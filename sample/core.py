@@ -1,3 +1,5 @@
+import numpy as np
+
 def conv2(matrix, kernel):
     '''
     :param matrix: 2D numpy matrix
@@ -8,4 +10,59 @@ def conv2(matrix, kernel):
     conv = np.convolve(matrix,kernel)
     return conv
 
-def CG_loop(solid,Axx,Axy,Ayy, Ux,Uy)
+class ElasticProblem:
+    """
+    :param solid: Bool 2d matrix containing the position of the solid on the grid (1 if solid, 0 if not)
+    :param elas_lambda
+    :param elas_mu : Lamé elastic coefficients
+    :param lm : pixel length
+    axx: kernel _x_x for div(sigma)
+    axy: kernel _x_y for div(sigma)
+    ayy: kernel _y_y for div(sigma)
+    ux: Initial guess for x displacements (2d numpy matrix, same size as solid)
+    uy: Initial guess for y displacements (2d numpy matrix, same size as solid)
+    ux_imp : 2d matrix of imposed displacements in the x direction
+    uy_imp : 2d matrix of imposed displacements in the y direction
+    sigx : 2d matrix of imposed stress on solid boundary in the x direction (sig.n = (sigx,sigy))
+    sigy : 2d matrix of imposed stress on solid boundary in the y direction
+    fx_imp : 2d matrix of imposed volumic forces in the x direction
+    fy_imp : 2d matrix of imposed volumic forces in the y directions
+    """
+    def __init__(self,solid,elas_lambda,elas_mu,lm):
+        self.solid=solid
+        self.elas_lambda = elas_lambda
+        self.elas_mu =elas_mu
+        self.lm = lm
+        for var in  ['ux','uy','ux_imp','uy_imp', 'sigx','sigy','fx_imp','fy_imp']:
+            self.var = np.zeros(solid.shape)
+        self.kernel_type = 'plane strain'
+        (self.axx,self.axy,self.ayy,self.ayx) =\
+            self.def_kernel()
+
+    def def_kernel(self):
+        if self.kernel_type=='plane strain':
+            axx=np.zeros([3,3])
+            axy= np.zeros([3,3])
+            ayy=np.zeros([3,3])
+            ayx=np.zeros([3,3])
+
+            temp=(self.elas_lambda+2*self.elas_mu)/self.lm**2
+            axx[2,1]+=temp
+            axx[0,1]+=temp
+            axx[0, 0] += -2*temp
+        else:
+            raise ValueError("Only \'plane strain\' is available")
+        return axx,axy,ayy,ayx
+
+    def CG_loop(self):
+        """
+        :return: Ux, Uy : Displacements solutions
+        :return: n_iter : number of iterations
+        :return: res : residual
+        """
+        n_iter = 0
+        res = np.zeros(self.solid.shape)
+        ux = np.zeros(self.solid.shape)
+        uy = np.zeros(self.solid.shape)
+
+        return ux,uy,n_iter,res
