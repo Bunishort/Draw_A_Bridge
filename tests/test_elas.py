@@ -11,4 +11,13 @@ lm=1
 
 
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm)
+print("axx")
+print(test.axx)
+print("axy")
+print(test.axy)
+print("ayy")
+print(test.ayy)
+print("ayx")
+print(test.ayx)
+
 1+1

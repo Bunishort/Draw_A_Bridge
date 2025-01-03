@@ -47,9 +47,21 @@ class ElasticProblem:
             ayx=np.zeros([3,3])
 
             temp=(self.elas_lambda+2*self.elas_mu)/self.lm**2
-            axx[2,1]+=temp
-            axx[0,1]+=temp
-            axx[0, 0] += -2*temp
+            axx[2,1] += temp
+            axx[0,1] += temp
+            axx[1,1] += -2*temp
+            temp = temp/2
+            axy[2,2] += temp
+            axy[2,0] -= temp
+            axy[0,2] -= temp
+            axy[0,0] += temp
+            temp = self.elas_mu / self.lm**2
+            axx[1,2] += temp
+            axx[1,0] += temp
+            axx[1,1] += -2*temp
+
+            ayy = np.transpose(axx)
+            ayx = axy
         else:
             raise ValueError("Only \'plane strain\' is available")
         return axx,axy,ayy,ayx
