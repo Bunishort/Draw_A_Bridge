@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.signal import convolve2d
 
 def conv2(matrix, kernel):
     '''
@@ -36,8 +37,12 @@ class ElasticProblem:
         for var in  ['ux','uy','ux_imp','uy_imp', 'sigx','sigy','fx_imp','fy_imp']:
             self.var = np.zeros(solid.shape)
         self.kernel_type = 'plane strain'
-        (self.axx,self.axy,self.ayy,self.ayx) =\
+        (self.axx,self.axy,self.ayy,self.ayx,
+         self.exxx,self.eyyy,self.exyx,self.exyy) =\
             self.def_kernel()
+
+    def conv(self,matrix,kernel):
+        return convolve2d(matrix,kernel,'same')
 
     def def_kernel(self):
         if self.kernel_type=='plane strain':
@@ -62,9 +67,43 @@ class ElasticProblem:
 
             ayy = np.transpose(axx)
             ayx = axy
+
+            #Mesh cell center stress matrix
+            # epsilon_xx = exxx * ux / (2 lm)
+            # epsilon_yy = eyyy * uy / (2 lm)
+            # epsilon_xy = (exyx * ux + exyy * uy) / (4 lm)
+            #TODO :
+            #Remplir les matrices et gérer les sorties de la fonction et classe
+            exxx = np.array([[-1,-1],[1,1]])
+            eyyy = np.array([[-1,1],[-1,1]])
+            exyx = eyyy.copy()
+            exyy = exxx.copy()
         else:
             raise ValueError("Only \'plane strain\' is available")
-        return axx,axy,ayy,ayx
+        return axx,axy,ayy,ayx,exxx,eyyy,exyx,exyy
+
+    def get_frontier(self):
+        kernel = np.ones([3,3])
+        temp = self.conv(self.solid,kernel)
+        frontier = np.bitwise_and(self.solid,temp < 9)
+        bulk = np.bitwise_and(self.solid,np.bitwise_not(frontier))
+
+        return frontier,bulk
+
+    def calc_normal(self):
+        kernelx = np.zeros([3,3])
+        kernelx[2,1] = 1
+        kernelx[0,1] = -1
+        kernely = np.zeros([3,3])
+        kernely[1,2]=1
+        kernely[1,0]=-1
+
+        nx = self.conv(self.solid, kernelx)
+        ny = self.conv(self.solid,kernely)
+        n = np.sqrt(nx**2 + ny **2)
+        nx = nx / n
+        ny = ny /n
+        return nx,ny
 
     def CG_loop(self):
         """
