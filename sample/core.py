@@ -72,8 +72,6 @@ class ElasticProblem:
             # epsilon_xx = exxx * ux / (2 lm)
             # epsilon_yy = eyyy * uy / (2 lm)
             # epsilon_xy = (exyx * ux + exyy * uy) / (4 lm)
-            #TODO :
-            #Remplir les matrices et gérer les sorties de la fonction et classe
             exxx = np.array([[-1,-1],[1,1]])
             eyyy = np.array([[-1,1],[-1,1]])
             exyx = eyyy.copy()
