@@ -35,7 +35,7 @@ class ElasticProblem:
         self.elas_mu =elas_mu
         self.lm = lm
         for var in  ['ux','uy','ux_imp','uy_imp', 'sigx','sigy','fx_imp','fy_imp']:
-            self.var = np.zeros(solid.shape)
+            setattr(self,var, np.zeros(solid.shape))
         self.kernel_type = 'plane strain'
         (self.axx,self.axy,self.ayy,self.ayx,
          self.exxx,self.eyyy,self.exyx,self.exyy) =\
@@ -80,7 +80,24 @@ class ElasticProblem:
             raise ValueError("Only \'plane strain\' is available")
         return axx,axy,ayy,ayx,exxx,eyyy,exyx,exyy
 
+    def calc_stress(self):
+        #Calculate the stress in the center of the mesh cells
+
+        exx = self.conv(self.ux, self.exxx) / 2 / self.lm
+        eyy = self.conv(self.uy, self.eyyy) / 2 / self.lm
+        exy = (self.conv(self.ux, self.exyx) +
+               self.conv(self.uy, self.exyy)) / 4 / self.lm
+        trace = exx+eyy
+        sxx = self.elas_lambda * trace +2*self.elas_mu * exx
+        syy = self.elas_lambda * trace + 2 * self.elas_mu * eyy
+        sxy = 2 * self.elas_mu * exy
+
+        return sxx,syy,sxy
+
     def get_frontier(self):
+        #Calculate all the points at the frontier of the solid
+        # Frontier = at least one neighbour point is not solid (including diagonals)
+        # Bulk is the solid minus the frontier
         kernel = np.ones([3,3])
         temp = self.conv(self.solid,kernel)
         frontier = np.bitwise_and(self.solid,temp < 9)
@@ -89,6 +106,7 @@ class ElasticProblem:
         return frontier,bulk
 
     def calc_normal(self):
+        #Calculate the normals to the solid boundaries
         kernelx = np.zeros([3,3])
         kernelx[2,1] = 1
         kernelx[0,1] = -1
