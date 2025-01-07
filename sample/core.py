@@ -17,29 +17,34 @@ class ElasticProblem:
     :param elas_lambda
     :param elas_mu : Lamé elastic coefficients
     :param lm : pixel length
+    :param ux_imp : 2d matrix of imposed displacements in the x direction. np.Nan where no displacement is imposed
+    :param uy_imp : 2d matrix of imposed displacements in the y direction np.Nan where no displacement is imposed
+    :param px_bound : 2d matrix of imposed stress on solid boundary in the x direction (sig.n = (px_bound,py_bound))
+    :param py_bound : 2d matrix of imposed stress on solid boundary in the y direction
+    :param fx_imp : 2d matrix of imposed volumic forces in the x direction
+    :param fy_imp : 2d matrix of imposed volumic forces in the y directions
     kernel_type: plane_strain, plane_stress or 2daxi (only plane strain available now)
     axx: kernel _x_x for div(sigma)
     axy: kernel _x_y for div(sigma)
     ayy: kernel _y_y for div(sigma)
     ux: Initial guess for x displacements (2d numpy matrix, same size as solid)
     uy: Initial guess for y displacements (2d numpy matrix, same size as solid)
-    ux_imp : 2d matrix of imposed displacements in the x direction
-    uy_imp : 2d matrix of imposed displacements in the y direction
-    px_bound : 2d matrix of imposed stress on solid boundary in the x direction (sig.n = (px_bound,py_bound))
-    py_bound : 2d matrix of imposed stress on solid boundary in the y direction
-    fx_imp : 2d matrix of imposed volumic forces in the x direction
-    fy_imp : 2d matrix of imposed volumic forces in the y directions
     exxx/eyyy/exyx/exyy : kernels for stress computation
     frontier : 2D bool matrix of frontier position
     bulk  :2d bool matrix of bulk position
     nx/ny : normals to the frontier of the solid
     """
-    def __init__(self,solid,elas_lambda,elas_mu,lm):
+    def __init__(self,solid,elas_lambda,elas_mu,lm,
+                 ux_imp,uy_imp, **kwargs):
         self.solid=solid
         self.elas_lambda = elas_lambda
         self.elas_mu =elas_mu
         self.lm = lm
-        for var in  ['ux','uy','ux_imp','uy_imp', 'px_bound','py_bound','fx_imp','fy_imp']:
+        self.ux_imp = ux_imp
+        self.uy_imp = uy_imp
+        for var in ['px_bound,py_bound,fx_imp,fy_imp']:
+            setattr(self,var,kwargs.get(var,np.zeros(solid.shape)))
+        for var in  ['ux','uy']:
             setattr(self,var, np.zeros(solid.shape))
         self.kernel_type = 'plane strain'
         (self.axx,self.axy,self.ayy,self.ayx,
@@ -89,13 +94,13 @@ class ElasticProblem:
             raise ValueError("Only \'plane strain\' is available")
         return axx,axy,ayy,ayx,exxx,eyyy,exyx,exyy
 
-    def calc_stress(self):
+    def calc_stress(self,uxt,uyt):
         #Calculate the stress in the center of the mesh cells
 
-        exx = self.conv(self.ux, self.exxx) / (2 *self.lm)
-        eyy = self.conv(self.uy, self.eyyy) / (2 * self.lm)
-        exy = (self.conv(self.ux, self.exyx) +
-               self.conv(self.uy, self.exyy)) / (4 * self.lm)
+        exx = self.conv(uxt, self.exxx) / (2 *self.lm)
+        eyy = self.conv(uyt, self.eyyy) / (2 * self.lm)
+        exy = (self.conv(uxt, self.exyx) +
+               self.conv(uyt, self.exyy)) / (4 * self.lm)
         lambda_trace = self.elas_lambda * (exx+eyy)
         sxx = lambda_trace + (2 * self.elas_mu) * exx
         syy = lambda_trace + (2 * self.elas_mu) * eyy
@@ -124,10 +129,11 @@ class ElasticProblem:
         kernely[1,0]=-1
 
         nx = self.conv(self.solid, kernelx)
-        ny = self.conv(self.solid,kernely)
+        ny = self.conv(self.solid, kernely)
         n = np.sqrt(nx**2 + ny **2)
-        nx = nx / n
-        ny = ny / n
+        ok = n>0
+        nx[ok] = nx[ok] / n[ok]
+        ny[ok] = ny[ok] / n[ok]
         return nx,ny
 
     def CG_loop(self):
@@ -135,6 +141,8 @@ class ElasticProblem:
         :return: ux, uy : Displacements solutions
         :return: n_iter : number of iterations
         :return: res : residual
+
+        Solve a_u = b
         """
         n_iter = 0
         res = np.zeros(self.solid.shape)
@@ -144,3 +152,36 @@ class ElasticProblem:
 
 
         return ux,uy,n_iter,res
+
+    def calc_a_u(self,uxt,uyt):
+        #In the bulk, a_u = div(sigma)
+        #On the frontier, a_u = sigma.n
+        #Elsewhere, it is 0
+        #uxt,uyt are 2d matrices of displacements
+
+        a_u_x = self.conv(uxt,self.axx) + self.conv(uyt,self.axy)
+        a_u_y = self.conv(uyt,self.ayy) + self.conv(uxt,self.axy)
+
+        sxx,syy,sxy = self.calc_stress(uxt,uyt)
+
+        a_u_x[self.frontier] = (sxx[self.frontier]*self.nx[self.frontier]
+                                     + sxy[self.frontier]*self.ny[self.frontier])
+        a_u_y[self.frontier] = (sxy[self.frontier] * self.nx[self.frontier]
+                                     + syy[self.frontier] * self.ny[self.frontier])
+
+        a_u_x[np.bitwise_not(self.solid)] = 0
+        a_u_y[np.bitwise_not(self.solid)] = 0
+
+        return a_u_x,a_u_y
+
+    def calc_b(self):
+        #In the bulk, b= fx_imp, fy_imp (volumic forces, no inertia taken into account at this stage)
+        #On the frontier, b = px_bound,py_bound
+        #Elsewhere, b=0
+
+        bx = self.fx_imp
+        by = self.fy_imp
+        bx[self.frontier] = self.px_bound[self.frontier]
+        by[self.frontier] = self.py_bound[self.frontier]
+
+        return bx,by
