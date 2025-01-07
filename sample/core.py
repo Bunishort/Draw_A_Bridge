@@ -17,6 +17,7 @@ class ElasticProblem:
     :param elas_lambda
     :param elas_mu : Lamé elastic coefficients
     :param lm : pixel length
+    kernel_type: plane_strain, plane_stress or 2daxi (only plane strain available now)
     axx: kernel _x_x for div(sigma)
     axy: kernel _x_y for div(sigma)
     ayy: kernel _y_y for div(sigma)
@@ -24,22 +25,30 @@ class ElasticProblem:
     uy: Initial guess for y displacements (2d numpy matrix, same size as solid)
     ux_imp : 2d matrix of imposed displacements in the x direction
     uy_imp : 2d matrix of imposed displacements in the y direction
-    sigx : 2d matrix of imposed stress on solid boundary in the x direction (sig.n = (sigx,sigy))
-    sigy : 2d matrix of imposed stress on solid boundary in the y direction
+    px_bound : 2d matrix of imposed stress on solid boundary in the x direction (sig.n = (px_bound,py_bound))
+    py_bound : 2d matrix of imposed stress on solid boundary in the y direction
     fx_imp : 2d matrix of imposed volumic forces in the x direction
     fy_imp : 2d matrix of imposed volumic forces in the y directions
+    exxx/eyyy/exyx/exyy : kernels for stress computation
+    frontier : 2D bool matrix of frontier position
+    bulk  :2d bool matrix of bulk position
+    nx/ny : normals to the frontier of the solid
     """
     def __init__(self,solid,elas_lambda,elas_mu,lm):
         self.solid=solid
         self.elas_lambda = elas_lambda
         self.elas_mu =elas_mu
         self.lm = lm
-        for var in  ['ux','uy','ux_imp','uy_imp', 'sigx','sigy','fx_imp','fy_imp']:
+        for var in  ['ux','uy','ux_imp','uy_imp', 'px_bound','py_bound','fx_imp','fy_imp']:
             setattr(self,var, np.zeros(solid.shape))
         self.kernel_type = 'plane strain'
         (self.axx,self.axy,self.ayy,self.ayx,
          self.exxx,self.eyyy,self.exyx,self.exyy) =\
             self.def_kernel()
+        self.frontier, self.bulk = self.get_frontier()
+        self.nx, self.ny = self.calc_normal()
+
+
 
     def conv(self,matrix,kernel):
         return convolve2d(matrix,kernel,'same')
@@ -83,14 +92,14 @@ class ElasticProblem:
     def calc_stress(self):
         #Calculate the stress in the center of the mesh cells
 
-        exx = self.conv(self.ux, self.exxx) / 2 / self.lm
-        eyy = self.conv(self.uy, self.eyyy) / 2 / self.lm
+        exx = self.conv(self.ux, self.exxx) / (2 *self.lm)
+        eyy = self.conv(self.uy, self.eyyy) / (2 * self.lm)
         exy = (self.conv(self.ux, self.exyx) +
-               self.conv(self.uy, self.exyy)) / 4 / self.lm
-        trace = exx+eyy
-        sxx = self.elas_lambda * trace +2*self.elas_mu * exx
-        syy = self.elas_lambda * trace + 2 * self.elas_mu * eyy
-        sxy = 2 * self.elas_mu * exy
+               self.conv(self.uy, self.exyy)) / (4 * self.lm)
+        lambda_trace = self.elas_lambda * (exx+eyy)
+        sxx = lambda_trace + (2 * self.elas_mu) * exx
+        syy = lambda_trace + (2 * self.elas_mu) * eyy
+        sxy = (2 * self.elas_mu) * exy
 
         return sxx,syy,sxy
 
@@ -118,12 +127,12 @@ class ElasticProblem:
         ny = self.conv(self.solid,kernely)
         n = np.sqrt(nx**2 + ny **2)
         nx = nx / n
-        ny = ny /n
+        ny = ny / n
         return nx,ny
 
     def CG_loop(self):
         """
-        :return: Ux, Uy : Displacements solutions
+        :return: ux, uy : Displacements solutions
         :return: n_iter : number of iterations
         :return: res : residual
         """
@@ -131,5 +140,7 @@ class ElasticProblem:
         res = np.zeros(self.solid.shape)
         ux = np.zeros(self.solid.shape)
         uy = np.zeros(self.solid.shape)
+
+
 
         return ux,uy,n_iter,res
