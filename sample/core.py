@@ -144,22 +144,51 @@ class ElasticProblem:
         """
         :return: ux, uy : Displacements solutions
         :return: n_iter : number of iterations
-        :return: res : residual
+        :return: resx,resy : residual
 
         Solve a_u = b
         """
         n_iter = 0
+        res_max_convergence = 1e9
+        convergence_hist=[]
 
+        # Calculate initial residual and search direction
         bx, by = self.calc_b()
         a_u_x,a_u_y = self.calc_a_u(self.ux,self.uy)
         resx = bx-a_u_x
         resy = by-a_u_y
+        dx = resx
+        dy = resy
 
+        # Convvergence loop
+        while n_iter <= self.max_iter and res_max_convergence > self.max_res:
+            #update variables
+            n_iter=n_iter+1
+            resx_old=resx
+            resy_old=resy
 
+            #Calculate new displacement field
+            a_d_x,a_d_y = self.calc_a_u(dx,dy)
+            d_a_d = np.dot(dx,a_d_x) + np.dot(dy,a_d_y)
+            alpha = (np.dot(resx,dx) + np.dot(resy,dy)) / d_a_d
 
+            self.ux = self.ux + alpha * dx
+            self.uy = self.uy + alpha * dy
 
+            #Calculate new residual
+            resx = resx - alpha * a_d_x
+            resy = resy - alpha * a_d_y
 
-        return ux,uy,n_iter,res
+            #Check convergence
+            res_max_convergence = np.max(np.max(np.abs(resx[:])),np.max(np.abs(resy[:])))
+            convergence_hist.append(res_max_convergence)
+
+            #Calculate new search direction
+            beta = ((np.dot(resx,resx-resx_old) + np.dot(resy,resy-resy_old))
+                    / alpha / d_a_d)
+            dx = resx + beta*dx
+            dy = resy + beta*dy
+        return n_iter,resx,resy,res_max_convergence,convergence_hist
 
     def calc_a_u(self,uxt,uyt):
         #In the bulk, a_u = div(sigma)
