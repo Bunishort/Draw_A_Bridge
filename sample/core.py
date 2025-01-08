@@ -192,7 +192,8 @@ class ElasticProblem:
 
     def calc_a_u(self,uxt,uyt):
         #In the bulk, a_u = div(sigma)
-        #On the frontier, a_u = sigma.n
+        #On the frontier, a_u = sigma.n / lm
+        # /lm so that the units are the same everywhere
         #WHere the displacement is imposed, a_u=0
         #Elsewhere, it is 0
         #uxt,uyt are 2d matrices of displacements
@@ -203,9 +204,10 @@ class ElasticProblem:
         sxx,syy,sxy = self.calc_stress(uxt,uyt)
 
         a_u_x[self.frontier] = (sxx[self.frontier]*self.nx[self.frontier]
-                                     + sxy[self.frontier]*self.ny[self.frontier])
+                                     + sxy[self.frontier]*self.ny[self.frontier]) / self.lm
         a_u_y[self.frontier] = (sxy[self.frontier] * self.nx[self.frontier]
-                                     + syy[self.frontier] * self.ny[self.frontier])
+                                     + syy[self.frontier] * self.ny[self.frontier]) /self.lm
+
 
         a_u_x[np.bitwise_not(self.solid)] = 0
         a_u_y[np.bitwise_not(self.solid)] = 0
@@ -217,14 +219,15 @@ class ElasticProblem:
 
     def calc_b(self):
         #In the bulk, b= fx_imp, fy_imp (volumic forces, no inertia taken into account at this stage)
-        #On the frontier, b = px_bound,py_bound
+        #On the frontier, b = px_bound/lm,py_bound/lm
+        # /lm so that the units are the same everywhere
         # Where displacement is imposed, b=0
         #Elsewhere, b=0
 
         bx = self.fx_imp
         by = self.fy_imp
-        bx[self.frontier] = self.px_bound[self.frontier]
-        by[self.frontier] = self.py_bound[self.frontier]
+        bx[self.frontier] = self.px_bound[self.frontier] / self.lm
+        by[self.frontier] = self.py_bound[self.frontier] / self.lm
 
 
         bx[np.bitwise_not(np.isnan(self.ux_imp))] = 0
