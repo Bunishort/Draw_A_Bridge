@@ -1,15 +1,27 @@
 from context import sample
 import numpy as np
 
-nx=8
-ny=8
+nx=7
+ny=9
+
+lx = 3
+ly = 3
+
+x = np.arange(nx) - (nx-1)/2
+y = np.arange(ny) - (ny-1)/2
+
+gridy,gridx = np.meshgrid(y,x)
 
 solid = np.zeros([nx,ny],dtype=bool)
+solid[np.bitwise_and(np.abs(gridx)<=lx/2,
+    np.abs(gridy)<=ly/2)] = True
+
 elas_lambda = 1
 elas_mu = 1
 lm=1
 ux_imp=np.zeros(solid.shape)
-ux_imp[1:,1:] = np.nan
+ux_imp[:,:] = np.nan
+ux_imp[gridx < (-lx/2+lm)] =0
 uy_imp=ux_imp
 
 
