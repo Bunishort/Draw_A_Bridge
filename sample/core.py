@@ -19,10 +19,12 @@ class ElasticProblem:
     :param lm : pixel length
     :param ux_imp : 2d matrix of imposed displacements in the x direction. np.Nan where no displacement is imposed
     :param uy_imp : 2d matrix of imposed displacements in the y direction np.Nan where no displacement is imposed
-    :param px_bound : 2d matrix of imposed stress on solid boundary in the x direction (sig.n = (px_bound,py_bound))
-    :param py_bound : 2d matrix of imposed stress on solid boundary in the y direction
-    :param fx_imp : 2d matrix of imposed volumic forces in the x direction
-    :param fy_imp : 2d matrix of imposed volumic forces in the y directions
+    :**kwarg px_bound : 2d matrix of imposed stress on solid boundary in the x direction (sig.n = (px_bound,py_bound))
+    :**kwarg py_bound : 2d matrix of imposed stress on solid boundary in the y direction (default 0)
+    :**kwarg fx_imp : 2d matrix of imposed volumic forces in the x direction
+    :**kwarg fy_imp : 2d matrix of imposed volumic forces in the y direction (default 0)
+    :**kwarg max_iter : maximum number of Conjugate Gradient iterations, default 20
+    :**kwarg max_res : maximum (non dimensional) residual convergence tolerance, default 1e-6
     kernel_type: plane_strain, plane_stress or 2daxi (only plane strain available now)
     axx: kernel _x_x for div(sigma)
     axy: kernel _x_y for div(sigma)
@@ -42,8 +44,10 @@ class ElasticProblem:
         self.lm = lm
         self.ux_imp = ux_imp
         self.uy_imp = uy_imp
-        for var in ['px_bound,py_bound,fx_imp,fy_imp']:
+        for var in ['px_bound','py_bound','fx_imp','fy_imp']:
             setattr(self,var,kwargs.get(var,np.zeros(solid.shape)))
+        self.max_iter = kwargs.get('max_iter',20)
+        self.max_res = kwargs.get('max_res', 1e-6)
         for var in  ['ux','uy']:
             setattr(self,var, np.zeros(solid.shape))
         self.kernel_type = 'plane strain'
@@ -145,9 +149,13 @@ class ElasticProblem:
         Solve a_u = b
         """
         n_iter = 0
-        res = np.zeros(self.solid.shape)
-        ux = np.zeros(self.solid.shape)
-        uy = np.zeros(self.solid.shape)
+
+        bx, by = self.calc_b()
+        a_u_x,a_u_y = self.calc_a_u(self.ux,self.uy)
+        resx = bx-a_u_x
+        resy = by-a_u_y
+
+
 
 
 
@@ -156,6 +164,7 @@ class ElasticProblem:
     def calc_a_u(self,uxt,uyt):
         #In the bulk, a_u = div(sigma)
         #On the frontier, a_u = sigma.n
+        #WHere the displacement is imposed, a_u=0
         #Elsewhere, it is 0
         #uxt,uyt are 2d matrices of displacements
 
@@ -172,16 +181,24 @@ class ElasticProblem:
         a_u_x[np.bitwise_not(self.solid)] = 0
         a_u_y[np.bitwise_not(self.solid)] = 0
 
+        a_u_x[np.bitwise_not(np.isnan(self.ux_imp))] = 0
+        a_u_y[np.bitwise_not(np.isnan(self.uy_imp))] = 0
+
         return a_u_x,a_u_y
 
     def calc_b(self):
         #In the bulk, b= fx_imp, fy_imp (volumic forces, no inertia taken into account at this stage)
         #On the frontier, b = px_bound,py_bound
+        # Where displacement is imposed, b=0
         #Elsewhere, b=0
 
         bx = self.fx_imp
         by = self.fy_imp
         bx[self.frontier] = self.px_bound[self.frontier]
         by[self.frontier] = self.py_bound[self.frontier]
+
+
+        bx[np.bitwise_not(np.isnan(self.ux_imp))] = 0
+        by[np.bitwise_not(np.isnan(self.uy_imp))] = 0
 
         return bx,by
