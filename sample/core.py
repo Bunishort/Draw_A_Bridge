@@ -101,6 +101,10 @@ class ElasticProblem:
     def calc_stress(self,uxt,uyt):
         #Calculate the stress in the center of the mesh cells
 
+        #!!! This np.nan gestion could be optimized by calculating ony once a solid_stress matrix
+        uxt[np.bitwise_not(self.solid)]=np.nan
+        uyt[np.bitwise_not(self.solid)] = np.nan
+
         exx = self.conv(uxt, self.exxx) / (2 *self.lm)
         eyy = self.conv(uyt, self.eyyy) / (2 * self.lm)
         exy = (self.conv(uxt, self.exyx) +
@@ -110,7 +114,26 @@ class ElasticProblem:
         syy = lambda_trace + (2 * self.elas_mu) * eyy
         sxy = (2 * self.elas_mu) * exy
 
+        sxx[np.isnan(sxx)] = 0
+        syy[np.isnan(syy)] = 0
+        sxy[np.isnan(sxy)] = 0
+
         return sxx,syy,sxy
+
+    def calc_stress_frontier(self,uxt,uyt):
+        #Calculate the mean stress on the frontier for the computation of sig.n
+
+        #!!! Could be optimized by not calculating stress on all the solid,
+        # and by keeping kernel in memory, using 2*2 kernel and shifting by 1
+        # (but need a different convolution)
+        sxx,syy,sxy = self.calc_stress(uxt,uyt)
+
+        kernel= np.array([[1,1,0],[1,1,0],[0,0,0]])
+        sxxf = self.conv(sxx,kernel) / 4
+        syyf = self.conv(syy,kernel) / 4
+        sxyf = self.conv(sxy,kernel) / 4
+
+        return sxxf,syyf,sxyf
 
     def get_frontier(self):
         #Calculate all the points at the frontier of the solid
@@ -140,7 +163,7 @@ class ElasticProblem:
         ny[ok] = ny[ok] / n[ok]
         return nx,ny
 
-    def CG_loop(self):
+    def cg_loop(self):
         """
         :return: ux, uy : Displacements solutions
         :return: n_iter : number of iterations
@@ -204,12 +227,12 @@ class ElasticProblem:
         a_u_x = self.conv(uxt,self.axx) + self.conv(uyt,self.axy)
         a_u_y = self.conv(uyt,self.ayy) + self.conv(uxt,self.axy)
 
-        sxx,syy,sxy = self.calc_stress(uxt,uyt)
+        sxxf,syyf,sxyf = self.calc_stress_frontier(uxt,uyt)
 
-        a_u_x[self.frontier] = (sxx[self.frontier]*self.nx[self.frontier]
-                                     + sxy[self.frontier]*self.ny[self.frontier]) / self.lm
-        a_u_y[self.frontier] = (sxy[self.frontier] * self.nx[self.frontier]
-                                     + syy[self.frontier] * self.ny[self.frontier]) /self.lm
+        a_u_x[self.frontier] = (sxxf[self.frontier]*self.nx[self.frontier]
+                                     + sxyf[self.frontier]*self.ny[self.frontier]) / self.lm
+        a_u_y[self.frontier] = (sxyf[self.frontier] * self.nx[self.frontier]
+                                     + syyf[self.frontier] * self.ny[self.frontier]) /self.lm
 
 
         a_u_x[np.bitwise_not(self.solid)] = 0
