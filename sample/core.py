@@ -169,8 +169,8 @@ class ElasticProblem:
 
             #Calculate new displacement field
             a_d_x,a_d_y = self.calc_a_u(dx,dy)
-            d_a_d = np.dot(dx,a_d_x) + np.dot(dy,a_d_y)
-            alpha = (np.dot(resx,dx) + np.dot(resy,dy)) / d_a_d
+            d_a_d = np.dot(dx.ravel(),a_d_x.ravel()) + np.dot(dy.ravel(),a_d_y.ravel())
+            alpha = (np.dot(resx.ravel(),dx.ravel()) + np.dot(resy.ravel(),dy.ravel())) / d_a_d
 
             self.ux = self.ux + alpha * dx
             self.uy = self.uy + alpha * dy
@@ -180,11 +180,14 @@ class ElasticProblem:
             resy = resy - alpha * a_d_y
 
             #Check convergence
-            res_max_convergence = np.max(np.max(np.abs(resx[:])),np.max(np.abs(resy[:])))
+            res_max_convergence = np.max(
+                [np.max(np.abs(resx.ravel())),
+                 np.max(np.abs(resy.ravel()))])
             convergence_hist.append(res_max_convergence)
 
             #Calculate new search direction
-            beta = ((np.dot(resx,resx-resx_old) + np.dot(resy,resy-resy_old))
+            beta = ((np.dot(resx.ravel(),resx.ravel()-resx_old.ravel())
+                     + np.dot(resy.ravel(),resy.ravel()-resy_old.ravel()))
                     / alpha / d_a_d)
             dx = resx + beta*dx
             dy = resy + beta*dy

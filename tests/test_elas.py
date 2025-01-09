@@ -24,8 +24,13 @@ ux_imp[:,:] = np.nan
 ux_imp[gridx < (-lx/2+lm)] =0
 uy_imp=ux_imp
 
+px_bound = np.zeros(solid.shape)
+px_bound[gridx > (lx/2-lm)] = 0.01
+py_bound = np.zeros(solid.shape)
 
-test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp)
+test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
+                                  px_bound=px_bound,py_bound=py_bound)
+test.CG_loop()
 print("axx")
 print(test.axx)
 print("axy")
