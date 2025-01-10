@@ -57,7 +57,10 @@ class ElasticProblem:
         self.frontier, self.bulk = self.get_frontier()
         self.nx, self.ny = self.calc_normal()
 
-
+        kerneltemp= np.array([[1,1,0],[1,1,0],[0,0,0]])
+        solidtemp = solid.astype(int)
+        temp = self.conv(solidtemp,kerneltemp)
+        self.solid_stress = (temp == 4)
 
     def conv(self,matrix,kernel):
         return convolve2d(matrix,kernel,'same')
@@ -90,8 +93,8 @@ class ElasticProblem:
             # epsilon_xx = exxx * ux / (2 lm)
             # epsilon_yy = eyyy * uy / (2 lm)
             # epsilon_xy = (exyx * ux + exyy * uy) / (4 lm)
-            exxx = np.array([[-1,-1],[1,1]])
-            eyyy = np.array([[-1,1],[-1,1]])
+            exxx = np.array([[-1,-1,0],[1,1,0],[0,0,0]])
+            eyyy = np.array([[-1,1,0],[-1,1,0],[0,0,0]]) #!!! signe à vérifier et comprendre
             exyx = eyyy.copy()
             exyy = exxx.copy()
         else:
@@ -100,11 +103,6 @@ class ElasticProblem:
 
     def calc_stress(self,uxt,uyt):
         #Calculate the stress in the center of the mesh cells
-
-        #!!! This np.nan gestion could be optimized by calculating ony once a solid_stress matrix
-        uxt[np.bitwise_not(self.solid)]=np.nan
-        uyt[np.bitwise_not(self.solid)] = np.nan
-
         exx = self.conv(uxt, self.exxx) / (2 *self.lm)
         eyy = self.conv(uyt, self.eyyy) / (2 * self.lm)
         exy = (self.conv(uxt, self.exyx) +
@@ -114,9 +112,9 @@ class ElasticProblem:
         syy = lambda_trace + (2 * self.elas_mu) * eyy
         sxy = (2 * self.elas_mu) * exy
 
-        sxx[np.isnan(sxx)] = 0
-        syy[np.isnan(syy)] = 0
-        sxy[np.isnan(sxy)] = 0
+        sxx[np.bitwise_not(self.solid_stress)] = 0
+        syy[np.bitwise_not(self.solid_stress)] = 0
+        sxy[np.bitwise_not(self.solid_stress)] = 0
 
         return sxx,syy,sxy
 
@@ -128,7 +126,7 @@ class ElasticProblem:
         # (but need a different convolution)
         sxx,syy,sxy = self.calc_stress(uxt,uyt)
 
-        kernel= np.array([[1,1,0],[1,1,0],[0,0,0]])
+        kernel= np.array([[0,0,0],[0,1,1],[0,1,1]])
         sxxf = self.conv(sxx,kernel) / 4
         syyf = self.conv(syy,kernel) / 4
         sxyf = self.conv(sxy,kernel) / 4
@@ -175,6 +173,13 @@ class ElasticProblem:
         res_max_convergence = 1e9
         convergence_hist=[]
 
+        #Displacement BC
+
+        self.ux[np.bitwise_not(np.isnan(self.ux_imp))] =\
+            self.ux_imp[np.bitwise_not(np.isnan(self.ux_imp))]
+        self.uy[np.bitwise_not(np.isnan(self.uy_imp))] = \
+            self.uy_imp[np.bitwise_not(np.isnan(self.uy_imp))]
+
         # Calculate initial residual and search direction
         bx, by = self.calc_b()
         a_u_x,a_u_y = self.calc_a_u(self.ux,self.uy)
@@ -187,8 +192,8 @@ class ElasticProblem:
         while n_iter <= self.max_iter and res_max_convergence > self.max_res:
             #update variables
             n_iter=n_iter+1
-            resx_old=resx
-            resy_old=resy
+            resx_old=resx.copy()
+            resy_old=resy.copy()
 
             #Calculate new displacement field
             a_d_x,a_d_y = self.calc_a_u(dx,dy)

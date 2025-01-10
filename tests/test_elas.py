@@ -16,7 +16,7 @@ solid = np.zeros([nx,ny],dtype=bool)
 solid[np.bitwise_and(np.abs(gridx)<=lx/2,
     np.abs(gridy)<=ly/2)] = True
 
-elas_lambda = 1
+elas_lambda = 0*1
 elas_mu = 1
 lm=1
 ux_imp=np.zeros(solid.shape)
@@ -40,5 +40,10 @@ print(test.ayy)
 print("ayx")
 print(test.ayx)
 n_iter,resx,resy,res_max_convergence,convergence_hist  = test.cg_loop()
+
+bx, by = test.calc_b()
+a_u_x, a_u_y = test.calc_a_u(test.ux, test.uy)
+resx2 = bx - a_u_x
+resy2 = by - a_u_y
 
 1+1
