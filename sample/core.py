@@ -121,9 +121,15 @@ class ElasticProblem:
         sxx,syy,sxy = self.calc_stress(uxt,uyt)
 
         kernel= np.array([[1,1,0],[1,1,0],[0,0,0]])
-        sxxf = self.conv(sxx,kernel) / self.solid_stress_num
-        syyf = self.conv(syy,kernel) / self.solid_stress_num
-        sxyf = self.conv(sxy,kernel) / self.solid_stress_num
+        sxxf = np.zeros(self.solid.shape)
+        syyf = np.zeros(self.solid.shape)
+        sxyf = np.zeros(self.solid.shape)
+        sxxf[self.frontier] = (self.conv(sxx,kernel)[self.frontier] /
+                               self.solid_stress_num[self.frontier])
+        syyf[self.frontier] = (self.conv(syy,kernel)[self.frontier] /
+                               self.solid_stress_num[self.frontier])
+        sxyf[self.frontier] = (self.conv(sxy,kernel)[self.frontier] /
+                               self.solid_stress_num[self.frontier])
 
         return sxxf,syyf,sxyf
 
@@ -141,14 +147,14 @@ class ElasticProblem:
     def calc_normal(self):
         #Calculate the normals to the solid boundaries
         kernelx = np.zeros([3,3])
-        kernelx[2,1] = 1
-        kernelx[0,1] = -1
+        kernelx[2,1] = -1
+        kernelx[0,1] = 1
         kernely = np.zeros([3,3])
-        kernely[1,2]=1
-        kernely[1,0]=-1
+        kernely[1,2]=-1
+        kernely[1,0]=1
 
-        nx = self.conv(self.solid, kernelx)
-        ny = self.conv(self.solid, kernely)
+        nx = self.conv(self.solid.astype(int), kernelx)
+        ny = self.conv(self.solid.astype(int), kernely)
         n = np.sqrt(nx**2 + ny **2)
         ok = n>0
         nx[ok] = nx[ok] / n[ok]
