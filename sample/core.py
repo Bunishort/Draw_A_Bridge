@@ -1,15 +1,5 @@
 import numpy as np
-from scipy.signal import convolve2d
-
-def conv2(matrix, kernel):
-    '''
-    :param matrix: 2D numpy matrix
-    :param kernel: 2D numpy matrix, smaller than matrix in each direction
-    :return: conv : convoluted matrix
-    '''
-    import numpy as np
-    conv = np.convolve(matrix,kernel)
-    return conv
+from scipy.signal import convolve2d,correlate2d
 
 class ElasticProblem:
     """
@@ -57,13 +47,17 @@ class ElasticProblem:
         self.frontier, self.bulk = self.get_frontier()
         self.nx, self.ny = self.calc_normal()
 
-        kerneltemp= np.array([[1,1,0],[1,1,0],[0,0,0]])
+        kerneltemp= np.array([[1,1],[1,1]])
         solidtemp = solid.astype(int)
         temp = self.conv(solidtemp,kerneltemp)
         self.solid_stress = (temp == 4)
+        kerneltemp = np.array([[1,1,0],[1,1,0],[0,0,0]])
+        solidtemp = self.solid_stress.astype(int)
+        self.solid_stress_num = self.conv(solidtemp, kerneltemp)
 
     def conv(self,matrix,kernel):
-        return convolve2d(matrix,kernel,'same')
+        #return convolve2d(matrix,kernel,'same')
+        return correlate2d(matrix, kernel, 'same')
 
     def def_kernel(self):
         if self.kernel_type=='plane strain':
@@ -93,8 +87,8 @@ class ElasticProblem:
             # epsilon_xx = exxx * ux / (2 lm)
             # epsilon_yy = eyyy * uy / (2 lm)
             # epsilon_xy = (exyx * ux + exyy * uy) / (4 lm)
-            exxx = np.array([[-1,-1,0],[1,1,0],[0,0,0]])
-            eyyy = np.array([[-1,1,0],[-1,1,0],[0,0,0]]) #!!! signe à vérifier et comprendre
+            exxx = np.array([[-1,-1],[1,1]])
+            eyyy = np.array([[-1,1],[-1,1]])
             exyx = eyyy.copy()
             exyy = exxx.copy()
         else:
@@ -126,10 +120,10 @@ class ElasticProblem:
         # (but need a different convolution)
         sxx,syy,sxy = self.calc_stress(uxt,uyt)
 
-        kernel= np.array([[0,0,0],[0,1,1],[0,1,1]])
-        sxxf = self.conv(sxx,kernel) / 4
-        syyf = self.conv(syy,kernel) / 4
-        sxyf = self.conv(sxy,kernel) / 4
+        kernel= np.array([[1,1,0],[1,1,0],[0,0,0]])
+        sxxf = self.conv(sxx,kernel) / self.solid_stress_num
+        syyf = self.conv(syy,kernel) / self.solid_stress_num
+        sxyf = self.conv(sxy,kernel) / self.solid_stress_num
 
         return sxxf,syyf,sxyf
 
