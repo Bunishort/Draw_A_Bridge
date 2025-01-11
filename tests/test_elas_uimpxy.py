@@ -26,7 +26,7 @@ elas_mu = E/2/(1+nu)
 lm=1
 ux_imp=gridx
 ux_imp[bulk] = np.nan
-uy_imp=np.zeros(solid.shape)
+uy_imp=(gridx / lx)**3
 uy_imp[bulk] = np.nan
 
 px_bound = np.zeros(solid.shape)
@@ -35,14 +35,6 @@ py_bound = np.zeros(solid.shape)
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
                                   px_bound=px_bound,py_bound=py_bound)
 
-print("axx")
-print(test.axx)
-print("axy")
-print(test.axy)
-print("ayy")
-print(test.ayy)
-print("ayx")
-print(test.ayx)
 n_iter,resx,resy,res_max_convergence,convergence_hist  = test.cg_loop()
 
 bx, by = test.calc_b()
@@ -50,4 +42,6 @@ a_u_x, a_u_y = test.calc_a_u(test.ux, test.uy)
 resx2 = bx - a_u_x
 resy2 = by - a_u_y
 
+print('Convergence')
+print(convergence_hist)
 1+1

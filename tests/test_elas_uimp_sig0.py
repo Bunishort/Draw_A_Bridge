@@ -1,7 +1,7 @@
 from context import sample
 import numpy as np
 
-from sample.core import get_frontier
+from sample.core import get_frontier, calc_normal
 
 nx=7
 ny=9
@@ -18,6 +18,8 @@ solid = np.zeros([nx,ny],dtype=bool)
 solid[np.bitwise_and(np.abs(gridx)<=lx/2,
     np.abs(gridy)<=ly/2)] = True
 frontier,bulk=get_frontier(solid)
+nx,ny = calc_normal(solid)
+
 
 E=1
 nu = 0.3
@@ -28,6 +30,8 @@ ux_imp=gridx
 ux_imp[bulk] = np.nan
 uy_imp=np.zeros(solid.shape)
 uy_imp[bulk] = np.nan
+uy_imp[ny**2==1] = np.nan
+ux_imp[ny**2==1] = np.nan
 
 px_bound = np.zeros(solid.shape)
 py_bound = np.zeros(solid.shape)
@@ -35,14 +39,6 @@ py_bound = np.zeros(solid.shape)
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
                                   px_bound=px_bound,py_bound=py_bound)
 
-print("axx")
-print(test.axx)
-print("axy")
-print(test.axy)
-print("ayy")
-print(test.ayy)
-print("ayx")
-print(test.ayx)
 n_iter,resx,resy,res_max_convergence,convergence_hist  = test.cg_loop()
 
 bx, by = test.calc_b()
