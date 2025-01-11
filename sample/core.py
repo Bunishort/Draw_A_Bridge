@@ -1,6 +1,41 @@
 import numpy as np
 from scipy.signal import convolve2d,correlate2d
 
+
+def get_frontier(solid):
+    # Calculate all the points at the frontier of the solid
+    # Frontier = at least one neighbour point is not solid (including diagonals)
+    # Bulk is the solid minus the frontier
+    kernel = np.ones([3, 3])
+    temp = conv(solid, kernel)
+    frontier = np.bitwise_and(solid, temp < 9)
+    bulk = np.bitwise_and(solid, np.bitwise_not(frontier))
+
+    return frontier, bulk
+
+
+def calc_normal(solid):
+    # Calculate the normals to the solid boundaries
+    kernelx = np.zeros([3, 3])
+    kernelx[2, 1] = -1
+    kernelx[0, 1] = 1
+    kernely = np.zeros([3, 3])
+    kernely[1, 2] = -1
+    kernely[1, 0] = 1
+
+    nx = conv(solid.astype(int), kernelx)
+    ny = conv(solid.astype(int), kernely)
+    n = np.sqrt(nx ** 2 + ny ** 2)
+    ok = n > 0
+    nx[ok] = nx[ok] / n[ok]
+    ny[ok] = ny[ok] / n[ok]
+    return nx, ny
+
+def conv(matrix,kernel):
+    #return convolve2d(matrix,kernel,'same')
+    return correlate2d(matrix, kernel, 'same')
+
+
 class ElasticProblem:
     """
     :param solid: Bool 2d matrix containing the position of the solid on the grid (1 if solid, 0 if not)
@@ -44,20 +79,16 @@ class ElasticProblem:
         (self.axx,self.axy,self.ayy,self.ayx,
          self.exxx,self.eyyy,self.exyx,self.exyy) =\
             self.def_kernel()
-        self.frontier, self.bulk = self.get_frontier()
-        self.nx, self.ny = self.calc_normal()
+        self.frontier, self.bulk = get_frontier(self.solid)
+        self.nx, self.ny = calc_normal(self.solid)
 
         kerneltemp= np.array([[1,1],[1,1]])
         solidtemp = solid.astype(int)
-        temp = self.conv(solidtemp,kerneltemp)
+        temp = conv(solidtemp,kerneltemp)
         self.solid_stress = (temp == 4)
         kerneltemp = np.array([[1,1,0],[1,1,0],[0,0,0]])
         solidtemp = self.solid_stress.astype(int)
-        self.solid_stress_num = self.conv(solidtemp, kerneltemp)
-
-    def conv(self,matrix,kernel):
-        #return convolve2d(matrix,kernel,'same')
-        return correlate2d(matrix, kernel, 'same')
+        self.solid_stress_num = conv(solidtemp, kerneltemp)
 
     def def_kernel(self):
         if self.kernel_type=='plane strain':
@@ -94,72 +125,6 @@ class ElasticProblem:
         else:
             raise ValueError("Only \'plane strain\' is available")
         return axx,axy,ayy,ayx,exxx,eyyy,exyx,exyy
-
-    def calc_stress(self,uxt,uyt):
-        #Calculate the stress in the center of the mesh cells
-        exx = self.conv(uxt, self.exxx) / (2 *self.lm)
-        eyy = self.conv(uyt, self.eyyy) / (2 * self.lm)
-        exy = (self.conv(uxt, self.exyx) +
-               self.conv(uyt, self.exyy)) / (4 * self.lm)
-        lambda_trace = self.elas_lambda * (exx+eyy)
-        sxx = lambda_trace + (2 * self.elas_mu) * exx
-        syy = lambda_trace + (2 * self.elas_mu) * eyy
-        sxy = (2 * self.elas_mu) * exy
-
-        sxx[np.bitwise_not(self.solid_stress)] = 0
-        syy[np.bitwise_not(self.solid_stress)] = 0
-        sxy[np.bitwise_not(self.solid_stress)] = 0
-
-        return sxx,syy,sxy
-
-    def calc_stress_frontier(self,uxt,uyt):
-        #Calculate the mean stress on the frontier for the computation of sig.n
-
-        #!!! Could be optimized by not calculating stress on all the solid,
-        # and by keeping kernel in memory, using 2*2 kernel and shifting by 1
-        # (but need a different convolution)
-        sxx,syy,sxy = self.calc_stress(uxt,uyt)
-
-        kernel= np.array([[1,1,0],[1,1,0],[0,0,0]])
-        sxxf = np.zeros(self.solid.shape)
-        syyf = np.zeros(self.solid.shape)
-        sxyf = np.zeros(self.solid.shape)
-        sxxf[self.frontier] = (self.conv(sxx,kernel)[self.frontier] /
-                               self.solid_stress_num[self.frontier])
-        syyf[self.frontier] = (self.conv(syy,kernel)[self.frontier] /
-                               self.solid_stress_num[self.frontier])
-        sxyf[self.frontier] = (self.conv(sxy,kernel)[self.frontier] /
-                               self.solid_stress_num[self.frontier])
-
-        return sxxf,syyf,sxyf
-
-    def get_frontier(self):
-        #Calculate all the points at the frontier of the solid
-        # Frontier = at least one neighbour point is not solid (including diagonals)
-        # Bulk is the solid minus the frontier
-        kernel = np.ones([3,3])
-        temp = self.conv(self.solid,kernel)
-        frontier = np.bitwise_and(self.solid,temp < 9)
-        bulk = np.bitwise_and(self.solid,np.bitwise_not(frontier))
-
-        return frontier,bulk
-
-    def calc_normal(self):
-        #Calculate the normals to the solid boundaries
-        kernelx = np.zeros([3,3])
-        kernelx[2,1] = -1
-        kernelx[0,1] = 1
-        kernely = np.zeros([3,3])
-        kernely[1,2]=-1
-        kernely[1,0]=1
-
-        nx = self.conv(self.solid.astype(int), kernelx)
-        ny = self.conv(self.solid.astype(int), kernely)
-        n = np.sqrt(nx**2 + ny **2)
-        ok = n>0
-        nx[ok] = nx[ok] / n[ok]
-        ny[ok] = ny[ok] / n[ok]
-        return nx,ny
 
     def cg_loop(self):
         """
@@ -229,8 +194,8 @@ class ElasticProblem:
         #Elsewhere, it is 0
         #uxt,uyt are 2d matrices of displacements
 
-        a_u_x = self.conv(uxt,self.axx) + self.conv(uyt,self.axy)
-        a_u_y = self.conv(uyt,self.ayy) + self.conv(uxt,self.axy)
+        a_u_x = conv(uxt,self.axx) + conv(uyt,self.axy)
+        a_u_y = conv(uyt,self.ayy) + conv(uxt,self.axy)
 
         sxxf,syyf,sxyf = self.calc_stress_frontier(uxt,uyt)
 
@@ -265,3 +230,41 @@ class ElasticProblem:
         by[np.bitwise_not(np.isnan(self.uy_imp))] = 0
 
         return bx,by
+
+    def calc_stress(self,uxt,uyt):
+        #Calculate the stress in the center of the mesh cells
+        exx = conv(uxt, self.exxx) / (2 *self.lm)
+        eyy = conv(uyt, self.eyyy) / (2 * self.lm)
+        exy = (conv(uxt, self.exyx) +
+               conv(uyt, self.exyy)) / (4 * self.lm)
+        lambda_trace = self.elas_lambda * (exx+eyy)
+        sxx = lambda_trace + (2 * self.elas_mu) * exx
+        syy = lambda_trace + (2 * self.elas_mu) * eyy
+        sxy = (2 * self.elas_mu) * exy
+
+        sxx[np.bitwise_not(self.solid_stress)] = 0
+        syy[np.bitwise_not(self.solid_stress)] = 0
+        sxy[np.bitwise_not(self.solid_stress)] = 0
+
+        return sxx,syy,sxy
+
+    def calc_stress_frontier(self,uxt,uyt):
+        #Calculate the mean stress on the frontier for the computation of sig.n
+
+        #!!! Could be optimized by not calculating stress on all the solid,
+        # and by keeping kernel in memory, using 2*2 kernel and shifting by 1
+        # (but need a different convolution)
+        sxx,syy,sxy = self.calc_stress(uxt,uyt)
+
+        kernel= np.array([[1,1,0],[1,1,0],[0,0,0]])
+        sxxf = np.zeros(self.solid.shape)
+        syyf = np.zeros(self.solid.shape)
+        sxyf = np.zeros(self.solid.shape)
+        sxxf[self.frontier] = (conv(sxx,kernel)[self.frontier] /
+                               self.solid_stress_num[self.frontier])
+        syyf[self.frontier] = (conv(syy,kernel)[self.frontier] /
+                               self.solid_stress_num[self.frontier])
+        sxyf[self.frontier] = (conv(sxy,kernel)[self.frontier] /
+                               self.solid_stress_num[self.frontier])
+
+        return sxxf,syyf,sxyf
