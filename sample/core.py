@@ -197,7 +197,7 @@ class ElasticProblem:
         a_u_x = conv(uxt,self.axx) + conv(uyt,self.axy)
         a_u_y = conv(uyt,self.ayy) + conv(uxt,self.axy)
 
-        sxxf,syyf,sxyf = self.calc_stress_frontier(uxt,uyt)
+        sxxf,syyf,sxyf = self.calc_stress(uxt,uyt)
 
         a_u_x[self.frontier] = (sxxf[self.frontier]*self.nx[self.frontier]
                                      + sxyf[self.frontier]*self.ny[self.frontier]) / self.lm
@@ -248,23 +248,3 @@ class ElasticProblem:
 
         return sxx,syy,sxy
 
-    def calc_stress_frontier(self,uxt,uyt):
-        #Calculate the mean stress on the frontier for the computation of sig.n
-
-        #!!! Could be optimized by not calculating stress on all the solid,
-        # and by keeping kernel in memory, using 2*2 kernel and shifting by 1
-        # (but need a different convolution)
-        sxx,syy,sxy = self.calc_stress(uxt,uyt)
-
-        kernel= np.array([[1,1,0],[1,1,0],[0,0,0]])
-        sxxf = np.zeros(self.solid.shape)
-        syyf = np.zeros(self.solid.shape)
-        sxyf = np.zeros(self.solid.shape)
-        sxxf[self.frontier] = (conv(sxx,kernel)[self.frontier] /
-                               self.solid_stress_num[self.frontier])
-        syyf[self.frontier] = (conv(syy,kernel)[self.frontier] /
-                               self.solid_stress_num[self.frontier])
-        sxyf[self.frontier] = (conv(sxy,kernel)[self.frontier] /
-                               self.solid_stress_num[self.frontier])
-
-        return sxxf,syyf,sxyf
