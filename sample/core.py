@@ -77,7 +77,7 @@ class ElasticProblem:
             setattr(self,var, np.zeros(solid.shape))
         self.kernel_type = 'plane strain'
         (self.axx,self.axy,self.ayy,self.ayx,
-         self.exxx,self.eyyy,self.exyx,self.exyy) =\
+         self.ddx,self.ddy) =\
             self.def_kernel()
         self.frontier, self.bulk = get_frontier(self.solid)
         self.nx, self.ny = calc_normal(self.solid)
@@ -115,16 +115,14 @@ class ElasticProblem:
             ayx = axy
 
             #Mesh cell center stress matrix
-            # epsilon_xx = exxx * ux / (2 lm)
-            # epsilon_yy = eyyy * uy / (2 lm)
-            # epsilon_xy = (exyx * ux + exyy * uy) / (4 lm)
-            exxx = np.array([[-1,-1],[1,1]])
-            eyyy = np.array([[-1,1],[-1,1]])
-            exyx = eyyy.copy()
-            exyy = exxx.copy()
+            # epsilon_xx = ddx * ux / (2 lm)
+            # epsilon_yy = ddy * uy / (2 lm)
+            # epsilon_xy = (ddy * ux + ddx * uy) / (4 lm)
+            ddx = np.array([[-1,-1],[1,1]])
+            ddy = np.array([[-1,1],[-1,1]])
         else:
             raise ValueError("Only \'plane strain\' is available")
-        return axx,axy,ayy,ayx,exxx,eyyy,exyx,exyy
+        return axx,axy,ayy,ayx,ddx,ddy
 
     def cg_loop(self):
         """
@@ -196,15 +194,12 @@ class ElasticProblem:
         sxx,syy,sxy = self.calc_stress(uxt,uyt)
         # Shear stress is zero on the frontier
         sxy[np.bitwise_not(self.solid_stress)] = 0
+        # sxx stress is zero on x frontier, same for syy on y frontier
+        sxx[np.bitwise_not(self.nx == 0)] = 0
+        sxx[np.bitwise_not(self.ny == 0)] = 0
 
-
-
-
-        a_u_x[self.frontier] = (sxxf[self.frontier]*self.nx[self.frontier]
-                                     + sxyf[self.frontier]*self.ny[self.frontier]) / self.lm
-        a_u_y[self.frontier] = (sxyf[self.frontier] * self.nx[self.frontier]
-                                     + syyf[self.frontier] * self.ny[self.frontier]) /self.lm
-
+        a_u_x = conv(sxx,self.ddx) + conv(sxy,self.ddy)
+        a_u_y = conv(syy, self.ddy) + conv(sxy, self.ddx)
 
         a_u_x[np.bitwise_not(self.solid)] = 0
         a_u_y[np.bitwise_not(self.solid)] = 0
@@ -234,10 +229,10 @@ class ElasticProblem:
 
     def calc_stress(self,uxt,uyt):
         #Calculate the stress in the center of the mesh cells
-        exx = conv(uxt, self.exxx) / (2 *self.lm)
-        eyy = conv(uyt, self.eyyy) / (2 * self.lm)
-        exy = (conv(uxt, self.exyx) +
-               conv(uyt, self.exyy)) / (4 * self.lm)
+        exx = conv(uxt, self.ddx) / (2 *self.lm)
+        eyy = conv(uyt, self.ddy) / (2 * self.lm)
+        exy = (conv(uxt, self.ddy) +
+               conv(uyt, self.ddx)) / (4 * self.lm)
         lambda_trace = self.elas_lambda * (exx+eyy)
         sxx = lambda_trace + (2 * self.elas_mu) * exx
         syy = lambda_trace + (2 * self.elas_mu) * eyy
