@@ -77,15 +77,27 @@ class ElasticProblem:
             setattr(self,var, np.zeros(solid.shape))
         self.kernel_type = 'plane strain'
         (self.axx,self.axy,self.ayy,self.ayx,
-         self.ddx,self.ddy) =\
+         self.ddx,self.ddy,self.ddxx,self.ddyy) =\
             self.def_kernel()
         self.frontier, self.bulk = get_frontier(self.solid)
         self.nx, self.ny = calc_normal(self.solid)
 
+        self.is_uimp = np.bitwise_and(np.bitwise_not(np.isnan(self.ux_imp)),
+                                      np.bitwise_not(np.isnan(self.uy_imp)))
         kerneltemp= np.array([[1,1],[1,1]])
         solidtemp = solid.astype(int)
         temp = conv(solidtemp,kerneltemp)
         self.solid_stress = (temp == 4)
+
+        kerneltemp = np.array([[-1,0],[1,0]])
+        kerneltemp2 = np.array([[0, -1], [0, 1]])
+        self.x_frontier_stress = np.bitwise_or(conv(self.solid,kerneltemp) != 0,
+                                               conv(self.solid, kerneltemp2) != 0)
+        kerneltemp = np.array([[-1, 1], [0, 0]])
+        kerneltemp2 = np.array([[0, 0], [-1, 1]])
+        self.y_frontier_stress = np.bitwise_or(conv(self.solid, kerneltemp) != 0,
+                                               conv(self.solid, kerneltemp2) != 0)
+
         kerneltemp = np.array([[1,1,0],[1,1,0],[0,0,0]])
         solidtemp = self.solid_stress.astype(int)
         self.solid_stress_num = conv(solidtemp, kerneltemp)
@@ -120,9 +132,12 @@ class ElasticProblem:
             # epsilon_xy = (ddy * ux + ddx * uy) / (4 lm)
             ddx = np.array([[-1,-1],[1,1]])
             ddy = np.array([[-1,1],[-1,1]])
+
+            ddxx = np.array([[-1, -1, 0], [1, 1, 0], [0, 0, 0]])
+            ddyy = np.transpose(ddxx)
         else:
             raise ValueError("Only \'plane strain\' is available")
-        return axx,axy,ayy,ayx,ddx,ddy
+        return axx,axy,ayy,ayx,ddx,ddy,ddxx,ddyy
 
     def cg_loop(self):
         """
@@ -195,17 +210,18 @@ class ElasticProblem:
         # Shear stress is zero on the frontier
         sxy[np.bitwise_not(self.solid_stress)] = 0
         # sxx stress is zero on x frontier, same for syy on y frontier
-        sxx[np.bitwise_not(self.nx == 0)] = 0
-        sxx[np.bitwise_not(self.ny == 0)] = 0
 
-        a_u_x = conv(sxx,self.ddx) + conv(sxy,self.ddy)
-        a_u_y = conv(syy, self.ddy) + conv(sxy, self.ddx)
+        sxx[self.x_frontier_stress] = 0
+        syy[self.y_frontier_stress] = 0
+
+        a_u_x = conv(sxx,self.ddxx) + conv(sxy,self.ddyy)
+        a_u_y = conv(syy, self.ddyy) + conv(sxy, self.ddxx)
 
         a_u_x[np.bitwise_not(self.solid)] = 0
         a_u_y[np.bitwise_not(self.solid)] = 0
 
-        a_u_x[np.bitwise_not(np.isnan(self.ux_imp))] = 0
-        a_u_y[np.bitwise_not(np.isnan(self.uy_imp))] = 0
+        a_u_x[self.is_uimp] = 0
+        a_u_y[self.is_uimp] = 0
 
         return a_u_x,a_u_y
 
