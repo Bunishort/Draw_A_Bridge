@@ -188,16 +188,17 @@ class ElasticProblem:
 
     def calc_a_u(self,uxt,uyt):
         #In the bulk, a_u = div(sigma)
-        #On the frontier, a_u = sigma.n / lm
-        # /lm so that the units are the same everywhere
+        #On the frontier, div(sigma) is modified to take into account the boundary condition
         #WHere the displacement is imposed, a_u=0
         #Elsewhere, it is 0
         #uxt,uyt are 2d matrices of displacements
 
-        a_u_x = conv(uxt,self.axx) + conv(uyt,self.axy)
-        a_u_y = conv(uyt,self.ayy) + conv(uxt,self.axy)
+        sxx,syy,sxy = self.calc_stress(uxt,uyt)
+        # Shear stress is zero on the frontier
+        sxy[np.bitwise_not(self.solid_stress)] = 0
 
-        sxxf,syyf,sxyf = self.calc_stress(uxt,uyt)
+
+
 
         a_u_x[self.frontier] = (sxxf[self.frontier]*self.nx[self.frontier]
                                      + sxyf[self.frontier]*self.ny[self.frontier]) / self.lm
@@ -241,10 +242,6 @@ class ElasticProblem:
         sxx = lambda_trace + (2 * self.elas_mu) * exx
         syy = lambda_trace + (2 * self.elas_mu) * eyy
         sxy = (2 * self.elas_mu) * exy
-
-        sxx[np.bitwise_not(self.solid_stress)] = 0
-        syy[np.bitwise_not(self.solid_stress)] = 0
-        sxy[np.bitwise_not(self.solid_stress)] = 0
 
         return sxx,syy,sxy
 
