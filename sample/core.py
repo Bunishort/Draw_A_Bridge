@@ -232,10 +232,10 @@ class ElasticProblem:
         # Where displacement is imposed, b=0
         #Elsewhere, b=0
 
-        bx = self.fx_imp
-        by = self.fy_imp
-        bx[self.frontier] = self.px_bound[self.frontier] / self.lm
-        by[self.frontier] = self.py_bound[self.frontier] / self.lm
+        bx = -self.fx_imp
+        by = -self.fy_imp
+        bx[self.frontier] -= self.px_bound[self.frontier] / self.lm
+        by[self.frontier] -= self.py_bound[self.frontier] / self.lm
 
 
         bx[np.bitwise_not(np.isnan(self.ux_imp))] = 0
