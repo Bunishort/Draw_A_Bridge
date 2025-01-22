@@ -71,7 +71,7 @@ class ElasticProblem:
         self.uy_imp = uy_imp
         for var in ['px_bound','py_bound','fx_imp','fy_imp']:
             setattr(self,var,kwargs.get(var,np.zeros(solid.shape)))
-        self.max_iter = kwargs.get('max_iter',20)
+        self.max_iter = kwargs.get('max_iter',200)
         self.max_res = kwargs.get('max_res', 1e-6)
         for var in  ['ux','uy']:
             setattr(self,var, np.zeros(solid.shape))
@@ -223,7 +223,7 @@ class ElasticProblem:
         a_u_x[self.is_uimp] = 0
         a_u_y[self.is_uimp] = 0
 
-        return a_u_x,a_u_y
+        return -a_u_x,-a_u_y
 
     def calc_b(self):
         #In the bulk, b= fx_imp, fy_imp (volumic forces, no inertia taken into account at this stage)
@@ -241,7 +241,7 @@ class ElasticProblem:
         bx[np.bitwise_not(np.isnan(self.ux_imp))] = 0
         by[np.bitwise_not(np.isnan(self.uy_imp))] = 0
 
-        return bx,by
+        return -bx,-by
 
     def calc_stress(self,uxt,uyt):
         #Calculate the stress in the center of the mesh cells

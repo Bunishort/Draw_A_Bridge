@@ -1,11 +1,11 @@
 from context import sample
 import numpy as np
 
-nx=7
-ny=9
+nx=3*7
+ny=3*9
 
-lx = 5
-ly = 5
+lx = 3*5
+ly = 3*5
 
 x = np.arange(nx) - (nx-1)/2
 y = np.arange(ny) - (ny-1)/2
@@ -16,6 +16,7 @@ solid = np.zeros([nx,ny],dtype=bool)
 solid[np.bitwise_and(np.abs(gridx)<=lx/2,
     np.abs(gridy)<=ly/2)] = True
 
+max_iter=2000
 E=1
 nu = 0.3
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
@@ -31,7 +32,7 @@ px_bound[gridx > (lx/2-lm)] = 0.01
 py_bound = np.zeros(solid.shape)
 
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
-                                  px_bound=px_bound,py_bound=py_bound)
+                                  px_bound=px_bound,py_bound=py_bound,max_iter=max_iter)
 
 print("axx")
 print(test.axx)

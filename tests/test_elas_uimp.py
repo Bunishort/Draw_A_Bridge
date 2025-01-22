@@ -3,11 +3,11 @@ import numpy as np
 
 from sample.core import get_frontier
 
-nx=7
-ny=9
+nx=3*7
+ny=3*9
 
-lx = 5
-ly = 5
+lx = 3*5
+ly = 3*5
 
 x = np.arange(nx) - (nx-1)/2
 y = np.arange(ny) - (ny-1)/2
@@ -31,9 +31,13 @@ uy_imp[bulk] = np.nan
 
 px_bound = np.zeros(solid.shape)
 py_bound = np.zeros(solid.shape)
+fx_imp = np.zeros(solid.shape)
+fx_imp[int((nx-1)/2),int((ny-1)/2)] = 20
+
+
 
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
-                                  px_bound=px_bound,py_bound=py_bound)
+                                  px_bound=px_bound,py_bound=py_bound,fx_imp=fx_imp)
 
 print("axx")
 print(test.axx)
