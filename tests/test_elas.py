@@ -4,8 +4,8 @@ import numpy as np
 nx=7
 ny=9
 
-lx = 3
-ly = 3
+lx = 5
+ly = 5
 
 x = np.arange(nx) - (nx-1)/2
 y = np.arange(ny) - (ny-1)/2
