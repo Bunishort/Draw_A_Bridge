@@ -71,6 +71,9 @@ class ElasticProblem:
         self.uy_imp = uy_imp
         for var in ['px_bound','py_bound','fx_imp','fy_imp']:
             setattr(self,var,kwargs.get(var,np.zeros(solid.shape)))
+
+        self.fx_imp[np.bitwise_not(self.solid)] = 0
+        self.fy_imp[np.bitwise_not(self.solid)] = 0
         self.max_iter = kwargs.get('max_iter',200)
         self.max_res = kwargs.get('max_res', 1e-6)
         for var in  ['ux','uy']:
