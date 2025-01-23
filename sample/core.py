@@ -213,9 +213,11 @@ class ElasticProblem:
         # Shear stress is zero on the frontier
         sxy[np.bitwise_not(self.solid_stress)] = 0
         # sxx stress is zero on x frontier, same for syy on y frontier
-
+        # On the other frontier, stress *2 to avoid frontier problems
         sxx[self.x_frontier_stress] = 0
         syy[self.y_frontier_stress] = 0
+        sxx[self.y_frontier_stress] = 2*sxx[self.y_frontier_stress]
+        syy[self.x_frontier_stress] = 2*syy[self.x_frontier_stress]
 
         a_u_x = conv(sxx,self.ddxx) + conv(sxy,self.ddyy)
         a_u_y = conv(syy, self.ddyy) + conv(sxy, self.ddxx)
