@@ -199,7 +199,7 @@ class ElasticProblem:
             convergence_hist.append(res_max_convergence)
 
             #Calculate new search direction
-            beta = 0*((np.dot(resx.ravel(),resx.ravel()-resx_old.ravel())
+            beta = ((np.dot(resx.ravel(),resx.ravel()-resx_old.ravel())
                      + np.dot(resy.ravel(),resy.ravel()-resy_old.ravel()))
                     / alpha / d_a_d)
             dx = resx + beta*dx
