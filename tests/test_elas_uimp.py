@@ -19,6 +19,7 @@ solid[np.bitwise_and(np.abs(gridx)<=lx/2,
     np.abs(gridy)<=ly/2)] = True
 frontier,bulk=get_frontier(solid)
 
+max_iter=2000
 E=1
 nu = 0.3
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
@@ -37,7 +38,7 @@ fx_imp[int((nx-1)/2),int((ny-1)/2)] = 20
 
 
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
-                                  px_bound=px_bound,py_bound=py_bound,fx_imp=fx_imp)
+                                  px_bound=px_bound,py_bound=py_bound,fx_imp=fx_imp,max_iter=max_iter)
 
 print("axx")
 print(test.axx)
