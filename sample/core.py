@@ -96,14 +96,11 @@ class ElasticProblem:
         kerneltemp2 = np.array([[0, -1], [0, 1]])
         self.x_frontier_stress = np.bitwise_or(conv(self.solid,kerneltemp) != 0,
                                                conv(self.solid, kerneltemp2) != 0)
-        self.x_frontier_stress = np.bitwise_and(self.x_frontier_stress,
-                                                np.bitwise_not(self.is_uimp))
+
         kerneltemp = np.array([[-1, 1], [0, 0]])
         kerneltemp2 = np.array([[0, 0], [-1, 1]])
         self.y_frontier_stress = np.bitwise_or(conv(self.solid, kerneltemp) != 0,
                                                conv(self.solid, kerneltemp2) != 0)
-        self.y_frontier_stress = np.bitwise_and(self.y_frontier_stress,
-                                                np.bitwise_not(self.is_uimp))
 
         kerneltemp = np.array([[1,1,0],[1,1,0],[0,0,0]])
         solidtemp = self.solid_stress.astype(int)
@@ -199,7 +196,7 @@ class ElasticProblem:
             convergence_hist.append(res_max_convergence)
 
             #Calculate new search direction
-            beta = ((np.dot(resx.ravel(),resx.ravel()-resx_old.ravel())
+            beta = 0*((np.dot(resx.ravel(),resx.ravel()-resx_old.ravel())
                      + np.dot(resy.ravel(),resy.ravel()-resy_old.ravel()))
                     / alpha / d_a_d)
             dx = resx + beta*dx
