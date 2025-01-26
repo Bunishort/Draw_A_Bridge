@@ -87,6 +87,7 @@ class ElasticProblem:
 
         self.is_uimp = np.bitwise_and(np.bitwise_not(np.isnan(self.ux_imp)),
                                       np.bitwise_not(np.isnan(self.uy_imp)))
+        self.is_uimp = np.bitwise_and(self.is_uimp, self.solid)
         kerneltemp= np.array([[1,1],[1,1]])
         solidtemp = solid.astype(int)
         temp = conv(solidtemp,kerneltemp)
@@ -157,10 +158,10 @@ class ElasticProblem:
 
         #Displacement BC
 
-        self.ux[np.bitwise_not(np.isnan(self.ux_imp))] =\
-            self.ux_imp[np.bitwise_not(np.isnan(self.ux_imp))]
-        self.uy[np.bitwise_not(np.isnan(self.uy_imp))] = \
-            self.uy_imp[np.bitwise_not(np.isnan(self.uy_imp))]
+        self.ux[self.is_uimp] =\
+            self.ux_imp[self.is_uimp]
+        self.uy[self.is_uimp] = \
+            self.uy_imp[self.is_uimp]
 
         # Calculate initial residual and search direction
         bx, by = self.calc_b()
