@@ -174,9 +174,7 @@ class ElasticProblem:
         while n_iter <= self.max_iter and res_max_convergence > self.max_res:
             #update variables
             n_iter=n_iter+1
-            resx_old=resx.copy()
-            resy_old=resy.copy()
-
+   
             #Calculate new displacement field
             a_d_x,a_d_y = self.calc_a_u(dx,dy)
             d_a_d = np.dot(dx.ravel(),a_d_x.ravel()) + np.dot(dy.ravel(),a_d_y.ravel())
@@ -196,9 +194,9 @@ class ElasticProblem:
             convergence_hist.append(res_max_convergence)
 
             #Calculate new search direction
-            beta = 0*((np.dot(resx.ravel(),resx.ravel()-resx_old.ravel())
-                     + np.dot(resy.ravel(),resy.ravel()-resy_old.ravel()))
-                    / alpha / d_a_d)
+            beta = -((np.dot(resx.ravel(),a_d_x.ravel())
+                     + np.dot(resy.ravel(),a_d_y.ravel()))
+                    / d_a_d)
             dx = resx + beta*dx
             dy = resy + beta*dy
         return n_iter,resx,resy,res_max_convergence,convergence_hist
