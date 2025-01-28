@@ -250,6 +250,9 @@ class ElasticProblem:
 
         # We could multiply by 2 exx/eyy on x/y frontiers respectively, depending on how
         # we want to handle frontiers
+        exx[self.y_frontier_stress] = 2 * exx[self.y_frontier_stress]
+        eyy[self.x_frontier_stress] = 2 * eyy[self.x_frontier_stress]
+
         # Special formulas on frontiers for exx/eyy to be OK with sxx/syy=0
         coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu)
         exx[self.x_frontier_stress] = coef * eyy[self.x_frontier_stress]
