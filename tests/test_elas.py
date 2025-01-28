@@ -1,11 +1,12 @@
 from context import sample
 import numpy as np
 
-nx=2*7
-ny=2*9
+k = 2
+nx=k*7
+ny=k*9
 
-lx = 2*5
-ly = 2*5
+lx = k*5
+ly = k*5
 
 x = np.arange(nx) - (nx-1)/2
 y = np.arange(ny) - (ny-1)/2

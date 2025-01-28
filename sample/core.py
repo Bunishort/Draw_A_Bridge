@@ -13,6 +13,14 @@ def get_frontier(solid):
 
     return frontier, bulk
 
+def remove_single_points(solid):
+    # Remove point with no enough neighbours
+    # TODO complete in case of single line points
+    kernel = np.array([[0,1,0],[1,0,1],[0,1,0]])
+    temp = conv(solid, kernel)
+    solid[temp <2] = False
+
+    return solid
 
 def calc_normal(solid):
     # Calculate the normals to the solid boundaries
