@@ -57,11 +57,6 @@ resy2 = by - a_u_y
 
 
 sxx, syy, sxy = test.calc_stress(test.ux, test.uy)
-# Shear stress is zero on the frontier
-sxy[np.bitwise_not(test.solid_stress)] = 0
-# sxx stress is zero on x frontier, same for syy on y frontier
 
-sxx[test.x_frontier_stress] = 0
-syy[test.y_frontier_stress] = 0
 
 1+1

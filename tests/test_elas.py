@@ -34,14 +34,6 @@ py_bound = np.zeros(solid.shape)
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
                                   px_bound=px_bound,py_bound=py_bound,max_iter=max_iter)
 
-print("axx")
-print(test.axx)
-print("axy")
-print(test.axy)
-print("ayy")
-print(test.ayy)
-print("ayx")
-print(test.ayx)
 n_iter,resx,resy,res_max_convergence,convergence_hist  = test.cg_loop()
 
 bx, by = test.calc_b()
@@ -50,10 +42,5 @@ resx2 = bx - a_u_x
 resy2 = by - a_u_y
 
 sxx, syy, sxy = test.calc_stress(test.ux, test.uy)
-# Shear stress is zero on the frontier
-sxy[np.bitwise_not(test.solid_stress)] = 0
-# sxx stress is zero on x frontier, same for syy on y frontier
 
-sxx[test.x_frontier_stress] = 0
-syy[test.y_frontier_stress] = 0
 1+1

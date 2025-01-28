@@ -210,14 +210,7 @@ class ElasticProblem:
         #uxt,uyt are 2d matrices of displacements
 
         sxx,syy,sxy = self.calc_stress(uxt,uyt)
-        # Shear stress is zero on the frontier
-        sxy[np.bitwise_not(self.solid_stress)] = 0
-        # sxx stress is zero on x frontier, same for syy on y frontier
-        # On the other frontier, stress *2 to avoid frontier problems
-        sxx[self.x_frontier_stress] = 0
-        syy[self.y_frontier_stress] = 0
-        sxx[self.y_frontier_stress] = 2*sxx[self.y_frontier_stress]
-        syy[self.x_frontier_stress] = 2*syy[self.x_frontier_stress]
+
 
         a_u_x = conv(sxx,self.ddxx) + conv(sxy,self.ddyy)
         a_u_y = conv(syy, self.ddyy) + conv(sxy, self.ddxx)
@@ -254,10 +247,26 @@ class ElasticProblem:
         eyy = conv(uyt, self.ddy) / (2 * self.lm)
         exy = (conv(uxt, self.ddy) +
                conv(uyt, self.ddx)) / (4 * self.lm)
+
+        # We could multiply by 2 exx/eyy on x/y frontiers respectively, depending on how
+        # we want to handle frontiers
+        # Special formulas on frontiers for exx/eyy to be OK with sxx/syy=0
+        coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu)
+        exx[self.x_frontier_stress] = coef * eyy[self.x_frontier_stress]
+        eyy[self.y_frontier_stress] = coef * exx[self.y_frontier_stress]
+
         lambda_trace = self.elas_lambda * (exx+eyy)
         sxx = lambda_trace + (2 * self.elas_mu) * exx
         syy = lambda_trace + (2 * self.elas_mu) * eyy
         sxy = (2 * self.elas_mu) * exy
+
+        #Frontier adjustments
+        # Shear stress is zero on the frontier
+        sxy[np.bitwise_not(self.solid_stress)] = 0
+        # sxx stress is zero on x frontier, same for syy on y frontier
+
+        sxx[self.x_frontier_stress] = 0
+        syy[self.y_frontier_stress] = 0
 
         return sxx,syy,sxy
 
