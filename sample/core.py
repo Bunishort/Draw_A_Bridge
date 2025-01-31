@@ -116,7 +116,7 @@ class ElasticProblem:
         temp = conv(solidtemp,kerneltemp)
         self.solid_stress = (temp >= 3)
 
-        kernels=[]
+        kernels = []
         kernels.append([[1, 0], [0, 1]])
         kernels.append([[0, 1], [1, 0]])
         self.out_corner = np.zeros(solid.shape).astype(bool)
