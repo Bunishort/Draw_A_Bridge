@@ -30,7 +30,7 @@ solid[np.bitwise_and(r>=ri,r<=ro)]= True
 solid = sample.core.remove_single_points(solid)
 
 frontier,bulk = sample.core.get_frontier(solid)
-nx,ny = sample.core.calc_normal(solid)
+nnx,nny = sample.core.calc_normal(solid)
 
 frontier_ind = np.where(frontier)
 ux_imp=np.zeros(solid.shape)*np.nan
@@ -39,10 +39,10 @@ uy_imp=ux_imp
 
 px_bound = np.zeros(solid.shape)
 py_bound = np.zeros(solid.shape)
-px_bound[np.bitwise_and(r <= ri+lm,nx<0)] = pi
-px_bound[np.bitwise_and(r <= ri+lm,nx>0)] = -pi
-py_bound[np.bitwise_and(r <= ri+lm,ny<0)] = pi
-py_bound[np.bitwise_and(r <= ri+lm,ny>0)] = -pi
+px_bound[np.bitwise_and(r <= ri+lm,nnx<0)] = pi
+px_bound[np.bitwise_and(r <= ri+lm,nnx>0)] = -pi
+py_bound[np.bitwise_and(r <= ri+lm,nny<0)] = pi
+py_bound[np.bitwise_and(r <= ri+lm,nny>0)] = -pi
 
 
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
