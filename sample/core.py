@@ -15,10 +15,25 @@ def get_frontier(solid):
 
 def remove_single_points(solid):
     # Remove point with no enough neighbours
-    # TODO complete in case of single line points
-    kernel = np.array([[0,1,0],[1,0,1],[0,1,0]])
+    # Point needs at least 2 consecutive neighbors to be OK
+    kernel = np.array([[1, 1, 0],[0, 0, 0],[0, 0, 0]])
     temp = conv(solid, kernel)
-    solid[temp <2] = False
+    temp2 = temp>=2
+
+    kernels=[]
+    kernels.append(np.array([[0 ,1, 1],[0, 0, 0],[0, 0, 0]]))
+    kernels.append(np.array([[0, 0, 1], [0, 0, 1], [0, 0, 0]]))
+    kernels.append(np.array([[0, 0, 0], [0, 0, 1], [0, 0, 1]]))
+    kernels.append(np.array([[0, 0, 0], [0, 0, 0], [0, 1, 1]]))
+    kernels.append(np.array([[0, 0, 0], [0, 0, 0], [1, 1, 0]]))
+    kernels.append(np.array([[0, 0, 0], [1, 0, 0], [1, 0, 0]]))
+    kernels.append(np.array([[1, 0, 0], [1, 0, 0], [0, 0, 0]]))
+
+    for kernel in kernels:
+        temp = conv(solid, kernel)
+        temp2 = np.bitwise_or(temp>=2,temp2)
+
+    solid = temp2
 
     return solid
 
