@@ -114,16 +114,26 @@ class ElasticProblem:
         kerneltemp= np.array([[1,1],[1,1]])
         solidtemp = solid.astype(int)
         temp = conv(solidtemp,kerneltemp)
-        self.solid_stress = (temp == 4)
+        self.solid_stress = (temp >= 3)
+
+        kernels=[]
+        kernels.append([[1, 0], [0, 1]])
+        kernels.append([[0, 1], [1, 0]])
+        self.out_corner = np.zeros(solid.shape).astype(bool)
+        for kernel in kernels:
+            temp = conv(solid,kernel)
+            self.out_corner = np.bitwise_or(self.out_corner,temp==0)
+        self.in_corner = np.bitwise_and(self.nx != 0, self.ny !=0)
+        self.in_corner = np.bitwise_and(self.in_corner,np.bitwise_not(self.out_corner))
 
         kerneltemp = np.array([[-1,0],[1,0]])
         kerneltemp2 = np.array([[0, -1], [0, 1]])
-        self.x_frontier_stress = np.bitwise_or(conv(self.solid,kerneltemp) != 0,
+        self.x_frontier_stress = np.bitwise_and(conv(self.solid,kerneltemp) != 0,
                                                conv(self.solid, kerneltemp2) != 0)
 
         kerneltemp = np.array([[-1, 1], [0, 0]])
         kerneltemp2 = np.array([[0, 0], [-1, 1]])
-        self.y_frontier_stress = np.bitwise_or(conv(self.solid, kerneltemp) != 0,
+        self.y_frontier_stress = np.bitwise_and(conv(self.solid, kerneltemp) != 0,
                                                conv(self.solid, kerneltemp2) != 0)
 
         kerneltemp = np.array([[1,1,0],[1,1,0],[0,0,0]])
