@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.signal import convolve2d,correlate2d
-
+###Remark : pyqt6 needed only for matplotlib show, maybe not necessary for pygame !
 
 def get_frontier(solid):
     # Calculate all the points at the frontier of the solid
@@ -103,7 +103,8 @@ class ElasticProblem:
             setattr(self,var, np.zeros(solid.shape))
         self.kernel_type = 'plane strain'
         (self.axx,self.axy,self.ayy,self.ayx,
-         self.ddx,self.ddy,self.ddxx,self.ddyy) =\
+         self.ddx1,self.ddx2,self.ddy1,self.ddy2,
+         self.ddxx,self.ddyy) =\
             self.def_kernel()
         self.frontier, self.bulk = get_frontier(self.solid)
         self.nx, self.ny = calc_normal(self.solid)
@@ -114,7 +115,7 @@ class ElasticProblem:
         kerneltemp= np.array([[1,1],[1,1]])
         solidtemp = solid.astype(int)
         temp = conv(solidtemp,kerneltemp)
-        self.solid_stress = (temp >= 3)
+        self.solid_stress = (temp == 4)
 
         kernels = []
         kernels.append([[1, 0], [0, 1]])
@@ -126,19 +127,19 @@ class ElasticProblem:
         self.in_corner = np.bitwise_and(self.nx != 0, self.ny !=0)
         self.in_corner = np.bitwise_and(self.in_corner,np.bitwise_not(self.out_corner))
 
-        kerneltemp = np.array([[-1,0],[1,0]])
-        kerneltemp2 = np.array([[0, -1], [0, 1]])
-        self.x_frontier_stress = np.bitwise_and(conv(self.solid,kerneltemp) != 0,
-                                               conv(self.solid, kerneltemp2) != 0)
+        self.isddx1 = conv(self.solid,self.ddx1) != 0
+        self.isddx2 = conv(self.solid, self.ddx2) != 0
 
-        kerneltemp = np.array([[-1, 1], [0, 0]])
-        kerneltemp2 = np.array([[0, 0], [-1, 1]])
-        self.y_frontier_stress = np.bitwise_and(conv(self.solid, kerneltemp) != 0,
-                                               conv(self.solid, kerneltemp2) != 0)
-
-        kerneltemp = np.array([[1,1,0],[1,1,0],[0,0,0]])
-        solidtemp = self.solid_stress.astype(int)
-        self.solid_stress_num = conv(solidtemp, kerneltemp)
+        self.x_frontier_stress = np.bitwise_and(self.isddx1,
+                                               self.isddx2)
+        self.isddy1 = conv(self.solid, self.ddy1) != 0
+        self.isddy2 = conv(self.solid, self.ddy2) != 0
+        self.y_frontier_stress = np.bitwise_and(self.isddy1,
+                                               self.isddy2)
+        self.isddx1= np.bitwise_or(self.isddx1,self.solid_stress)
+        self.isddx2 = np.bitwise_or(self.isddx2, self.solid_stress)
+        self.isddy1 = np.bitwise_or(self.isddy1, self.solid_stress)
+        self.isddy2 = np.bitwise_or(self.isddy2, self.solid_stress)
 
     def def_kernel(self):
         if self.kernel_type=='plane strain':
@@ -168,14 +169,16 @@ class ElasticProblem:
             # epsilon_xx = ddx * ux / (2 lm)
             # epsilon_yy = ddy * uy / (2 lm)
             # epsilon_xy = (ddy * ux + ddx * uy) / (4 lm)
-            ddx = np.array([[-1,-1],[1,1]])
-            ddy = np.array([[-1,1],[-1,1]])
+            ddx1 = np.array([[-1,0],[1,0]])
+            ddx2 = np.array([[0, -1], [0, 1]])
+            ddy1 = np.array([[-1,1],[0,0]])
+            ddy2 = np.array([[0, 0], [-1, 1]])
 
             ddxx = np.array([[-1, -1, 0], [1, 1, 0], [0, 0, 0]])
             ddyy = np.transpose(ddxx)
         else:
             raise ValueError("Only \'plane strain\' is available")
-        return axx,axy,ayy,ayx,ddx,ddy,ddxx,ddyy
+        return axx,axy,ayy,ayx,ddx1,ddx2,ddy1,ddy2,ddxx,ddyy
 
     def cg_loop(self):
         """
@@ -276,10 +279,12 @@ class ElasticProblem:
 
     def calc_stress(self,uxt,uyt):
         #Calculate the stress in the center of the mesh cells
-        exx = conv(uxt, self.ddx) / (2 *self.lm)
-        eyy = conv(uyt, self.ddy) / (2 * self.lm)
-        exy = (conv(uxt, self.ddy) +
-               conv(uyt, self.ddx)) / (4 * self.lm)
+        exx = (conv(uxt, self.ddx1)*self.isddx1 +
+               conv(uxt, self.ddx2)*self.isddx2 ) / (2 *self.lm)
+        eyy = (conv(uyt, self.ddy1)*self.isddy1
+               + conv(uyt,self.ddy2) * self.isddy2 ) / (2 * self.lm)
+        exy = (conv(uxt, self.ddy1) + conv(uxt, self.ddy2) +
+               conv(uyt, self.ddx1) + conv(uyt, self.ddx2)   ) / (4 * self.lm)
 
         # We could multiply by 2 exx/eyy on x/y frontiers respectively, depending on how
         # we want to handle frontiers
@@ -291,18 +296,24 @@ class ElasticProblem:
         exx[self.x_frontier_stress] = coef * eyy[self.x_frontier_stress]
         eyy[self.y_frontier_stress] = coef * exx[self.y_frontier_stress]
 
+        # In inside corners, exx=eyy = mean (exx,eyy)*2
+        temp = (exx[self.in_corner] + eyy[self.in_corner])
+        exx[self.in_corner] = temp
+        eyy[self.in_corner] = temp
+        exy[self.in_corner] = - (self.elas_lambda + 2 * self.elas_mu) / (2 * self.elas_mu) * temp
+
         lambda_trace = self.elas_lambda * (exx+eyy)
         sxx = lambda_trace + (2 * self.elas_mu) * exx
         syy = lambda_trace + (2 * self.elas_mu) * eyy
         sxy = (2 * self.elas_mu) * exy
 
         #Frontier adjustments
-        # Shear stress is zero on the frontier
-        sxy[np.bitwise_not(self.solid_stress)] = 0
         # sxx stress is zero on x frontier, same for syy on y frontier
 
         sxx[self.x_frontier_stress] = 0
         syy[self.y_frontier_stress] = 0
+        sxy[self.x_frontier_stress] = 0
+        sxy[self.y_frontier_stress] = 0
 
         return sxx,syy,sxy
 

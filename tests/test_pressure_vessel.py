@@ -1,6 +1,8 @@
 from context import sample
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('TkAgg')
 
 nx=25
 ny=25
