@@ -8,7 +8,7 @@ def get_frontier(solid):
     # Bulk is the solid minus the frontier
     kernel = np.ones([3, 3])
     temp = conv(solid, kernel)
-    frontier = np.bitwise_and(solid, temp < 9)
+    frontier = np.bitwise_and(solid, temp < 8)
     bulk = np.bitwise_and(solid, np.bitwise_not(frontier))
 
     return frontier, bulk
@@ -38,7 +38,7 @@ def remove_single_points(solid):
     return solid
 
 def calc_normal(solid):
-    # Calculate the normals to the solid boundaries
+    # Calculate the normals to the solid boundaries on nodes
     kernelx = np.zeros([3, 3])
     kernelx[2, 1] = -1
     kernelx[0, 1] = 1
@@ -52,6 +52,19 @@ def calc_normal(solid):
     ok = n > 0
     nx[ok] = nx[ok] / n[ok]
     ny[ok] = ny[ok] / n[ok]
+    return nx, ny
+
+def calc_normal_stress(solid):
+    # Calculate the normals to the solid boundaries on stress points
+    kernelx = np.array([[-1,-1],[1,1]])
+    kernely = np.array([[-1,1],[-1,1]])
+
+    nx = conv(solid.astype(int), kernelx)
+    ny = conv(solid.astype(int), kernely)
+    #n = np.sqrt(nx ** 2 + ny ** 2)
+    #ok = n > 0
+    #nx[ok] = nx[ok] / n[ok]
+    #ny[ok] = ny[ok] / n[ok]
     return nx, ny
 
 def conv(matrix,kernel):
@@ -108,6 +121,8 @@ class ElasticProblem:
             self.def_kernel()
         self.frontier, self.bulk = get_frontier(self.solid)
         self.nx, self.ny = calc_normal(self.solid)
+        self.nx_s, self.ny_s = calc_normal_stress(self.solid)
+
 
         self.is_uimp = np.bitwise_and(np.bitwise_not(np.isnan(self.ux_imp)),
                                       np.bitwise_not(np.isnan(self.uy_imp)))
@@ -116,6 +131,9 @@ class ElasticProblem:
         solidtemp = solid.astype(int)
         temp = conv(solidtemp,kerneltemp)
         self.solid_stress = (temp == 4)
+        self.in_corner = (temp==3)
+        self.in_corner_p = np.bitwise_and(self.in_corner, self.nx_s*self.ny_s > 0)
+        self.in_corner_m = np.bitwise_and(self.in_corner, self.nx_s * self.ny_s < 0)
 
         kernels = []
         kernels.append([[1, 0], [0, 1]])
@@ -124,22 +142,20 @@ class ElasticProblem:
         for kernel in kernels:
             temp = conv(solid,kernel)
             self.out_corner = np.bitwise_or(self.out_corner,temp==0)
-        self.in_corner = np.bitwise_and(self.nx != 0, self.ny !=0)
-        self.in_corner = np.bitwise_and(self.in_corner,np.bitwise_not(self.out_corner))
 
-        self.isddx1 = conv(self.solid,self.ddx1) != 0
-        self.isddx2 = conv(self.solid, self.ddx2) != 0
+        tempisddx1 = conv(self.solid.astype(int),self.ddx1) != 0
+        tempisddx2 = conv(self.solid.astype(int), self.ddx2) != 0
 
-        self.x_frontier_stress = np.bitwise_and(self.isddx1,
-                                               self.isddx2)
-        self.isddy1 = conv(self.solid, self.ddy1) != 0
-        self.isddy2 = conv(self.solid, self.ddy2) != 0
-        self.y_frontier_stress = np.bitwise_and(self.isddy1,
-                                               self.isddy2)
-        self.isddx1= np.bitwise_or(self.isddx1,self.solid_stress)
-        self.isddx2 = np.bitwise_or(self.isddx2, self.solid_stress)
-        self.isddy1 = np.bitwise_or(self.isddy1, self.solid_stress)
-        self.isddy2 = np.bitwise_or(self.isddy2, self.solid_stress)
+        self.x_frontier_stress = np.bitwise_and(tempisddx1,
+                                               tempisddx2)
+        tempisddy1 = conv(self.solid.astype(int), self.ddy1) != 0
+        tempisddy2 = conv(self.solid.astype(int), self.ddy2) != 0
+        self.y_frontier_stress = np.bitwise_and(tempisddy1,
+                                               tempisddy2)
+        self.isddx1 = conv(self.solid.astype(int), self.ddx1 ** 2) == 2
+        self.isddx2 = conv(self.solid.astype(int), self.ddx2 ** 2) == 2
+        self.isddy1 = conv(self.solid.astype(int), self.ddy1 ** 2) == 2
+        self.isddy2 = conv(self.solid.astype(int), self.ddy2 ** 2) == 2
 
     def def_kernel(self):
         if self.kernel_type=='plane strain':
@@ -169,7 +185,7 @@ class ElasticProblem:
             # epsilon_xx = ddx * ux / (2 lm)
             # epsilon_yy = ddy * uy / (2 lm)
             # epsilon_xy = (ddy * ux + ddx * uy) / (4 lm)
-            ddx1 = np.array([[-1,0],[1,0]])
+            ddx1 = np.array([[-1, 0], [1, 0]])
             ddx2 = np.array([[0, -1], [0, 1]])
             ddy1 = np.array([[-1,1],[0,0]])
             ddy2 = np.array([[0, 0], [-1, 1]])
@@ -297,10 +313,11 @@ class ElasticProblem:
         eyy[self.y_frontier_stress] = coef * exx[self.y_frontier_stress]
 
         # In inside corners, exx=eyy = mean (exx,eyy)*2
-        temp = (exx[self.in_corner] + eyy[self.in_corner])
-        exx[self.in_corner] = temp
-        eyy[self.in_corner] = temp
-        exy[self.in_corner] = - (self.elas_lambda + 2 * self.elas_mu) / (2 * self.elas_mu) * temp
+        #temp = (exx[self.in_corner] + eyy[self.in_corner])
+        #exx[self.in_corner] = temp
+        #eyy[self.in_corner] = temp
+        #exy[self.in_corner_p] = - (self.elas_lambda + 2 * self.elas_mu) / (2 * self.elas_mu) * exx[self.in_corner_p]
+        #exy[self.in_corner_m] =  (self.elas_lambda + 2 * self.elas_mu) / (2 * self.elas_mu) * exx[self.in_corner_m]
 
         lambda_trace = self.elas_lambda * (exx+eyy)
         sxx = lambda_trace + (2 * self.elas_mu) * exx
@@ -314,6 +331,10 @@ class ElasticProblem:
         syy[self.y_frontier_stress] = 0
         sxy[self.x_frontier_stress] = 0
         sxy[self.y_frontier_stress] = 0
+
+        sxx[self.out_corner] = 0
+        syy[self.out_corner] = 0
+        sxy[self.out_corner] = 0
 
         return sxx,syy,sxy
 
