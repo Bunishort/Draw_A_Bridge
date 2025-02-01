@@ -313,11 +313,11 @@ class ElasticProblem:
         eyy[self.y_frontier_stress] = coef * exx[self.y_frontier_stress]
 
         # In inside corners, exx=eyy = mean (exx,eyy)*2
-        #temp = (exx[self.in_corner] + eyy[self.in_corner])
-        #exx[self.in_corner] = temp
-        #eyy[self.in_corner] = temp
-        #exy[self.in_corner_p] = - (self.elas_lambda + 2 * self.elas_mu) / (2 * self.elas_mu) * exx[self.in_corner_p]
-        #exy[self.in_corner_m] =  (self.elas_lambda + 2 * self.elas_mu) / (2 * self.elas_mu) * exx[self.in_corner_m]
+        temp = (exx[self.in_corner] + eyy[self.in_corner])
+        exx[self.in_corner] = temp
+        eyy[self.in_corner] = temp
+        exy[self.in_corner_p] = - (self.elas_lambda + 2 * self.elas_mu) / (2 * self.elas_mu) * exx[self.in_corner_p]
+        exy[self.in_corner_m] =  (self.elas_lambda + 2 * self.elas_mu) / (2 * self.elas_mu) * exx[self.in_corner_m]
 
         lambda_trace = self.elas_lambda * (exx+eyy)
         sxx = lambda_trace + (2 * self.elas_mu) * exx
