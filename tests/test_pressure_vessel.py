@@ -59,6 +59,12 @@ r = np.arange(5*nx) - (5*nx-1)/2
 sig_circ = pi*ri**2 / (ro**2-ri**2) + pi*ri**2*ro**2 / r**2 / (ro**2-ri**2)
 sig_rad =pi*ri**2 / (ro**2-ri**2) - pi*ri**2*ro**2 / r**2 / (ro**2-ri**2)
 
+sig_circ[np.abs(r)<ri] = np.nan
+sig_rad[np.abs(r)<ri] = np.nan
+sig_circ[np.abs(r)>ro] = np.nan
+sig_rad[np.abs(r)>ro] = np.nan
+
+
 line = gridy == np.min(gridy[gridy>=0])
 sigc_num = syy[line]
 sigr_num = sxx[line]
