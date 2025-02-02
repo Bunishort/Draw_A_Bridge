@@ -4,16 +4,16 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('TkAgg')
 
-nx=25
-ny=25
-L = nx
+nx=2*25
+ny=2*25
+L = 25
 lm= L/nx
 
-ri = 5*lm#internal radius
-ro = 10*lm#external radius
+ri = 5#internal radius
+ro = 10#external radius
 pi = 0.1
 
-max_iter=2000
+max_iter=5*2000
 E=1
 nu = 0.3
 elas_lambda = E*nu /(1+nu)/(1-2*nu)

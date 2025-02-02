@@ -312,19 +312,32 @@ class ElasticProblem:
         exx[self.x_frontier_stress] = coef * eyy[self.x_frontier_stress]
         eyy[self.y_frontier_stress] = coef * exx[self.y_frontier_stress]
 
-        # In inside corners, exx=eyy = mean (exx,eyy)*2
-        # temp = (exx[self.in_corner] + eyy[self.in_corner])
-        # exx[self.in_corner] = temp
-        # eyy[self.in_corner] = temp
-        # exy[self.in_corner_p] = - (self.elas_lambda + 2 * self.elas_mu) / (2 * self.elas_mu) * exx[self.in_corner_p]
-        # exy[self.in_corner_m] =  (self.elas_lambda + 2 * self.elas_mu) / (2 * self.elas_mu) * exx[self.in_corner_m]
+        # In inside corners, exx=eyy = mean (exx,eyy,exy* (+/-) mu / (lambda+mu))*2
+        # does not work well
+        # temp = 2/3*((exx[self.in_corner_p] + eyy[self.in_corner_p])*(1+coef) -
+        #         self.elas_mu / (self.elas_lambda + self.elas_mu) * exy[self.in_corner_p])
+        # exx[self.in_corner_p] = temp
+        # eyy[self.in_corner_p] = temp
+        # exy[self.in_corner_p] = - (self.elas_lambda + self.elas_mu) / (self.elas_mu) * exx[self.in_corner_p]
+        #
+        # temp = 2/3*((exx[self.in_corner_m] + eyy[self.in_corner_m]) * (1 + coef) +
+        #         self.elas_mu / (self.elas_lambda + self.elas_mu) * exy[self.in_corner_m])
+        # exx[self.in_corner_m] = temp
+        # eyy[self.in_corner_m] = temp
+        # exy[self.in_corner_m] = (self.elas_lambda + self.elas_mu) / (self.elas_mu) * exx[self.in_corner_m]
 
         # Another strategy for test :
-        exx[self.in_corner] = 0.5*(exx[self.in_corner] + coef*eyy[self.in_corner])
-        eyy[self.in_corner] = 0.5*(eyy[self.in_corner] + coef*exx[self.in_corner])
-        exy[self.in_corner] =  exy[self.in_corner]
+        #temp = exx[self.in_corner]
+        #exx[self.in_corner] = (exx[self.in_corner] + coef*eyy[self.in_corner])
+        #eyy[self.in_corner] = (eyy[self.in_corner] + coef*temp)
+        #exy[self.in_corner] =  exy[self.in_corner]
 
-
+        # Another one :
+        temp = exx[self.in_corner]
+        exx[self.in_corner] = (2*exx[self.in_corner] + coef*eyy[self.in_corner])/3
+        eyy[self.in_corner] = (2*eyy[self.in_corner] + coef*temp)/3
+        exy[self.in_corner] =  exy[self.in_corner]*2/3
+        #test exy from exx/eyy
 
         lambda_trace = self.elas_lambda * (exx+eyy)
         sxx = lambda_trace + (2 * self.elas_mu) * exx
