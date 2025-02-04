@@ -56,8 +56,8 @@ def calc_normal(solid):
 
 def calc_normal_stress(solid):
     # Calculate the normals to the solid boundaries on stress points
-    kernelx = np.array([[-1,-1],[1,1]])
-    kernely = np.array([[-1,1],[-1,1]])
+    kernelx = -np.array([[-1,-1],[1,1]])
+    kernely = -np.array([[-1,1],[-1,1]])
 
     nx = conv(solid.astype(int), kernelx)
     ny = conv(solid.astype(int), kernely)
