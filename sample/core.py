@@ -327,16 +327,16 @@ class ElasticProblem:
         # exy[self.in_corner_m] = (self.elas_lambda + self.elas_mu) / (self.elas_mu) * exx[self.in_corner_m]
 
         # Another strategy for test :
-        #temp = exx[self.in_corner]
-        #exx[self.in_corner] = (exx[self.in_corner] + coef*eyy[self.in_corner])
-        #eyy[self.in_corner] = (eyy[self.in_corner] + coef*temp)
-        #exy[self.in_corner] =  exy[self.in_corner]
+        temp = exx[self.in_corner]
+        exx[self.in_corner] = (exx[self.in_corner] + coef*eyy[self.in_corner])
+        eyy[self.in_corner] = (eyy[self.in_corner] + coef*temp)
+        exy[self.in_corner] =  exy[self.in_corner]
 
         # Another one :
-        temp = exx[self.in_corner]
-        exx[self.in_corner] = (2*exx[self.in_corner] + coef*eyy[self.in_corner])/3
-        eyy[self.in_corner] = (2*eyy[self.in_corner] + coef*temp)/3
-        exy[self.in_corner] =  exy[self.in_corner]*2/3
+        #temp = exx[self.in_corner]
+        #exx[self.in_corner] = (2*exx[self.in_corner] + coef*eyy[self.in_corner])/3
+        #eyy[self.in_corner] = (2*eyy[self.in_corner] + coef*temp)/3
+        #exy[self.in_corner] =  exy[self.in_corner]*2/3
         #test exy from exx/eyy
 
         lambda_trace = self.elas_lambda * (exx+eyy)
