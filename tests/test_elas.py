@@ -1,7 +1,8 @@
 from context import sample
 import numpy as np
+import matplotlib.pyplot as plt
 
-k = 2
+k = 5
 nx=k*7
 ny=k*9
 
@@ -43,5 +44,10 @@ resx2 = bx - a_u_x
 resy2 = by - a_u_y
 
 sxx, syy, sxy = test.calc_stress(test.ux, test.uy)
+
+plt.figure()
+plt.plot(np.sum(sxx,axis=1))
+plt.show()
+
 
 1+1
