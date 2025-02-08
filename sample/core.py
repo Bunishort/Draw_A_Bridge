@@ -146,11 +146,11 @@ class ElasticProblem:
         tempisddx1 = conv(self.solid.astype(int),self.ddx1) != 0
         tempisddx2 = conv(self.solid.astype(int), self.ddx2) != 0
 
-        self.x_frontier_stress = np.bitwise_and(tempisddx1,
+        self.x_frontier_stress = np.bitwise_or(tempisddx1,
                                                tempisddx2)
         tempisddy1 = conv(self.solid.astype(int), self.ddy1) != 0
         tempisddy2 = conv(self.solid.astype(int), self.ddy2) != 0
-        self.y_frontier_stress = np.bitwise_and(tempisddy1,
+        self.y_frontier_stress = np.bitwise_or(tempisddy1,
                                                tempisddy2)
         self.isddx1 = conv(self.solid.astype(int), self.ddx1 ** 2) == 2
         self.isddx2 = conv(self.solid.astype(int), self.ddx2 ** 2) == 2

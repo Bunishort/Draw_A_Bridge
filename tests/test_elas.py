@@ -12,6 +12,8 @@ ly = k*5
 x = np.arange(nx) - (nx-1)/2
 y = np.arange(ny) - (ny-1)/2
 
+max_res = 1e-6
+
 gridy,gridx = np.meshgrid(y,x)
 
 solid = np.zeros([nx,ny],dtype=bool)
@@ -34,7 +36,7 @@ px_bound[gridx > (lx/2-lm)] = 0.01
 py_bound = np.zeros(solid.shape)
 
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
-                                  px_bound=px_bound,py_bound=py_bound,max_iter=max_iter)
+                                  px_bound=px_bound,py_bound=py_bound,max_iter=max_iter,max_res = max_res)
 
 n_iter,resx,resy,res_max_convergence,convergence_hist  = test.cg_loop()
 
