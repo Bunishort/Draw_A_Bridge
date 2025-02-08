@@ -128,6 +128,9 @@ class ElasticProblem:
         self.x_frontier_edge = conv(self.solid.astype(int),self.ddx2) != 0
         self.y_frontier_edge = conv(self.solid.astype(int), self.ddy2) != 0
 
+        self.not_solid_x_edge = conv(self.solid.astype(int), self.ddx2**2) == 0
+        self.not_solid_y_edge = conv(self.solid.astype(int), self.ddy2**2) == 0
+
         self.isddx1 = conv(self.solid.astype(int), self.ddx1 ** 2) == 2
         self.isddx2 = conv(self.solid.astype(int), self.ddx2 ** 2) == 2
         self.isddy1 = conv(self.solid.astype(int), self.ddy1 ** 2) == 2
@@ -282,6 +285,12 @@ class ElasticProblem:
         syy_y[self.y_frontier_edge] = 0
         sxy_x[self.x_frontier_edge] = 0
         sxy_y[self.y_frontier_edge] = 0
+
+        #Set to zero outside the solid
+        sxx_x[self.not_solid_x_edge] = 0
+        syy_y[self.not_solid_y_edge] = 0
+        sxy_x[self.not_solid_x_edge] = 0
+        sxy_y[self.not_solid_y_edge] = 0
 
         return sxx_x,sxy_x,syy_y,sxy_y
 
