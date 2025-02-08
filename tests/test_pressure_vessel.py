@@ -52,7 +52,7 @@ test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
 
 n_iter,resx,resy,res_max_convergence,convergence_hist  = test.cg_loop()
 
-sxx, syy, sxy = test.calc_stress(test.ux, test.uy)
+sxx_x,sxy_x,syy_y,sxy_y = test.calc_stress(test.ux, test.uy)
 
 
 r = np.arange(5*nx) - (5*nx-1)/2
@@ -66,8 +66,8 @@ sig_rad[np.abs(r)>ro] = np.nan
 
 
 line = gridy == np.min(gridy[gridy>=0])
-sigc_num = syy[line]
-sigr_num = sxx[line]
+sigc_num = syy_y[line]
+sigr_num = sxx_x[line]
 
 plt.figure()
 plt.title('Circumferential stress')

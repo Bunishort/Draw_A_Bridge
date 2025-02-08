@@ -115,43 +115,19 @@ class ElasticProblem:
         for var in  ['ux','uy']:
             setattr(self,var, np.zeros(solid.shape))
         self.kernel_type = 'plane strain'
-        (self.axx,self.axy,self.ayy,self.ayx,
-         self.ddx1,self.ddx2,self.ddy1,self.ddy2,
+        (self.ddx1,self.ddx2,self.ddy1,self.ddy2,self.meanx,self.meany,
          self.ddxx,self.ddyy) =\
             self.def_kernel()
         self.frontier, self.bulk = get_frontier(self.solid)
         self.nx, self.ny = calc_normal(self.solid)
-        self.nx_s, self.ny_s = calc_normal_stress(self.solid)
-
 
         self.is_uimp = np.bitwise_and(np.bitwise_not(np.isnan(self.ux_imp)),
                                       np.bitwise_not(np.isnan(self.uy_imp)))
         self.is_uimp = np.bitwise_and(self.is_uimp, self.solid)
-        kerneltemp= np.array([[1,1],[1,1]])
-        solidtemp = solid.astype(int)
-        temp = conv(solidtemp,kerneltemp)
-        self.solid_stress = (temp == 4)
-        self.in_corner = (temp==3)
-        self.in_corner_p = np.bitwise_and(self.in_corner, self.nx_s*self.ny_s > 0)
-        self.in_corner_m = np.bitwise_and(self.in_corner, self.nx_s * self.ny_s < 0)
 
-        kernels = []
-        kernels.append([[1, 0], [0, 1]])
-        kernels.append([[0, 1], [1, 0]])
-        self.out_corner = np.zeros(solid.shape).astype(bool)
-        for kernel in kernels:
-            temp = conv(solid,kernel)
-            self.out_corner = np.bitwise_or(self.out_corner,temp==0)
+        self.x_frontier_edge = conv(self.solid.astype(int),self.ddx2) != 0
+        self.y_frontier_edge = conv(self.solid.astype(int), self.ddy2) != 0
 
-        tempisddx1 = conv(self.solid.astype(int),self.ddx1) != 0
-        tempisddx2 = conv(self.solid.astype(int), self.ddx2) != 0
-
-        self.x_frontier_stress = np.bitwise_or(tempisddx1,
-                                               tempisddx2)
-        tempisddy1 = conv(self.solid.astype(int), self.ddy1) != 0
-        tempisddy2 = conv(self.solid.astype(int), self.ddy2) != 0
-        self.y_frontier_stress = np.bitwise_or(tempisddy1,
-                                               tempisddy2)
         self.isddx1 = conv(self.solid.astype(int), self.ddx1 ** 2) == 2
         self.isddx2 = conv(self.solid.astype(int), self.ddx2 ** 2) == 2
         self.isddy1 = conv(self.solid.astype(int), self.ddy1 ** 2) == 2
@@ -159,29 +135,8 @@ class ElasticProblem:
 
     def def_kernel(self):
         if self.kernel_type=='plane strain':
-            axx=np.zeros([3,3])
-            axy= np.zeros([3,3])
-            ayy=np.zeros([3,3])
-            ayx=np.zeros([3,3])
 
-            temp=(self.elas_lambda+2*self.elas_mu)/self.lm**2
-            axx[2,1] += temp
-            axx[0,1] += temp
-            axx[1,1] += -2*temp
-            temp = temp/2
-            axy[2,2] += temp
-            axy[2,0] -= temp
-            axy[0,2] -= temp
-            axy[0,0] += temp
-            temp = self.elas_mu / self.lm**2
-            axx[1,2] += temp
-            axx[1,0] += temp
-            axx[1,1] += -2*temp
-
-            ayy = np.transpose(axx)
-            ayx = axy
-
-            #Mesh cell center stress matrix
+            #Mesh cell center def matrix
             # epsilon_xx = ddx * ux / (2 lm)
             # epsilon_yy = ddy * uy / (2 lm)
             # epsilon_xy = (ddy * ux + ddx * uy) / (4 lm)
@@ -190,11 +145,14 @@ class ElasticProblem:
             ddy1 = np.array([[-1,1],[0,0]])
             ddy2 = np.array([[0, 0], [-1, 1]])
 
-            ddxx = np.array([[-1, -1, 0], [1, 1, 0], [0, 0, 0]])
+            meanx = np.array([[1, 0], [1, 0]])
+            meany = np.transpose(meanx)
+
+            ddxx = np.array([[-1, 0, 0], [1, 0, 0], [0, 0, 0]])
             ddyy = np.transpose(ddxx)
         else:
             raise ValueError("Only \'plane strain\' is available")
-        return axx,axy,ayy,ayx,ddx1,ddx2,ddy1,ddy2,ddxx,ddyy
+        return ddx1,ddx2,ddy1,ddy2,meanx,meany,ddxx,ddyy
 
     def cg_loop(self):
         """
@@ -261,11 +219,11 @@ class ElasticProblem:
         #Elsewhere, it is 0
         #uxt,uyt are 2d matrices of displacements
 
-        sxx,syy,sxy = self.calc_stress(uxt,uyt)
+        sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress(uxt,uyt)
 
 
-        a_u_x = conv(sxx,self.ddxx) + conv(sxy,self.ddyy)
-        a_u_y = conv(syy, self.ddyy) + conv(sxy, self.ddxx)
+        a_u_x = conv(sxx_x,self.ddxx) + conv(sxy_y,self.ddyy)
+        a_u_y = conv(syy_y, self.ddyy) + conv(sxy_x, self.ddxx)
 
         a_u_x[np.bitwise_not(self.solid)] = 0
         a_u_y[np.bitwise_not(self.solid)] = 0
@@ -294,7 +252,9 @@ class ElasticProblem:
         return -bx,-by
 
     def calc_stress(self,uxt,uyt):
-        #Calculate the stress in the center of the mesh cells
+        #Calculate the stress in the center of the mesh edges
+
+        #First, calculate def at mesh cell centers
         exx = (conv(uxt, self.ddx1)*self.isddx1 +
                conv(uxt, self.ddx2)*self.isddx2 ) / (2 *self.lm)
         eyy = (conv(uyt, self.ddy1)*self.isddy1
@@ -302,59 +262,26 @@ class ElasticProblem:
         exy = (conv(uxt, self.ddy1) + conv(uxt, self.ddy2) +
                conv(uyt, self.ddx1) + conv(uyt, self.ddx2)   ) / (4 * self.lm)
 
-        # We could multiply by 2 exx/eyy on x/y frontiers respectively, depending on how
-        # we want to handle frontiers
-        exx[self.y_frontier_stress] = 2 * exx[self.y_frontier_stress]
-        eyy[self.x_frontier_stress] = 2 * eyy[self.x_frontier_stress]
+        #Average to have def on edges _x perpendicular to x, and _y perpendicular to y
+        exx_x = conv(exx,self.meany)
+        eyy_x = conv(eyy,self.meany)
+        exy_x = conv(exy, self.meany)
+        exx_y = conv(exx, self.meanx)
+        eyy_y = conv(eyy, self.meanx)
+        exy_y = conv(exy, self.meanx)
 
-        # Special formulas on frontiers for exx/eyy to be OK with sxx/syy=0
-        coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu)
-        exx[self.x_frontier_stress] = coef * eyy[self.x_frontier_stress]
-        eyy[self.y_frontier_stress] = coef * exx[self.y_frontier_stress]
+        sxx_x = (self.elas_lambda + 2 * self.elas_mu) * exx_x + self.elas_lambda * eyy_x
+        sxy_x =  (2 * self.elas_mu) * exy_x
 
-        # In inside corners, exx=eyy = mean (exx,eyy,exy* (+/-) mu / (lambda+mu))*2
-        # does not work well
-        # temp = 2/3*((exx[self.in_corner_p] + eyy[self.in_corner_p])*(1+coef) -
-        #         self.elas_mu / (self.elas_lambda + self.elas_mu) * exy[self.in_corner_p])
-        # exx[self.in_corner_p] = temp
-        # eyy[self.in_corner_p] = temp
-        # exy[self.in_corner_p] = - (self.elas_lambda + self.elas_mu) / (self.elas_mu) * exx[self.in_corner_p]
-        #
-        # temp = 2/3*((exx[self.in_corner_m] + eyy[self.in_corner_m]) * (1 + coef) +
-        #         self.elas_mu / (self.elas_lambda + self.elas_mu) * exy[self.in_corner_m])
-        # exx[self.in_corner_m] = temp
-        # eyy[self.in_corner_m] = temp
-        # exy[self.in_corner_m] = (self.elas_lambda + self.elas_mu) / (self.elas_mu) * exx[self.in_corner_m]
-
-        # Another strategy for test :
-        temp = exx[self.in_corner]
-        exx[self.in_corner] = (exx[self.in_corner] + coef*eyy[self.in_corner])
-        eyy[self.in_corner] = (eyy[self.in_corner] + coef*temp)
-        exy[self.in_corner] =  exy[self.in_corner]
-
-        # Another one :
-        #temp = exx[self.in_corner]
-        #exx[self.in_corner] = (2*exx[self.in_corner] + coef*eyy[self.in_corner])/3
-        #eyy[self.in_corner] = (2*eyy[self.in_corner] + coef*temp)/3
-        #exy[self.in_corner] =  exy[self.in_corner]*2/3
-        #test exy from exx/eyy
-
-        lambda_trace = self.elas_lambda * (exx+eyy)
-        sxx = lambda_trace + (2 * self.elas_mu) * exx
-        syy = lambda_trace + (2 * self.elas_mu) * eyy
-        sxy = (2 * self.elas_mu) * exy
+        syy_y = (self.elas_lambda + 2 * self.elas_mu) * eyy_y + self.elas_lambda * exx_y
+        sxy_y =  (2 * self.elas_mu) * exy_y
 
         #Frontier adjustments
         # sxx stress is zero on x frontier, same for syy on y frontier
+        sxx_x[self.x_frontier_edge] = 0
+        syy_y[self.y_frontier_edge] = 0
+        sxy_x[self.x_frontier_edge] = 0
+        sxy_y[self.y_frontier_edge] = 0
 
-        sxx[self.x_frontier_stress] = 0
-        syy[self.y_frontier_stress] = 0
-        sxy[self.x_frontier_stress] = 0
-        sxy[self.y_frontier_stress] = 0
-
-        sxx[self.out_corner] = 0
-        syy[self.out_corner] = 0
-        sxy[self.out_corner] = 0
-
-        return sxx,syy,sxy
+        return sxx_x,sxy_x,syy_y,sxy_y
 

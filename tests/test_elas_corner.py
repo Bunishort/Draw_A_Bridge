@@ -50,10 +50,10 @@ a_u_x, a_u_y = test.calc_a_u(test.ux, test.uy)
 resx2 = bx - a_u_x
 resy2 = by - a_u_y
 
-sxx, syy, sxy = test.calc_stress(test.ux, test.uy)
+sxx_x,sxy_x,syy_y,sxy_y = test.calc_stress(test.ux, test.uy)
 
 plt.figure()
-plt.plot(np.sum(sxx,axis=1))
+plt.plot(np.sum(sxx_x,axis=1))
 plt.show()
 
 1+1
