@@ -35,6 +35,8 @@ px_bound = np.zeros(solid.shape)
 px_bound[gridx > (lx/2-lm)] = 0.01
 py_bound = np.zeros(solid.shape)
 
+lm=0.5
+
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
                                   px_bound=px_bound,py_bound=py_bound,max_iter=max_iter,max_res = max_res)
 
@@ -50,6 +52,7 @@ sxx_x,sxy_x,syy_y,sxy_y = test.calc_stress(test.ux, test.uy)
 plt.figure()
 plt.plot(np.sum(sxx_x,axis=1))
 plt.show()
+
 
 
 1+1

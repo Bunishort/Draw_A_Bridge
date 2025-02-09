@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('TkAgg')
 
-nx=2*25
-ny=2*25
+nx=5*25
+ny=5*25
 L = 25
 lm= L/nx
 
@@ -77,7 +77,7 @@ plt.plot(gridx[line],sigc_num)
 plt.figure()
 plt.title('Radial stress')
 plt.plot(r,sig_rad,color='k')
-plt.plot(gridx[line],sigr_num)
+plt.plot(gridx[line]+0.5*lm,sigr_num)
 
 plt.show()
 1+1

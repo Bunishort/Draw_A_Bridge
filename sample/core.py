@@ -227,9 +227,9 @@ class ElasticProblem:
 
         sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress(uxt,uyt)
 
-
-        a_u_x = conv(sxx_x,self.ddxx) + conv(sxy_y,self.ddyy)
-        a_u_y = conv(syy_y, self.ddyy) + conv(sxy_x, self.ddxx)
+        # We could remove this /lm division by multiplying b by lm
+        a_u_x = (conv(sxx_x,self.ddxx) + conv(sxy_y,self.ddyy)) / self.lm
+        a_u_y = (conv(syy_y, self.ddyy) + conv(sxy_x, self.ddxx)) / self.lm
 
         a_u_x[np.bitwise_not(self.solid)] = 0
         a_u_y[np.bitwise_not(self.solid)] = 0
