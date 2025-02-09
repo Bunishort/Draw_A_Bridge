@@ -131,6 +131,13 @@ class ElasticProblem:
         self.not_solid_x_edge = conv(self.solid.astype(int), self.ddx2**2) == 0
         self.not_solid_y_edge = conv(self.solid.astype(int), self.ddy2**2) == 0
 
+        tempisddx1 = conv(self.solid.astype(int), self.ddx1) != 0
+        self.x_frontier_centre = np.bitwise_and(tempisddx1,
+                                                self.x_frontier_edge)
+        tempisddy1 = conv(self.solid.astype(int), self.ddy1) != 0
+        self.y_frontier_centre = np.bitwise_and(tempisddy1,
+                                                self.y_frontier_edge)
+
         self.isddx1 = conv(self.solid.astype(int), self.ddx1 ** 2) == 2
         self.isddx2 = conv(self.solid.astype(int), self.ddx2 ** 2) == 2
         self.isddy1 = conv(self.solid.astype(int), self.ddy1 ** 2) == 2
