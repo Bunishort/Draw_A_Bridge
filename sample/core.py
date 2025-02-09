@@ -136,6 +136,9 @@ class ElasticProblem:
         self.isddy1 = conv(self.solid.astype(int), self.ddy1 ** 2) == 2
         self.isddy2 = conv(self.solid.astype(int), self.ddy2 ** 2) == 2
 
+        self.frontier_def = np.bitwise_or(np.bitwise_not(self.isddx1),
+                                             np.bitwise_not(self.isddx2))
+
     def def_kernel(self):
         if self.kernel_type=='plane strain':
 
@@ -262,8 +265,13 @@ class ElasticProblem:
                conv(uxt, self.ddx2)*self.isddx2 ) / (2 *self.lm)
         eyy = (conv(uyt, self.ddy1)*self.isddy1
                + conv(uyt,self.ddy2) * self.isddy2 ) / (2 * self.lm)
-        exy = (conv(uxt, self.ddy1) + conv(uxt, self.ddy2) +
-               conv(uyt, self.ddx1) + conv(uyt, self.ddx2)   ) / (4 * self.lm)
+        exy = (conv(uxt, self.ddy1)*self.isddy1 + conv(uxt, self.ddy2)*self.isddy2 +
+               conv(uyt, self.ddx1)*self.isddx1 + conv(uyt, self.ddx2)*self.isddx2   ) / (4 * self.lm)
+
+        #multiply by 2 if on the frontier (inside corner included)
+        exx[self.frontier_def] *= 2
+        exy[self.frontier_def] *= 2
+        eyy[self.frontier_def] *= 2
 
         #Average to have def on edges _x perpendicular to x, and _y perpendicular to y
         exx_x = conv(exx,self.meany)

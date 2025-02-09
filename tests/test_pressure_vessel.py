@@ -29,7 +29,7 @@ r = np.sqrt(gridx**2+gridy**2)
 
 solid = np.zeros([nx,ny],dtype=bool)
 solid[np.bitwise_and(r>=ri,r<=ro)]= True
-solid = sample.core.remove_single_points(solid)
+#solid = sample.core.remove_single_points(solid)
 
 frontier,bulk = sample.core.get_frontier(solid)
 nnx,nny = sample.core.calc_normal(solid)
