@@ -29,7 +29,7 @@ r = np.sqrt(gridx**2+gridy**2)
 
 solid = np.zeros([nx,ny],dtype=bool)
 solid[np.bitwise_and(r>=ri,r<=ro)]= True
-solid = sample.core.remove_single_points(solid)
+#solid = sample.core.remove_single_points(solid)
 
 frontier,bulk = sample.core.get_frontier(solid)
 nnx,nny = sample.core.calc_normal(solid)
@@ -55,7 +55,7 @@ n_iter,resx,resy,res_max_convergence,convergence_hist  = test.cg_loop()
 sxx_x,sxy_x,syy_y,sxy_y = test.calc_stress(test.ux, test.uy)
 
 
-r = np.arange(5*nx) - (5*nx-1)/2
+r = (np.arange(5*nx) - (5*nx-1)/2)/(5*nx) *L
 sig_circ = pi*ri**2 / (ro**2-ri**2) + pi*ri**2*ro**2 / r**2 / (ro**2-ri**2)
 sig_rad =pi*ri**2 / (ro**2-ri**2) - pi*ri**2*ro**2 / r**2 / (ro**2-ri**2)
 
@@ -69,15 +69,25 @@ line = gridy == np.min(gridy[gridy>=0])
 sigc_num = syy_y[line]
 sigr_num = sxx_x[line]
 
+theta = 0.01*np.pi/4
+xt = r * np.cos(theta)
+yt = r * np.sin(theta)
+sxx,syy,sxy = sample.core.interp_stress(xt,yt,x*lm,y*lm,sxx_x,sxy_x,syy_y,sxy_y)
+sigr_t = sxx * np.cos(theta) + sxy * np.sin(theta)
+sigc_t = -sxy * np.sin(theta) + syy * np.cos(theta)
+
+
 plt.figure()
 plt.title('Circumferential stress')
 plt.plot(r,sig_circ,color='k')
 plt.plot(gridx[line],sigc_num)
+plt.plot(r,sigc_t)
 
 plt.figure()
 plt.title('Radial stress')
 plt.plot(r,sig_rad,color='k')
 plt.plot(gridx[line]+0.5*lm,sigr_num)
+plt.plot(r,sigr_t)
 
 plt.show()
 1+1

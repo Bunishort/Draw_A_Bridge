@@ -54,18 +54,23 @@ def calc_normal(solid):
     ny[ok] = ny[ok] / n[ok]
     return nx, ny
 
-def calc_normal_stress(solid):
-    # Calculate the normals to the solid boundaries on stress points
-    kernelx = -np.array([[-1,-1],[1,1]])
-    kernely = -np.array([[-1,1],[-1,1]])
+def interp_stress(xq,yq,xnodes,ynodes,sxx_x,sxy_x,syy_y,sxy_y):
+    from scipy.interpolate import interpn
+    # x_nodes,ynodes are vectors
+    lm = xnodes[1] - xnodes[0]
 
-    nx = conv(solid.astype(int), kernelx)
-    ny = conv(solid.astype(int), kernely)
-    #n = np.sqrt(nx ** 2 + ny ** 2)
-    #ok = n > 0
-    #nx[ok] = nx[ok] / n[ok]
-    #ny[ok] = ny[ok] / n[ok]
-    return nx, ny
+
+    x_x = xnodes + lm/2
+    y_x = ynodes
+    y_y = ynodes +lm/2
+    x_y = xnodes
+
+    sxx = interpn((x_x,y_x),sxx_x,(xq,yq),bounds_error=False)
+    syy = interpn((x_y, y_y), syy_y, (xq, yq),bounds_error=False)
+    sxy = 1/2 * (interpn((x_x, y_x), sxy_x, (xq, yq),bounds_error=False) +
+                 interpn((x_y, y_y), sxy_y, (xq, yq),bounds_error=False))
+
+    return sxx,syy,sxy
 
 def conv(matrix,kernel):
     #return convolve2d(matrix,kernel,'same')
