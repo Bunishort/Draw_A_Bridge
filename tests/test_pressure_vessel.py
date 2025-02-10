@@ -69,25 +69,36 @@ line = gridy == np.min(gridy[gridy>=0])
 sigc_num = syy_y[line]
 sigr_num = sxx_x[line]
 
-theta = 0.01*np.pi/4
-xt = r * np.cos(theta)
-yt = r * np.sin(theta)
-sxx,syy,sxy = sample.core.interp_stress(xt,yt,x*lm,y*lm,sxx_x,sxy_x,syy_y,sxy_y)
-sigr_t = sxx * np.cos(theta) + sxy * np.sin(theta)
-sigc_t = -sxy * np.sin(theta) + syy * np.cos(theta)
-
-
-plt.figure()
+figc = plt.figure()
 plt.title('Circumferential stress')
 plt.plot(r,sig_circ,color='k')
 plt.plot(gridx[line],sigc_num)
-plt.plot(r,sigc_t)
 
-plt.figure()
+figr = plt.figure()
 plt.title('Radial stress')
 plt.plot(r,sig_rad,color='k')
 plt.plot(gridx[line]+0.5*lm,sigr_num)
-plt.plot(r,sigr_t)
+
+thetas = [0, np.pi/12, np.pi/6, np.pi/4, np.pi/3, np.pi/2]
+thetas_str = ['0', 'np.pi/12', 'np.pi/6', 'np.pi/4', 'np.pi/3', 'np.pi/2']
+
+for theta,theta_str in zip(thetas,thetas_str):
+    xt = r * np.cos(theta)
+    yt = r * np.sin(theta)
+    sxx,syy,sxy = sample.core.interp_stress(xt,yt,x*lm,y*lm,sxx_x,sxy_x,syy_y,sxy_y)
+    c = np.cos(theta)
+    s = np.sin(theta)
+    sigr_t = sxx * c**2 + 2*c*s*sxy + s**2 * syy
+    sigc_t = sxx * s**2 - 2*c*s*sxy + c**2 * syy
+
+    plt.figure(figc)
+    plt.plot(r, sigc_t,label=theta_str)
+    plt.figure(figr)
+    plt.plot(r, sigr_t,label=theta_str)
+
+plt.legend()
+plt.figure(figc)
+plt.legend()
 
 plt.show()
 1+1
