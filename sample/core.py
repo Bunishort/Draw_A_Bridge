@@ -137,10 +137,10 @@ class ElasticProblem:
         self.not_solid_y_edge = conv(self.solid.astype(int), self.ddy2**2) == 0
 
         tempisddx1 = conv(self.solid.astype(int), self.ddx1) != 0
-        self.x_frontier_def = np.bitwise_and(tempisddx1,
+        self.x_frontier_def = np.bitwise_or(tempisddx1,
                                                 self.x_frontier_edge)
         tempisddy1 = conv(self.solid.astype(int), self.ddy1) != 0
-        self.y_frontier_def = np.bitwise_and(tempisddy1,
+        self.y_frontier_def = np.bitwise_or(tempisddy1,
                                                 self.y_frontier_edge)
 
         self.isddx1 = conv(self.solid.astype(int), self.ddx1 ** 2) == 2
@@ -282,8 +282,8 @@ class ElasticProblem:
 
         # Adjust defs on frontier
         coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu)
-        exx[self.x_frontier_def] = coef * eyy[self.x_frontier_def]
-        eyy[self.y_frontier_def] = coef * exx[self.y_frontier_def]
+        exx[self.x_frontier_def] += coef * eyy[self.x_frontier_def]
+        eyy[self.y_frontier_def] += coef * exx[self.y_frontier_def]
 
 
         #Average to have def on edges _x perpendicular to x, and _y perpendicular to y
