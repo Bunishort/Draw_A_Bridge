@@ -282,8 +282,9 @@ class ElasticProblem:
 
         # Adjust defs on frontier
         coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu)
+        temp = exx[self.y_frontier_def]
         exx[self.x_frontier_def] += coef * eyy[self.x_frontier_def]
-        eyy[self.y_frontier_def] += coef * exx[self.y_frontier_def]
+        eyy[self.y_frontier_def] += coef * temp
 
 
         #Average to have def on edges _x perpendicular to x, and _y perpendicular to y
