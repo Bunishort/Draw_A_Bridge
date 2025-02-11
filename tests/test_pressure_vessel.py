@@ -79,8 +79,8 @@ plt.title('Radial stress')
 plt.plot(r,sig_rad,color='k')
 plt.plot(gridx[line]+0.5*lm,sigr_num)
 
-thetas = [0, np.pi/12, np.pi/6, np.pi/4, np.pi/3, np.pi/2]
-thetas_str = ['0', 'np.pi/12', 'np.pi/6', 'np.pi/4', 'np.pi/3', 'np.pi/2']
+thetas = -np.array([0, np.pi/12, np.pi/6, np.pi/4, np.pi/3, np.pi/2])
+thetas_str = ['0', 'pi/12', 'pi/6', 'pi/4', 'pi/3', 'pi/2']
 
 for theta,theta_str in zip(thetas,thetas_str):
     xt = r * np.cos(theta)
