@@ -4,8 +4,11 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('TkAgg')
 
-nx=5*25
-ny=5*25
+import timeit
+start = timeit.default_timer()
+
+nx=1*25
+ny=1*25
 L = 25
 lm= L/nx
 
@@ -54,6 +57,8 @@ n_iter,resx,resy,res_max_convergence,convergence_hist  = test.cg_loop()
 
 sxx_x,sxy_x,syy_y,sxy_y = test.calc_stress(test.ux, test.uy)
 
+stop = timeit.default_timer()
+print('Time: ', stop - start)
 
 r = (np.arange(5*nx) - (5*nx-1)/2)/(5*nx) *L
 sig_circ = pi*ri**2 / (ro**2-ri**2) + pi*ri**2*ro**2 / r**2 / (ro**2-ri**2)

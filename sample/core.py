@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.signal import convolve2d,correlate2d
+from .convolutions import addition_convolution
 ###Remark : pyqt6 needed only for matplotlib show, maybe not necessary for pygame !
 
 def get_frontier(solid):
@@ -7,7 +8,7 @@ def get_frontier(solid):
     # Frontier = at least one neighbour point is not solid (including diagonals)
     # Bulk is the solid minus the frontier
     kernel = np.ones([3, 3])
-    temp = conv(solid, kernel)
+    temp = conv(solid.astype(int), kernel)
     frontier = np.bitwise_and(solid, temp < 8)
     bulk = np.bitwise_and(solid, np.bitwise_not(frontier))
 
@@ -20,14 +21,10 @@ def remove_single_points(solid):
     temp = conv(solid, kernel)
     temp2 = temp>=2
 
-    kernels=[]
-    kernels.append(np.array([[0 ,1, 1],[0, 0, 0],[0, 0, 0]]))
-    kernels.append(np.array([[0, 0, 1], [0, 0, 1], [0, 0, 0]]))
-    kernels.append(np.array([[0, 0, 0], [0, 0, 1], [0, 0, 1]]))
-    kernels.append(np.array([[0, 0, 0], [0, 0, 0], [0, 1, 1]]))
-    kernels.append(np.array([[0, 0, 0], [0, 0, 0], [1, 1, 0]]))
-    kernels.append(np.array([[0, 0, 0], [1, 0, 0], [1, 0, 0]]))
-    kernels.append(np.array([[1, 0, 0], [1, 0, 0], [0, 0, 0]]))
+    kernels= [np.array([[0, 1, 1], [0, 0, 0], [0, 0, 0]]), np.array([[0, 0, 1], [0, 0, 1], [0, 0, 0]]),
+              np.array([[0, 0, 0], [0, 0, 1], [0, 0, 1]]), np.array([[0, 0, 0], [0, 0, 0], [0, 1, 1]]),
+              np.array([[0, 0, 0], [0, 0, 0], [1, 1, 0]]), np.array([[0, 0, 0], [1, 0, 0], [1, 0, 0]]),
+              np.array([[1, 0, 0], [1, 0, 0], [0, 0, 0]])]
 
     for kernel in kernels:
         temp = conv(solid, kernel)
@@ -75,6 +72,7 @@ def interp_stress(xq,yq,xnodes,ynodes,sxx_x,sxy_x,syy_y,sxy_y):
 def conv(matrix,kernel):
     #return convolve2d(matrix,kernel,'same')
     return correlate2d(matrix, kernel, 'same')
+    #return addition_convolution(matrix,kernel)
 
 
 class ElasticProblem:
