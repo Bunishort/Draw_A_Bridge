@@ -7,8 +7,8 @@ matplotlib.use('TkAgg')
 import timeit
 start = timeit.default_timer()
 
-nx=1*25
-ny=1*25
+nx=3*25
+ny=3*25
 L = 25
 lm= L/nx
 

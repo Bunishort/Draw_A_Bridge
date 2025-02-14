@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.signal import convolve2d,correlate2d
 from .convolutions import addition_convolution
+from cv2 import filter2D
 ###Remark : pyqt6 needed only for matplotlib show, maybe not necessary for pygame !
 
 def get_frontier(solid):
@@ -71,8 +72,9 @@ def interp_stress(xq,yq,xnodes,ynodes,sxx_x,sxy_x,syy_y,sxy_y):
 
 def conv(matrix,kernel):
     #return convolve2d(matrix,kernel,'same')
-    return correlate2d(matrix, kernel, 'same')
+    #return correlate2d(matrix, kernel, 'same')
     #return addition_convolution(matrix,kernel)
+    return filter2D(matrix.astype(np.float32),-1,np.flip(kernel).astype(np.float32))
 
 
 class ElasticProblem:
