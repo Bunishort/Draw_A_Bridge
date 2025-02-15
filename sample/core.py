@@ -74,7 +74,11 @@ def conv(matrix,kernel):
     #return convolve2d(matrix,kernel,'same')
     #return correlate2d(matrix, kernel, 'same')
     #return addition_convolution(matrix,kernel)
-    return filter2D(matrix.astype(np.float32),-1,np.flip(kernel).astype(np.float32))
+    if kernel.shape == (2,2):
+        anch = (0,0)
+    else:
+        anch = (-1,-1)
+    return filter2D(matrix.astype(np.float32),-1,kernel.astype(np.float32),anchor=anch)
 
 
 class ElasticProblem:
