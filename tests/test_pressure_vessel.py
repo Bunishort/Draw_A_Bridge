@@ -7,10 +7,11 @@ matplotlib.use('TkAgg')
 import timeit
 start = timeit.default_timer()
 
-nx=3*25
-ny=3*25
+nx=64
+ny=64
 L = 25
 lm= L/nx
+max_res = 1e-6
 
 ri = 5#internal radius
 ro = 10#external radius
@@ -51,7 +52,7 @@ py_bound[np.bitwise_and(r <= ri+lm,nny>0)] = -pi
 
 
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
-                                  px_bound=px_bound,py_bound=py_bound,max_iter=max_iter)
+                                  px_bound=px_bound,py_bound=py_bound,max_iter=max_iter, max_res=max_res)
 
 n_iter,resx,resy,res_max_convergence,convergence_hist  = test.cg_loop()
 
@@ -106,4 +107,4 @@ plt.figure(figc)
 plt.legend()
 
 plt.show()
-1+1
+0.00278# stress error &e-6, 0.00299 with 1e-4, 0.0036 with 1e-2 (but looks bad), 117 iter
