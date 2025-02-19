@@ -7,8 +7,8 @@ matplotlib.use('TkAgg')
 import timeit
 start = timeit.default_timer()
 
-nx=8*64
-ny=8*64
+nx=64
+ny=64
 L = 25
 lm= L/nx
 max_res = 1e-6
