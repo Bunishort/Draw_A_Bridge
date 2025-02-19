@@ -2,7 +2,7 @@ from context import sample
 import numpy as np
 import matplotlib.pyplot as plt
 
-k = 1
+k = 3
 nx=k*7
 ny=k*9
 
