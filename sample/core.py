@@ -146,6 +146,8 @@ class ElasticProblem:
         tempisddy1 = conv(self.solid.astype(int), self.ddy1) != 0
         self.y_frontier_def = np.bitwise_or(tempisddy1,
                                                 self.y_frontier_edge)
+        ## we could define only in_corner instead of corner for best performance...
+        self.corner_def = np.bitwise_and(self.y_frontier_def, self.x_frontier_def)
 
         self.isddx1 = conv(self.solid.astype(int), self.ddx1 ** 2) == 2
         self.isddx2 = conv(self.solid.astype(int), self.ddx2 ** 2) == 2
@@ -277,18 +279,23 @@ class ElasticProblem:
         #Calculate the stress in the center of the mesh edges
 
         #First, calculate def at mesh cell centers
+        duxdx2 = conv(uxt, self.ddx2)*self.isddx2
+        duxdy2 = conv(uxt, self.ddy2)*self.isddy2
+        duydx2 = conv(uyt, self.ddx2)*self.isddx2
+        duydy2 = conv(uyt,self.ddy2) * self.isddy2
         exx = (conv(uxt, self.ddx1)*self.isddx1 +
-               conv(uxt, self.ddx2)*self.isddx2 ) / (2 *self.lm)
+               duxdx2 ) / (2 *self.lm)
         eyy = (conv(uyt, self.ddy1)*self.isddy1
-               + conv(uyt,self.ddy2) * self.isddy2 ) / (2 * self.lm)
-        exy = (conv(uxt, self.ddy1)*self.isddy1 + conv(uxt, self.ddy2)*self.isddy2 +
-               conv(uyt, self.ddx1)*self.isddx1 + conv(uyt, self.ddx2)*self.isddx2   ) / (4 * self.lm)
+               + duydy2 ) / (2 * self.lm)
+        exy = (conv(uxt, self.ddy1)*self.isddy1 + duxdy2 ) / (4 * self.lm)
+        eyx = (conv(uyt, self.ddx1)*self.isddx1 + duydx2 ) / (4 * self.lm)
 
-        # Adjust defs on frontier
-        coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu)
-        temp = exx[self.y_frontier_def]
-        exx[self.x_frontier_def] += coef * eyy[self.x_frontier_def]
-        eyy[self.y_frontier_def] += coef * temp
+        # multply by two on frontiers to compensate where isddx/isddy = 0
+        exx[self.y_frontier_def] *= 2
+        eyy[self.x_frontier_def] *= 2
+        exy[self.corner_def] *= 2
+        eyx[self.corner_def] *= 2
+
 
 
         #Average to have def on edges _x perpendicular to x, and _y perpendicular to y
@@ -298,6 +305,11 @@ class ElasticProblem:
         exx_y = conv(exx, self.meanx)
         eyy_y = conv(eyy, self.meanx)
         exy_y = conv(exy, self.meanx)
+
+        # Adjust defs on frontier
+        coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu)
+        exx_x[self.x_frontier_edge] = coef * eyy_x[self.x_frontier_edge]
+        eyy_y[self.y_frontier_edge] = coef * exx_y[self.y_frontier_edge]
 
         sxx_x = (self.elas_lambda + 2 * self.elas_mu) * exx_x + self.elas_lambda * eyy_x
         sxy_x =  (2 * self.elas_mu) * exy_x
