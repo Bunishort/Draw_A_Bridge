@@ -296,6 +296,12 @@ class ElasticProblem:
         exy[self.corner_def] *= 2
         eyx[self.corner_def] *= 2
 
+        # Adjust defs on frontier
+        coef = - self.elas_lambda / (self.elas_lambda + 2 * self.elas_mu)
+        exx[self.x_frontier_def] = coef * eyy[self.x_frontier_def]
+        eyy[self.y_frontier_def] = coef * exx[self.y_frontier_def]
+
+
         #Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
         exx_x = 0.5*conv(exx,self.meany)+0.5*duxdx2
         eyy_x = conv(eyy,self.meany)
@@ -311,11 +317,8 @@ class ElasticProblem:
         exy_x += eyx_x
         exy_y += eyx_y
 
-        # Adjust defs on frontier
-        coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu)
-        exx_x[self.x_frontier_edge] = coef * eyy_x[self.x_frontier_edge]
+        # Adjust shear def on frontier
         exy_x[self.x_frontier_edge] = 0
-        eyy_y[self.y_frontier_edge] = coef * exx_y[self.y_frontier_edge]
         exy_y[self.y_frontier_edge] = 0
 
         #Calculate stress from def
