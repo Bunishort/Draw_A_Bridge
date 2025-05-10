@@ -20,7 +20,7 @@ solid = np.zeros([nx,ny],dtype=bool)
 solid[np.bitwise_and(np.abs(gridx)<=lx/2,
     np.abs(gridy)<=ly/2)] = True
 
-max_iter=2000
+max_iter=1
 E=1
 nu = 0.3
 elas_lambda = E*nu /(1+nu)/(1-2*nu)

@@ -316,8 +316,9 @@ class ElasticProblem:
         exx_x[self.x_frontier_edge] = coef * eyy_x[self.x_frontier_edge]
         exy_x[self.x_frontier_edge] = 0
         eyy_y[self.y_frontier_edge] = coef * exx_y[self.y_frontier_edge]
-        exx_y[self.y_frontier_edge] = 0
+        exy_y[self.y_frontier_edge] = 0
 
+        #Calculate stress from def
         sxx_x = (self.elas_lambda + 2 * self.elas_mu) * exx_x + self.elas_lambda * eyy_x
         sxy_x =  (2 * self.elas_mu) * exy_x
 
@@ -325,13 +326,12 @@ class ElasticProblem:
         sxy_y =  (2 * self.elas_mu) * exy_y
 
         #Frontier adjustments
+        # TODO : check, it should not be necessary
         # sxx stress is zero on x frontier, same for syy on y frontier
         sxx_x[self.x_frontier_edge] = 0
         syy_y[self.y_frontier_edge] = 0
-        sxy_x[self.x_frontier_edge] = 0
-        sxy_y[self.y_frontier_edge] = 0
 
-        #Set to zero outside the solid
+        #Set to zero outside the solid - this one might be necessary
         sxx_x[self.not_solid_x_edge] = 0
         syy_y[self.not_solid_y_edge] = 0
         sxy_x[self.not_solid_x_edge] = 0
