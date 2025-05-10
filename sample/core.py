@@ -290,21 +290,26 @@ class ElasticProblem:
         exy = (conv(uxt, self.ddy1)*self.isddy1 + duxdy2 ) / (4 * self.lm)
         eyx = (conv(uyt, self.ddx1)*self.isddx1 + duydx2 ) / (4 * self.lm)
 
-        # multply by two on frontiers to compensate where isddx/isddy = 0
+        # multiply by two on frontiers to compensate where isddx/isddy = 0
         exx[self.y_frontier_def] *= 2
         eyy[self.x_frontier_def] *= 2
         exy[self.corner_def] *= 2
         eyx[self.corner_def] *= 2
 
-
-
-        #Average to have def on edges _x perpendicular to x, and _y perpendicular to y
-        exx_x = conv(exx,self.meany)
+        #Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
+        exx_x = 0.5*conv(exx,self.meany)+0.5*duxdx2
         eyy_x = conv(eyy,self.meany)
         exy_x = conv(exy, self.meany)
+        eyx_x = 0.5*conv(eyx, self.meany)+0.5*duydx2
+
         exx_y = conv(exx, self.meanx)
-        eyy_y = conv(eyy, self.meanx)
-        exy_y = conv(exy, self.meanx)
+        eyy_y = 0.5*conv(eyy, self.meanx)+0.5*duydy2
+        exy_y = 0.5*conv(exy, self.meanx)+0.5*duxdy2
+        eyx_y = conv(eyx, self.meanx)
+
+        #Calculate complete shear deformation exy
+        exy_x += eyx_x
+        exy_y += eyx_y
 
         # Adjust defs on frontier
         coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu)
