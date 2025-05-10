@@ -314,7 +314,9 @@ class ElasticProblem:
         # Adjust defs on frontier
         coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu)
         exx_x[self.x_frontier_edge] = coef * eyy_x[self.x_frontier_edge]
+        exy_x[self.x_frontier_edge] = 0
         eyy_y[self.y_frontier_edge] = coef * exx_y[self.y_frontier_edge]
+        exx_y[self.y_frontier_edge] = 0
 
         sxx_x = (self.elas_lambda + 2 * self.elas_mu) * exx_x + self.elas_lambda * eyy_x
         sxy_x =  (2 * self.elas_mu) * exy_x
