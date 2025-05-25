@@ -296,9 +296,16 @@ class ElasticProblem:
 
         # multiply by two on frontiers to compensate where isddx/isddy = 0
         exx[self.y_frontier_def] *= 2
+        eyx[self.y_frontier_def] *= 2
         eyy[self.x_frontier_def] *= 2
-        exy[self.corner_def] *= 2
-        eyx[self.corner_def] *= 2
+        exy[self.x_frontier_def] *= 2
+
+        #Adjust exy/eyx on frontiers to have eps_xy=0
+        exy[self.y_frontier_def] = -eyx[self.y_frontier_def]
+        eyx[self.x_frontier_def] = -exy[self.x_frontier_def]
+
+        #exy[self.corner_def] *= 2
+        #eyx[self.corner_def] *= 2
 
         # Adjust defs on frontier
         coef = - self.elas_lambda / (self.elas_lambda + 2 * self.elas_mu)
