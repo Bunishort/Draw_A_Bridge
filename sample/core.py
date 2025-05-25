@@ -141,13 +141,17 @@ class ElasticProblem:
         self.not_solid_y_edge = conv(self.solid.astype(int), self.ddy2**2) == 0
 
         tempisddx1 = conv(self.solid.astype(int), self.ddx1) != 0
-        self.x_frontier_def = np.bitwise_or(tempisddx1,
+        temp_x_frontier_def = np.bitwise_or(tempisddx1,
+                                             self.x_frontier_edge)
+        self.x_frontier_def = np.bitwise_and(tempisddx1,
                                                 self.x_frontier_edge)
         tempisddy1 = conv(self.solid.astype(int), self.ddy1) != 0
-        self.y_frontier_def = np.bitwise_or(tempisddy1,
+        temp_y_frontier_def = np.bitwise_or(tempisddy1,
+                                             self.y_frontier_edge)
+        self.y_frontier_def = np.bitwise_and(tempisddy1,
                                                 self.y_frontier_edge)
         ## we could define only in_corner instead of corner for best performance...
-        self.corner_def = np.bitwise_and(self.y_frontier_def, self.x_frontier_def)
+        self.corner_def = np.bitwise_and(temp_y_frontier_def, temp_x_frontier_def)
 
         self.isddx1 = conv(self.solid.astype(int), self.ddx1 ** 2) == 2
         self.isddx2 = conv(self.solid.astype(int), self.ddx2 ** 2) == 2
