@@ -316,12 +316,17 @@ class ElasticProblem:
         coef = self.elas_mu / (self.elas_lambda + 2 * self.elas_mu)
         coef2 = (2 * self.elas_lambda + 3 * self.elas_mu) / self.elas_mu
         tempxx = coef * ( exx[self.corner_def] + eyy[self.corner_def]
-                        - self.normal_sign * (exy[self.corner_def] + eyx[self.corner_def]))
-        tempyx = coef * (self.normal_sign*exx[self.corner_def] - exy[self.corner_def]
-                         + coef2 * ( eyx[self.corner_def] - self.normal_sign * eyy[self.corner_def]))
+                        - self.normal_sign[self.corner_def] * (exy[self.corner_def]
+                                                               + eyx[self.corner_def]))
+        tempyx = coef * (self.normal_sign[self.corner_def]*exx[self.corner_def]
+                         - exy[self.corner_def]
+                         + coef2 * ( eyx[self.corner_def]
+                                     - self.normal_sign[self.corner_def] * eyy[self.corner_def]))
 
-        exy[self.corner_def] = coef * (self.normal_sign * eyy[self.corner_def] - eyx[self.corner_def]
-                         + coef2 * (exy[self.corner_def] - self.normal_sign * exx[self.corner_def]))
+        exy[self.corner_def] = coef * (self.normal_sign[self.corner_def] * eyy[self.corner_def]
+                                       - eyx[self.corner_def]
+                         + coef2 * (exy[self.corner_def]
+                                    - self.normal_sign[self.corner_def] * exx[self.corner_def]))
 
         eyx[self.corner_def] = tempyx
         exx[self.corner_def] = tempxx
