@@ -152,6 +152,7 @@ class ElasticProblem:
                                                 self.y_frontier_edge)
         ## we could define only in_corner instead of corner for best performance...
         self.corner_def = np.bitwise_and(temp_y_frontier_def, temp_x_frontier_def)
+        self.normal_sign = np.sign(self.nx*self.ny)
 
         self.isddx1 = conv(self.solid.astype(int), self.ddx1 ** 2) == 2
         self.isddx2 = conv(self.solid.astype(int), self.ddx2 ** 2) == 2
@@ -304,15 +305,27 @@ class ElasticProblem:
         exy[self.y_frontier_def] = -eyx[self.y_frontier_def]
         eyx[self.x_frontier_def] = -exy[self.x_frontier_def]
 
-        #exy[self.corner_def] *= 2
-        #eyx[self.corner_def] *= 2
-
-        # Adjust defs on frontier
+        # Adjust defs on straight frontier
         coef = - self.elas_lambda / (self.elas_lambda + 2 * self.elas_mu)
         temp=exx[self.y_frontier_def]
         exx[self.x_frontier_def] += coef * eyy[self.x_frontier_def]
         eyy[self.y_frontier_def] += coef * temp
 
+        #adjust defs on in_corners
+        #exx=eyy :
+        coef = self.elas_mu / (self.elas_lambda + 2 * self.elas_mu)
+        coef2 = (2 * self.elas_lambda + 3 * self.elas_mu) / self.elas_mu
+        tempxx = coef * ( exx[self.corner_def] + eyy[self.corner_def]
+                        - self.normal_sign * (exy[self.corner_def] + eyx[self.corner_def]))
+        tempyx = coef * (self.normal_sign*exx[self.corner_def] - exy[self.corner_def]
+                         + coef2 * ( eyx[self.corner_def] - self.normal_sign * eyy[self.corner_def]))
+
+        exy[self.corner_def] = coef * (self.normal_sign * eyy[self.corner_def] - eyx[self.corner_def]
+                         + coef2 * (exy[self.corner_def] - self.normal_sign * exx[self.corner_def]))
+
+        eyx[self.corner_def] = tempyx
+        exx[self.corner_def] = tempxx
+        eyy[self.corner_def] = tempxx
 
         #Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
         exx_x = 0.5*conv(exx,self.meany)+0.5*duxdx2
@@ -329,9 +342,9 @@ class ElasticProblem:
         exy_x += eyx_x
         exy_y += eyx_y
 
-        # Adjust shear def on frontier
-        exy_x[self.x_frontier_edge] = 0
-        exy_y[self.y_frontier_edge] = 0
+        # Adjust shear def on frontier ; should it be done on edges around in_corners ??
+        #exy_x[self.x_frontier_edge] = 0
+        #exy_y[self.y_frontier_edge] = 0
 
         #Calculate stress from def
         sxx_x = (self.elas_lambda + 2 * self.elas_mu) * exx_x + self.elas_lambda * eyy_x
