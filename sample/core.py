@@ -151,7 +151,7 @@ class ElasticProblem:
         self.y_frontier_def = np.bitwise_and(tempisddy1,
                                                 self.y_frontier_edge)
         ## we could define only in_corner instead of corner for best performance...
-        self.corner_def = np.bitwise_and(temp_y_frontier_def, temp_x_frontier_def)
+        self.corner_def = 0*np.bitwise_and(temp_y_frontier_def, temp_x_frontier_def)
         self.normal_sign = np.sign(self.nx*self.ny)
 
         self.isddx1 = conv(self.solid.astype(int), self.ddx1 ** 2) == 2
@@ -309,7 +309,7 @@ class ElasticProblem:
         coef = - self.elas_lambda / (self.elas_lambda + 2 * self.elas_mu)
         temp=exx[self.y_frontier_def]
         exx[self.x_frontier_def] += coef * eyy[self.x_frontier_def]
-        eyy[self.y_frontier_def] += coef * temp
+        eyy[self.y_frontier_def] += coef * temp#todo temp devrait etre inutile ici
 
         #adjust defs on in_corners
         #exx=eyy :
@@ -342,6 +342,13 @@ class ElasticProblem:
         eyy_y = 0.5*conv(eyy, self.meanx)+0.5*duydy2
         exy_y = 0.5*conv(exy, self.meanx)+0.5*duxdy2
         eyx_y = conv(eyx, self.meanx)
+
+        # Adjust def on frontier.... todo check
+        exx_x[self.x_frontier_edge] *= 2
+        eyx_x[self.x_frontier_edge] *= 2
+        eyy_y[self.y_frontier_edge] *= 2
+        exy_y[self.y_frontier_edge] *= 2
+
 
         #Calculate complete shear deformation exy
         exy_x += eyx_x
