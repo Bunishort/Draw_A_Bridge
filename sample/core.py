@@ -151,7 +151,7 @@ class ElasticProblem:
         self.y_frontier_def = np.bitwise_and(tempisddy1,
                                                 self.y_frontier_edge)
         ## we could define only in_corner instead of corner for best performance...
-        self.corner_def = 0*np.bitwise_and(temp_y_frontier_def, temp_x_frontier_def)
+        self.corner_def = np.bitwise_and(temp_y_frontier_def, temp_x_frontier_def)
         self.normal_sign = np.sign(self.nx*self.ny)
 
         self.isddx1 = conv(self.solid.astype(int), self.ddx1 ** 2) == 2
