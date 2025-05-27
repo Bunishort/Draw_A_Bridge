@@ -343,12 +343,11 @@ class ElasticProblem:
         exy_y = 0.5*conv(exy, self.meanx)+0.5*duxdy2
         eyx_y = conv(eyx, self.meanx)
 
-        # Adjust def on frontier.... todo check
+        # Adjust def on frontier to compensate duydy2=0.... todo check
         exx_x[self.x_frontier_edge] *= 2
         eyx_x[self.x_frontier_edge] *= 2
         eyy_y[self.y_frontier_edge] *= 2
         exy_y[self.y_frontier_edge] *= 2
-
 
         #Calculate complete shear deformation exy
         exy_x += eyx_x
@@ -368,8 +367,8 @@ class ElasticProblem:
         #Frontier adjustments
         # TODO : check, it should not be necessary
         # sxx stress is zero on x frontier, same for syy on y frontier
-        sxx_x[self.x_frontier_edge] = 0
-        syy_y[self.y_frontier_edge] = 0
+        # sxx_x[self.x_frontier_edge] = 0
+        # syy_y[self.y_frontier_edge] = 0
 
         #Set to zero outside the solid - this one might be necessary
         sxx_x[self.not_solid_x_edge] = 0
