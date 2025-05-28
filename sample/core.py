@@ -333,14 +333,15 @@ class ElasticProblem:
         eyy[self.corner_def] = tempxx
 
         #Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
-        exx_x = 0.5*conv(exx,self.meany)+0.5*duxdx2
-        eyy_x = conv(eyy,self.meany)
+        exx_x = 0.5*conv(exx,self.meany)+0.5*duxdx2 / self.lm
+        eyy_x = conv(eyy,self.meany)# todo check if /2 necessary // meany
         exy_x = conv(exy, self.meany)
-        eyx_x = 0.5*conv(eyx, self.meany)+0.5*duydx2
+        eyx_x = 0.5*conv(eyx, self.meany)+0.5*duydx2/ self.lm /2
 
+        #/2 necessary for exy/eyx because of epsilonxy definition
         exx_y = conv(exx, self.meanx)
-        eyy_y = 0.5*conv(eyy, self.meanx)+0.5*duydy2
-        exy_y = 0.5*conv(exy, self.meanx)+0.5*duxdy2
+        eyy_y = 0.5*conv(eyy, self.meanx)+0.5*duydy2/ self.lm
+        exy_y = 0.5*conv(exy, self.meanx)+0.5*duxdy2/ self.lm /2
         eyx_y = conv(eyx, self.meanx)
 
         # Adjust def on frontier to compensate duydy2=0.... todo check
