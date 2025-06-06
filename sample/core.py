@@ -352,13 +352,13 @@ class ElasticProblem:
 
         # Adjust def on frontier to compensate duydy2=0.... todo check
         exx_x[self.x_frontier_edge] += (2*exx_x[self.x_frontier_edge]
-                                        - conv(exxold,self.meany)[self.x_frontier_edge]/4)
+                                        - conv(exxold,self.meany)[self.x_frontier_edge]/ self.lm/4)
         eyx_x[self.x_frontier_edge] += (2*eyx_x[self.x_frontier_edge]
-                                        - conv(eyxold,self.meany)[self.x_frontier_edge]/4) /2
+                                        - conv(eyxold,self.meany)[self.x_frontier_edge]/ self.lm/4/2)
         eyy_y[self.y_frontier_edge] += (2*eyy_y[self.y_frontier_edge]
-                                        - conv(eyyold,self.meanx)[self.y_frontier_edge]/4)
+                                        - conv(eyyold,self.meanx)[self.y_frontier_edge]/ self.lm/4)
         exy_y[self.y_frontier_edge] += (2*exy_y[self.y_frontier_edge]
-                                        - conv(exyold,self.meanx)[self.y_frontier_edge]/4) /2
+                                        - conv(exyold,self.meanx)[self.y_frontier_edge]/ self.lm/4/2)
 
         #Calculate complete shear deformation exy
         exy_x += eyx_x
