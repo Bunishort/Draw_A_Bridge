@@ -295,6 +295,12 @@ class ElasticProblem:
         exy = (conv(uxt, self.ddy1)*self.isddy1 + duxdy2 ) / (4 * self.lm)
         eyx = (conv(uyt, self.ddx1)*self.isddx1 + duydx2 ) / (4 * self.lm)
 
+        #keep those vals in memory for frontier mod later. could be optimised for frontier only...
+        exxold = exx
+        eyyold = eyy
+        exyold = exy
+        eyxold = eyx
+
         # multiply by two on frontiers to compensate where isddx/isddy = 0
         exx[self.y_frontier_def] *= 2
         eyx[self.y_frontier_def] *= 2
@@ -345,10 +351,14 @@ class ElasticProblem:
         eyx_y = conv(eyx, self.meanx)/2
 
         # Adjust def on frontier to compensate duydy2=0.... todo check
-        exx_x[self.x_frontier_edge] *= 2
-        eyx_x[self.x_frontier_edge] *= 2
-        eyy_y[self.y_frontier_edge] *= 2
-        exy_y[self.y_frontier_edge] *= 2
+        exx_x[self.x_frontier_edge] += (2*exx_x[self.x_frontier_edge]
+                                        - conv(exxold,self.meany)[self.x_frontier_edge]/4)
+        eyx_x[self.x_frontier_edge] += (2*eyx_x[self.x_frontier_edge]
+                                        - conv(eyxold,self.meany)[self.x_frontier_edge]/4) /2
+        eyy_y[self.y_frontier_edge] += (2*eyy_y[self.y_frontier_edge]
+                                        - conv(eyyold,self.meanx)[self.y_frontier_edge]/4)
+        exy_y[self.y_frontier_edge] += (2*exy_y[self.y_frontier_edge]
+                                        - conv(exyold,self.meanx)[self.y_frontier_edge]/4) /2
 
         #Calculate complete shear deformation exy
         exy_x += eyx_x
