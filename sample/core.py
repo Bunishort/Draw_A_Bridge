@@ -350,15 +350,20 @@ class ElasticProblem:
         exy_y = 0.5*conv(exy, self.meanx)/2+0.5*duxdy2/ self.lm /2
         eyx_y = conv(eyx, self.meanx)/2
 
+        exxold[self.corner_def] -= 0.5*exx[self.corner_def]
+        eyyold[self.corner_def] -= 0.5*eyy[self.corner_def]
+        exyold[self.corner_def] -= 0.5*exy[self.corner_def]
+        eyxold[self.corner_def] -= 0.5*eyx[self.corner_def]
+
         # Adjust def on frontier to compensate duydy2=0.... todo check
-        exx_x[self.x_frontier_edge] += 0.5*(2*exx_x[self.x_frontier_edge]
-                                        - conv(exxold,self.meany)[self.x_frontier_edge]/ self.lm/4)
-        eyx_x[self.x_frontier_edge] += 0.5*(2*eyx_x[self.x_frontier_edge]
-                                        - conv(eyxold,self.meany)[self.x_frontier_edge]/ self.lm/4/2)
-        eyy_y[self.y_frontier_edge] += 0.5*(2*eyy_y[self.y_frontier_edge]
-                                        - conv(eyyold,self.meanx)[self.y_frontier_edge]/ self.lm/4)
-        exy_y[self.y_frontier_edge] += 0.5*(2*exy_y[self.y_frontier_edge]
-                                        - conv(exyold,self.meanx)[self.y_frontier_edge]/ self.lm/4/2)
+        exx_x[self.x_frontier_edge] += (exx_x[self.x_frontier_edge]
+                                        - conv(exxold,self.meany)[self.x_frontier_edge]/2)
+        eyx_x[self.x_frontier_edge] += (eyx_x[self.x_frontier_edge]
+                                        - conv(eyxold,self.meany)[self.x_frontier_edge]/2)
+        eyy_y[self.y_frontier_edge] += (eyy_y[self.y_frontier_edge]
+                                        - conv(eyyold,self.meanx)[self.y_frontier_edge]/2)
+        exy_y[self.y_frontier_edge] += (exy_y[self.y_frontier_edge]
+                                        - conv(exyold,self.meanx)[self.y_frontier_edge]/2)
 
         #Calculate complete shear deformation exy
         exy_x += eyx_x
