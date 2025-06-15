@@ -350,10 +350,10 @@ class ElasticProblem:
         exy_y = 0.5*conv(exy, self.meanx)/2+0.5*duxdy2/ self.lm /2
         eyx_y = conv(eyx, self.meanx)/2
 
-        exxold[self.corner_def] -= 0.5*exx[self.corner_def]
-        eyyold[self.corner_def] -= 0.5*eyy[self.corner_def]
-        exyold[self.corner_def] -= 0.5*exy[self.corner_def]
-        eyxold[self.corner_def] -= 0.5*eyx[self.corner_def]
+        # exxold[self.corner_def] -= 0.5*exx[self.corner_def]
+        # eyyold[self.corner_def] -= 0.5*eyy[self.corner_def]
+        # exyold[self.corner_def] -= 0.5*exy[self.corner_def]
+        # eyxold[self.corner_def] -= 0.5*eyx[self.corner_def]
 
         # Adjust def on frontier to compensate duydy2=0.... todo check
         exx_x[self.x_frontier_edge] += (exx_x[self.x_frontier_edge]
