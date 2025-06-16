@@ -292,14 +292,14 @@ class ElasticProblem:
                duxdx2 ) / (2 *self.lm)
         eyy = (conv(uyt, self.ddy1)*self.isddy1
                + duydy2 ) / (2 * self.lm)
-        exy = (conv(uxt, self.ddy1)*self.isddy1 + duxdy2 ) / (4 * self.lm)
-        eyx = (conv(uyt, self.ddx1)*self.isddx1 + duydx2 ) / (4 * self.lm)
+        exy = (conv(uxt, self.ddy1)*self.isddy1 + duxdy2 ) / (2 * self.lm)
+        eyx = (conv(uyt, self.ddx1)*self.isddx1 + duydx2 ) / (2 * self.lm)
 
         #keep those vals in memory for frontier mod later. could be optimised for frontier only...
-        exxold = exx.copy()
-        eyyold = eyy.copy()
-        exyold = exy.copy()
-        eyxold = eyx.copy()
+        exxold = exx.copy() /2
+        eyyold = eyy.copy() /2
+        exyold = exy.copy() /2
+        eyxold = eyx.copy() /2
 
         # multiply by two on frontiers to compensate where isddx/isddy = 0
         exx[self.y_frontier_def] *= 2
@@ -322,16 +322,16 @@ class ElasticProblem:
         coef = self.elas_mu / (self.elas_lambda + 2 * self.elas_mu)
         coef2 = (2 * self.elas_lambda + 3 * self.elas_mu) / self.elas_mu
         tempxx = coef * ( exx[self.corner_def] + eyy[self.corner_def]
-                        - self.normal_sign[self.corner_def] * 2 * (exy[self.corner_def]
+                        - self.normal_sign[self.corner_def] * (exy[self.corner_def]
                                                                + eyx[self.corner_def]))
         tempyx = coef * (self.normal_sign[self.corner_def]*exx[self.corner_def]
-                         - 2 * exy[self.corner_def]
-                         + coef2 * ( 2 * eyx[self.corner_def]
+                         - exy[self.corner_def]
+                         + coef2 * ( eyx[self.corner_def]
                                      - self.normal_sign[self.corner_def] * eyy[self.corner_def]))
 
         exy[self.corner_def] = coef * (self.normal_sign[self.corner_def] * eyy[self.corner_def]
-                                       - 2 * eyx[self.corner_def]
-                         + coef2 * (2 * exy[self.corner_def]
+                                       - eyx[self.corner_def]
+                         + coef2 * (exy[self.corner_def]
                                     - self.normal_sign[self.corner_def] * exx[self.corner_def]))
 
         eyx[self.corner_def] = tempyx
@@ -342,18 +342,18 @@ class ElasticProblem:
         exx_x = 0.5*conv(exx,self.meany) /2 +0.5*duxdx2 / self.lm
         eyy_x = conv(eyy,self.meany) /2
         exy_x = conv(exy, self.meany) /2
-        eyx_x = 0.5*conv(eyx, self.meany) /2 +0.5*duydx2/ self.lm /2
+        eyx_x = 0.5*conv(eyx, self.meany) /2 +0.5*duydx2/ self.lm
 
         #duydx2 /2 necessary for exy/eyx because of epsilonxy definition
         exx_y = conv(exx, self.meanx) /2
         eyy_y = 0.5*conv(eyy, self.meanx)/2+0.5*duydy2/ self.lm
-        exy_y = 0.5*conv(exy, self.meanx)/2+0.5*duxdy2/ self.lm /2
+        exy_y = 0.5*conv(exy, self.meanx)/2+0.5*duxdy2/ self.lm
         eyx_y = conv(eyx, self.meanx)/2
 
-        # exxold[self.corner_def] -= 0.5*exx[self.corner_def]
-        # eyyold[self.corner_def] -= 0.5*eyy[self.corner_def]
-        # exyold[self.corner_def] -= 0.5*exy[self.corner_def]
-        # eyxold[self.corner_def] -= 0.5*eyx[self.corner_def]
+        exxold[self.corner_def] -= 0.25*exx[self.corner_def]
+        eyyold[self.corner_def] -= 0.25*eyy[self.corner_def]
+        exyold[self.corner_def] -= 0.25*exy[self.corner_def]
+        eyxold[self.corner_def] -= 0.25*eyx[self.corner_def]
 
         # Adjust def on frontier to compensate duydy2=0.... todo check
         exx_x[self.x_frontier_edge] += (exx_x[self.x_frontier_edge]
@@ -368,6 +368,8 @@ class ElasticProblem:
         #Calculate complete shear deformation exy
         exy_x += eyx_x
         exy_y += eyx_y
+        exy_x /=2
+        exy_y /=2
 
         # Adjust shear def on frontier ; should it be done on edges around in_corners ??
         #exy_x[self.x_frontier_edge] = 0
