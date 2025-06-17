@@ -296,10 +296,10 @@ class ElasticProblem:
         eyx = (conv(uyt, self.ddx1)*self.isddx1 + duydx2 ) / (2 * self.lm)
 
         #keep those vals in memory for frontier mod later. could be optimised for frontier only...
-        exxold = exx.copy() /2
-        eyyold = eyy.copy() /2
-        exyold = exy.copy() /2
-        eyxold = eyx.copy() /2
+        exxold = exx.copy()
+        eyyold = eyy.copy()
+        exyold = exy.copy()
+        eyxold = eyx.copy()
 
         # multiply by two on frontiers to compensate where isddx/isddy = 0
         exx[self.y_frontier_def] *= 2
@@ -350,10 +350,10 @@ class ElasticProblem:
         exy_y = 0.5*conv(exy, self.meanx)/2+0.5*duxdy2/ self.lm
         eyx_y = conv(eyx, self.meanx)/2
 
-        exxold[self.corner_def] -= 0.25*exx[self.corner_def]
-        eyyold[self.corner_def] -= 0.25*eyy[self.corner_def]
-        exyold[self.corner_def] -= 0.25*exy[self.corner_def]
-        eyxold[self.corner_def] -= 0.25*eyx[self.corner_def]
+        exxold[self.corner_def] -= 0.5*exx[self.corner_def]
+        eyyold[self.corner_def] -= 0.5*eyy[self.corner_def]
+        exyold[self.corner_def] -= 0.5*exy[self.corner_def]
+        eyxold[self.corner_def] -= 0.5*eyx[self.corner_def]
 
         # Adjust def on frontier to compensate duydy2=0.... todo check
         exx_x[self.x_frontier_edge] += (exx_x[self.x_frontier_edge]
