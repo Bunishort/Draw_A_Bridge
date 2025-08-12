@@ -2,7 +2,7 @@ from context import sample
 import numpy as np
 import matplotlib.pyplot as plt
 
-k = 2
+k = 3
 nx=k*9
 ny=k*9
 
@@ -41,7 +41,8 @@ px_bound[gridx > (lx/2-lm)] = 0.01
 py_bound = np.zeros(solid.shape)
 
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
-                                  px_bound=px_bound,py_bound=py_bound,max_iter=max_iter)
+                                  px_bound=px_bound,py_bound=py_bound,max_iter=max_iter,
+                                  max_res=1e-8)
 
 n_iter,resx,resy,res_max_convergence,convergence_hist  = test.cg_loop()
 
