@@ -17,7 +17,7 @@ gridy,gridx = np.meshgrid(y,x)
 solid = np.zeros([nx,ny],dtype=bool)
 solid[np.bitwise_and(np.abs(gridx)<=lx/2,
     np.abs(gridy)<=ly/2)] = True
-frontier,bulk=get_frontier(solid)
+frontier,bulk,corn=get_frontier(solid)
 
 max_iter=2000
 E=1
@@ -56,7 +56,7 @@ resx2 = bx - a_u_x
 resy2 = by - a_u_y
 
 
-sxx, syy, sxy = test.calc_stress(test.ux, test.uy)
+sxx_x,sxy_x,syy_y,sxy_y = test.calc_stress(test.ux, test.uy)
 
 
 1+1
