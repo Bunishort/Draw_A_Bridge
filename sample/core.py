@@ -290,6 +290,7 @@ class ElasticProblem:
         exx[self.out_corner_def] = 0
         eyy[self.out_corner_def] = 0
         exy[self.out_corner_def] = 0
+        eyx[self.out_corner_def] = 0
 
         #Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
         exx_x = 0.5*conv(exx,self.meany) /2 +0.5*duxdx2 / self.lm

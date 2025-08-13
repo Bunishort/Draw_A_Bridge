@@ -38,9 +38,9 @@ solid[np.bitwise_and(r>=(ri-lm),r<=(ro+lm))]= True
 frontier,bulk,corn = sample.core.get_frontier(solid)
 nnx,nny = sample.core.calc_normal(solid)
 
-frontier_ind = np.where(frontier)
+bulk_ind = np.where(bulk)
 ux_imp=np.zeros(solid.shape)*np.nan
-ux_imp[frontier_ind[0][0],frontier_ind[1][0]] = 0
+ux_imp[bulk_ind[0][0],bulk_ind[1][0]] = 0
 uy_imp=ux_imp
 
 px_bound = np.zeros(solid.shape)
