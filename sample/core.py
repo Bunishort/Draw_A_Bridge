@@ -141,10 +141,11 @@ class ElasticProblem:
         tempcorner =  np.bitwise_and(self.out_corner,np.bitwise_not(self.is_uimp))
         self.out_corner_def = conv(tempcorner.astype(int), temp) > 0
 
-        self.isddx1 = conv(self.solid.astype(int), self.ddx1 ** 2) == 2
-        self.isddx2 = conv(self.solid.astype(int), self.ddx2 ** 2) == 2
-        self.isddy1 = conv(self.solid.astype(int), self.ddy1 ** 2) == 2
-        self.isddy2 = conv(self.solid.astype(int), self.ddy2 ** 2) == 2
+        solid_temp = np.bitwise_and(self.solid, np.bitwise_not(self.out_corner)).astype(int)
+        self.isddx1 = conv(solid_temp, self.ddx1 ** 2) == 2
+        self.isddx2 = conv(solid_temp, self.ddx2 ** 2) == 2
+        self.isddy1 = conv(solid_temp, self.ddy1 ** 2) == 2
+        self.isddy2 = conv(solid_temp, self.ddy2 ** 2) == 2
 
         self.frontier_def = np.bitwise_or(np.bitwise_not(self.isddx1),
                                              np.bitwise_not(self.isddx2))
@@ -287,10 +288,10 @@ class ElasticProblem:
         exy = (conv(uxt, self.ddy1)*self.isddy1 + duxdy2 ) / (2 * self.lm)
         eyx = (conv(uyt, self.ddx1)*self.isddx1 + duydx2 ) / (2 * self.lm)
 
-        exx[self.out_corner_def] = 0
-        eyy[self.out_corner_def] = 0
-        exy[self.out_corner_def] = 0
-        eyx[self.out_corner_def] = 0
+        # exx[self.out_corner_def] = 0
+        # eyy[self.out_corner_def] = 0
+        # exy[self.out_corner_def] = 0
+        # eyx[self.out_corner_def] = 0
 
         #Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
         exx_x = 0.5*conv(exx,self.meany) /2 +0.5*duxdx2 / self.lm
