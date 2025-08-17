@@ -36,7 +36,7 @@ uy_imp[u_free] = np.nan
 px_bound = np.zeros(solid.shape)
 py_bound = np.zeros(solid.shape)
 fx_imp = np.zeros(solid.shape)
-#fx_imp[int((nx-1)/2),int((ny-1)/2)] = 20
+fx_imp[int((nx-1)/2),int((ny-1)/2)] = 20
 
 
 

@@ -141,7 +141,7 @@ class ElasticProblem:
         tempcorner =  np.bitwise_and(self.out_corner,np.bitwise_not(self.is_uimp))
         self.out_corner_def = conv(tempcorner.astype(int), temp) > 0
 
-        solid_temp = np.bitwise_and(self.solid, np.bitwise_not(self.out_corner)).astype(int)
+        solid_temp = np.bitwise_and(self.solid, np.bitwise_not(tempcorner)).astype(int)
         self.isddx1 = conv(solid_temp, self.ddx1 ** 2) == 2
         self.isddx2 = conv(solid_temp, self.ddx2 ** 2) == 2
         self.isddy1 = conv(solid_temp, self.ddy1 ** 2) == 2
