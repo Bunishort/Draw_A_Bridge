@@ -252,9 +252,6 @@ class ElasticProblem:
         a_u_x[self.out_corner] = 0
         a_u_y[self.out_corner] = 0
 
-        a_u_x[self.frontier] *= 2
-        a_u_y[self.frontier] *= 2
-
         return -a_u_x,-a_u_y
 
     def calc_b(self):
@@ -274,10 +271,6 @@ class ElasticProblem:
 
         bx[np.bitwise_not(np.isnan(self.ux_imp))] = 0
         by[np.bitwise_not(np.isnan(self.uy_imp))] = 0
-
-
-        bx[self.frontier] *= 2
-        by[self.frontier] *= 2
 
         return -bx,-by
 
