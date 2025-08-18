@@ -12,7 +12,8 @@ def get_frontier(solid):
     temp = conv(solid.astype(int), kernel)
     frontier = np.bitwise_and(solid, temp < 9)
     bulk = np.bitwise_and(solid, np.bitwise_not(frontier))
-    out_corner = np.bitwise_and(frontier, temp<=4)#remove out corner from the computation
+    temp = conv(bulk.astype(int), kernel)
+    out_corner = np.bitwise_and(frontier, temp==1)#remove out corner from the computation
     return frontier, bulk, out_corner
 
 def remove_single_points(solid):

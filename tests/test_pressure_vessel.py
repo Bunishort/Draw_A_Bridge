@@ -17,7 +17,7 @@ ri = 5#internal radius
 ro = 10#external radius
 pi = 0.1
 
-max_iter=2000
+max_iter=10*2000
 E=1
 nu = 0.3
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
