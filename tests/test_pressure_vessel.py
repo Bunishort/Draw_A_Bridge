@@ -36,7 +36,7 @@ solid[np.bitwise_and(r>=(ri-lm),r<=(ro+lm))]= True
 #solid = sample.core.remove_single_points(solid)
 
 frontier,bulk,corn = sample.core.get_frontier(solid)
-nnx,nny = sample.core.calc_normal(solid)
+nnx,nny = sample.core.calc_normal(bulk)
 
 bulk_ind = np.where(bulk)
 ux_imp=np.zeros(solid.shape)*np.nan
