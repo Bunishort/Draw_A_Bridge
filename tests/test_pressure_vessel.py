@@ -79,12 +79,12 @@ sigr_num = sxx_x[line]
 figc = plt.figure()
 plt.title('Circumferential stress')
 plt.plot(r,sig_circ,color='k')
-plt.plot(gridx[line],sigc_num)
+plt.plot(gridx[line],sigc_num,'--')
 
 figr = plt.figure()
 plt.title('Radial stress')
 plt.plot(r,sig_rad,color='k')
-plt.plot(gridx[line]+0.5*lm,sigr_num)
+plt.plot(gridx[line]+0.5*lm,sigr_num,'--')
 
 figu = plt.figure()
 plt.title(' Displacement norm')
@@ -100,7 +100,7 @@ for theta,theta_str in zip(thetas,thetas_str):
     s = np.sin(theta)
     sigr_t = sxx * c**2 + 2*c*s*sxy + s**2 * syy
     sigc_t = sxx * s**2 - 2*c*s*sxy + c**2 * syy
-    un = (test.ux - np.mean(test.ux[solid])) ** 2 + (test.uy - np.mean(test.uy[solid])) ** 2
+    un = (test.ux - np.mean(test.ux[bulk])) ** 2 + (test.uy - np.mean(test.uy[bulk])) ** 2
     un = np.sqrt(un)
     uni = interpn((x*lm,y*lm),un,(xt,yt),bounds_error=False)
 
@@ -115,6 +115,8 @@ for theta,theta_str in zip(thetas,thetas_str):
 
 plt.legend()
 plt.figure(figc)
+plt.legend()
+plt.figure(figr)
 plt.legend()
 
 plt.show()
