@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('TkAgg')
+from scipy.interpolate import interpn
 
 import timeit
 start = timeit.default_timer()
@@ -85,6 +86,9 @@ plt.title('Radial stress')
 plt.plot(r,sig_rad,color='k')
 plt.plot(gridx[line]+0.5*lm,sigr_num)
 
+figu = plt.figure()
+plt.title(' Displacement norm')
+
 thetas = -np.array([0, np.pi/12, np.pi/6, np.pi/4, np.pi/3, np.pi/2])
 thetas_str = ['0', 'pi/12', 'pi/6', 'pi/4', 'pi/3', 'pi/2']
 
@@ -96,11 +100,18 @@ for theta,theta_str in zip(thetas,thetas_str):
     s = np.sin(theta)
     sigr_t = sxx * c**2 + 2*c*s*sxy + s**2 * syy
     sigc_t = sxx * s**2 - 2*c*s*sxy + c**2 * syy
+    un = (test.ux - np.mean(test.ux[solid])) ** 2 + (test.uy - np.mean(test.uy[solid])) ** 2
+    un = np.sqrt(un)
+    uni = interpn((x*lm,y*lm),un,(xt,yt),bounds_error=False)
+
 
     plt.figure(figc)
     plt.plot(r, sigc_t,label=theta_str)
     plt.figure(figr)
     plt.plot(r, sigr_t,label=theta_str)
+    plt.figure(figu)
+    plt.plot(r, uni,label=theta_str)
+
 
 plt.legend()
 plt.figure(figc)
