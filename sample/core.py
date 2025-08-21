@@ -289,10 +289,6 @@ class ElasticProblem:
         exy = (conv(uxt, self.ddy1)*self.isddy1 + duxdy2 ) / (2 * self.lm)
         eyx = (conv(uyt, self.ddx1)*self.isddx1 + duydx2 ) / (2 * self.lm)
 
-        # exx[self.out_corner_def] = 0
-        # eyy[self.out_corner_def] = 0
-        # exy[self.out_corner_def] = 0
-        # eyx[self.out_corner_def] = 0
         exx[self.out_corner_def] *= 2
         eyy[self.out_corner_def] *= 2
         exy[self.out_corner_def] *= 2
