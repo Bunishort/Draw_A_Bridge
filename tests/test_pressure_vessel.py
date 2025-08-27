@@ -8,8 +8,8 @@ from scipy.interpolate import interpn
 import timeit
 start = timeit.default_timer()
 
-nx=2*64
-ny=2*64
+nx=64
+ny=64
 L = 25
 lm= L/nx
 max_res = 1e-6
@@ -20,7 +20,7 @@ pi = 0.1
 
 max_iter=10*2000
 E=1
-nu = 0.
+nu = 0.3
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
 elas_mu = E/2/(1+nu)
 
@@ -67,7 +67,7 @@ A = pi*ri**2 / (ro**2-ri**2)
 B = pi*ri**2*ro**2 / (ro**2-ri**2)
 sig_circ = A + B/ r**2
 sig_rad =A - B / r**2
-u_rad = (1 + nu) / E * ( (1 - nu) * A * r + ( 1 + nu ) * B / r )
+u_rad = (1 + nu) / E * ( (1 - 2 * nu) * A * r + B / r )
 
 sig_circ[np.abs(r)<ri] = np.nan
 sig_rad[np.abs(r)<ri] = np.nan
