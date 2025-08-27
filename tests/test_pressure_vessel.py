@@ -8,8 +8,8 @@ from scipy.interpolate import interpn
 import timeit
 start = timeit.default_timer()
 
-nx=64
-ny=64
+nx=2*64
+ny=2*64
 L = 25
 lm= L/nx
 max_res = 1e-6
