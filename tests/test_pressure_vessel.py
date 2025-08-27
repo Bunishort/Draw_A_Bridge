@@ -8,19 +8,19 @@ from scipy.interpolate import interpn
 import timeit
 start = timeit.default_timer()
 
-nx=64
-ny=64
+nx=2*64
+ny=2*64
 L = 25
 lm= L/nx
 max_res = 1e-6
 
-ri = 5#internal radius
+ri = 3#internal radius
 ro = 10#external radius
 pi = 0.1
 
 max_iter=10*2000
 E=1
-nu = 0.3
+nu = 0.
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
 elas_mu = E/2/(1+nu)
 
@@ -123,7 +123,7 @@ plt.figure(figc)
 plt.legend()
 plt.figure(figr)
 plt.legend()
+print(n_iter)
 
 plt.show()
-print(n_iter)
 0.00278# stress error &e-6, 0.00299 with 1e-4, 0.0036 with 1e-2 (but looks bad), 117 iter
