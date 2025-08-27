@@ -91,7 +91,7 @@ plt.plot(r,sig_rad,color='k')
 plt.plot(gridx[line]+0.5*lm,sigr_num,'--')
 
 figu = plt.figure()
-plt.plot(r,u_rad,color='k')
+plt.plot(r,np.abs(u_rad),color='k')
 plt.title(' Displacement norm')
 
 thetas = -np.array([0, np.pi/12, np.pi/6, np.pi/4, np.pi/3, np.pi/2])
@@ -107,7 +107,7 @@ for theta,theta_str in zip(thetas,thetas_str):
     sigc_t = sxx * s**2 - 2*c*s*sxy + c**2 * syy
     un = (test.ux - np.mean(test.ux[bulk])) ** 2 + (test.uy - np.mean(test.uy[bulk])) ** 2
     un = np.sqrt(un)
-    uni = interpn((x*lm,y*lm),un,(xt,yt),bounds_error=False)
+    uni = interpn((x*lm,y*lm),2*un,(xt,yt),bounds_error=False)
 
 
     plt.figure(figc)
