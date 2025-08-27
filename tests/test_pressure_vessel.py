@@ -74,7 +74,7 @@ sig_rad[np.abs(r)<ri] = np.nan
 sig_circ[np.abs(r)>ro] = np.nan
 sig_rad[np.abs(r)>ro] = np.nan
 u_rad[np.abs(r)<ri] = np.nan
-u_circ[np.abs(r)>ro] = np.nan
+u_rad[np.abs(r)>ro] = np.nan
 
 line = gridy == np.min(gridy[gridy>=0])
 sigc_num = syy_y[line]
@@ -91,7 +91,7 @@ plt.plot(r,sig_rad,color='k')
 plt.plot(gridx[line]+0.5*lm,sigr_num,'--')
 
 figu = plt.figure()
-plt.plot(r,u_rad,color='k')
+plt.plot(r,np.abs(u_rad),color='k')
 plt.title(' Displacement norm')
 
 thetas = -np.array([0, np.pi/12, np.pi/6, np.pi/4, np.pi/3, np.pi/2])
