@@ -74,7 +74,7 @@ sig_rad[np.abs(r)<ri] = np.nan
 sig_circ[np.abs(r)>ro] = np.nan
 sig_rad[np.abs(r)>ro] = np.nan
 u_rad[np.abs(r)<ri] = np.nan
-u_circ[np.abs(r)>ro] = np.nan
+u_rad[np.abs(r)>ro] = np.nan
 
 line = gridy == np.min(gridy[gridy>=0])
 sigc_num = syy_y[line]
