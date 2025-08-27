@@ -63,14 +63,18 @@ stop = timeit.default_timer()
 print('Time: ', stop - start)
 
 r = (np.arange(5*nx) - (5*nx-1)/2)/(5*nx) *L
-sig_circ = pi*ri**2 / (ro**2-ri**2) + pi*ri**2*ro**2 / r**2 / (ro**2-ri**2)
-sig_rad =pi*ri**2 / (ro**2-ri**2) - pi*ri**2*ro**2 / r**2 / (ro**2-ri**2)
+A = pi*ri**2 / (ro**2-ri**2)
+B = pi*ri**2*ro**2 / (ro**2-ri**2)
+sig_circ = A + B/ r**2
+sig_rad =A - B / r**2
+u_rad = (1 + nu) / E * ( (1 - nu) * A * r + ( 1 + nu ) * B / r )
 
 sig_circ[np.abs(r)<ri] = np.nan
 sig_rad[np.abs(r)<ri] = np.nan
 sig_circ[np.abs(r)>ro] = np.nan
 sig_rad[np.abs(r)>ro] = np.nan
-
+u_rad[np.abs(r)<ri] = np.nan
+u_circ[np.abs(r)>ro] = np.nan
 
 line = gridy == np.min(gridy[gridy>=0])
 sigc_num = syy_y[line]
@@ -87,6 +91,7 @@ plt.plot(r,sig_rad,color='k')
 plt.plot(gridx[line]+0.5*lm,sigr_num,'--')
 
 figu = plt.figure()
+plt.plot(r,u_rad,color='k')
 plt.title(' Displacement norm')
 
 thetas = -np.array([0, np.pi/12, np.pi/6, np.pi/4, np.pi/3, np.pi/2])
