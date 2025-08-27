@@ -67,7 +67,7 @@ A = pi*ri**2 / (ro**2-ri**2)
 B = pi*ri**2*ro**2 / (ro**2-ri**2)
 sig_circ = A + B/ r**2
 sig_rad =A - B / r**2
-u_rad = (1 + nu) / E * ( (1 - nu) * A * r + ( 1 + nu ) * B / r )
+u_rad = (1 + nu) / E * ( (1 - 2 * nu) * A * r + B / r )
 
 sig_circ[np.abs(r)<ri] = np.nan
 sig_rad[np.abs(r)<ri] = np.nan
