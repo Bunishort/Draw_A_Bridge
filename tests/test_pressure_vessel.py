@@ -107,7 +107,7 @@ for theta,theta_str in zip(thetas,thetas_str):
     sigc_t = sxx * s**2 - 2*c*s*sxy + c**2 * syy
     un = (test.ux - np.mean(test.ux[bulk])) ** 2 + (test.uy - np.mean(test.uy[bulk])) ** 2
     un = np.sqrt(un)
-    uni = interpn((x*lm,y*lm),2*un,(xt,yt),bounds_error=False)
+    uni = interpn((x*lm,y*lm),un,(xt,yt),bounds_error=False)
 
 
     plt.figure(figc)

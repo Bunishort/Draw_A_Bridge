@@ -292,12 +292,12 @@ class ElasticProblem:
 
 
         #Average to have def on edges _x perpendicular to x, and _y perpendicular to y
-        exx_x = conv(exx,self.meany)
-        eyy_x = conv(eyy,self.meany)
-        exy_x = conv(exy, self.meany)
-        exx_y = conv(exx, self.meanx)
-        eyy_y = conv(eyy, self.meanx)
-        exy_y = conv(exy, self.meanx)
+        exx_x = conv(exx,self.meany) / 2
+        eyy_x = conv(eyy,self.meany) / 2
+        exy_x = conv(exy, self.meany) / 2
+        exx_y = conv(exx, self.meanx) / 2
+        eyy_y = conv(eyy, self.meanx) / 2
+        exy_y = conv(exy, self.meanx) / 2
 
         sxx_x = (self.elas_lambda + 2 * self.elas_mu) * exx_x + self.elas_lambda * eyy_x
         sxy_x =  (2 * self.elas_mu) * exy_x
