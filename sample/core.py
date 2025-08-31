@@ -10,10 +10,11 @@ def get_frontier(solid):
     # Bulk is the solid minus the frontier
     kernel = np.ones([3, 3])
     temp = conv(solid.astype(int), kernel)
-    frontier = np.bitwise_and(solid, temp < 8)
+    frontier = np.bitwise_and(solid, temp < 9)
     bulk = np.bitwise_and(solid, np.bitwise_not(frontier))
-
-    return frontier, bulk
+    temp = conv(bulk.astype(int), kernel)
+    out_corner = np.bitwise_and(frontier, temp==1)#remove out corner from the computation
+    return frontier, bulk, out_corner
 
 def remove_single_points(solid):
     # Remove point with no enough neighbours
@@ -127,30 +128,25 @@ class ElasticProblem:
         (self.ddx1,self.ddx2,self.ddy1,self.ddy2,self.meanx,self.meany,
          self.ddxx,self.ddyy) =\
             self.def_kernel()
-        self.frontier, self.bulk = get_frontier(self.solid)
+        self.frontier, self.bulk, self.out_corner = get_frontier(self.solid)
         self.nx, self.ny = calc_normal(self.solid)
 
         self.is_uimp = np.bitwise_and(np.bitwise_not(np.isnan(self.ux_imp)),
                                       np.bitwise_not(np.isnan(self.uy_imp)))
         self.is_uimp = np.bitwise_and(self.is_uimp, self.solid)
 
-        self.x_frontier_edge = conv(self.solid.astype(int),self.ddx2) != 0
-        self.y_frontier_edge = conv(self.solid.astype(int), self.ddy2) != 0
+        self.not_solid_x_edge = conv(self.bulk.astype(int), self.ddx2**2) == 0
+        self.not_solid_y_edge = conv(self.bulk.astype(int), self.ddy2**2) == 0
 
-        self.not_solid_x_edge = conv(self.solid.astype(int), self.ddx2**2) == 0
-        self.not_solid_y_edge = conv(self.solid.astype(int), self.ddy2**2) == 0
+        temp = np.array([[1, 1], [1, 1]])
+        tempcorner =  np.bitwise_and(self.out_corner,np.bitwise_not(self.is_uimp))
+        self.out_corner_def = conv(tempcorner.astype(int), temp) > 0
 
-        tempisddx1 = conv(self.solid.astype(int), self.ddx1) != 0
-        self.x_frontier_def = np.bitwise_or(tempisddx1,
-                                                self.x_frontier_edge)
-        tempisddy1 = conv(self.solid.astype(int), self.ddy1) != 0
-        self.y_frontier_def = np.bitwise_or(tempisddy1,
-                                                self.y_frontier_edge)
-
-        self.isddx1 = conv(self.solid.astype(int), self.ddx1 ** 2) == 2
-        self.isddx2 = conv(self.solid.astype(int), self.ddx2 ** 2) == 2
-        self.isddy1 = conv(self.solid.astype(int), self.ddy1 ** 2) == 2
-        self.isddy2 = conv(self.solid.astype(int), self.ddy2 ** 2) == 2
+        solid_temp = np.bitwise_and(self.solid, np.bitwise_not(tempcorner)).astype(int)
+        self.isddx1 = conv(solid_temp, self.ddx1 ** 2) == 2
+        self.isddx2 = conv(solid_temp, self.ddx2 ** 2) == 2
+        self.isddy1 = conv(solid_temp, self.ddy1 ** 2) == 2
+        self.isddy2 = conv(solid_temp, self.ddy2 ** 2) == 2
 
         self.frontier_def = np.bitwise_or(np.bitwise_not(self.isddx1),
                                              np.bitwise_not(self.isddx2))
@@ -253,6 +249,9 @@ class ElasticProblem:
         a_u_x[self.is_uimp] = 0
         a_u_y[self.is_uimp] = 0
 
+        a_u_x[self.out_corner] = 0
+        a_u_y[self.out_corner] = 0
+
         return -a_u_x,-a_u_y
 
     def calc_b(self):
@@ -261,12 +260,14 @@ class ElasticProblem:
         # /lm so that the units are the same everywhere
         # Where displacement is imposed, b=0
         #Elsewhere, b=0
-
-        bx = -self.fx_imp
-        by = -self.fy_imp
+        bx = np.zeros(self.solid.shape)
+        by = np.zeros(self.solid.shape)
+        bx[self.bulk] = -self.fx_imp[self.bulk]
+        by[self.bulk] = -self.fy_imp[self.bulk]
         bx[self.frontier] -= self.px_bound[self.frontier] / self.lm
         by[self.frontier] -= self.py_bound[self.frontier] / self.lm
-
+        bx[self.out_corner] = 0
+        by[self.out_corner] = 0
 
         bx[np.bitwise_not(np.isnan(self.ux_imp))] = 0
         by[np.bitwise_not(np.isnan(self.uy_imp))] = 0
@@ -277,28 +278,41 @@ class ElasticProblem:
         #Calculate the stress in the center of the mesh edges
 
         #First, calculate def at mesh cell centers
+        duxdx2 = conv(uxt, self.ddx2)*self.isddx2
+        duxdy2 = conv(uxt, self.ddy2)*self.isddy2
+        duydx2 = conv(uyt, self.ddx2)*self.isddx2
+        duydy2 = conv(uyt,self.ddy2) * self.isddy2
         exx = (conv(uxt, self.ddx1)*self.isddx1 +
-               conv(uxt, self.ddx2)*self.isddx2 ) / (2 *self.lm)
+               duxdx2 ) / (2 *self.lm)
         eyy = (conv(uyt, self.ddy1)*self.isddy1
-               + conv(uyt,self.ddy2) * self.isddy2 ) / (2 * self.lm)
-        exy = (conv(uxt, self.ddy1)*self.isddy1 + conv(uxt, self.ddy2)*self.isddy2 +
-               conv(uyt, self.ddx1)*self.isddx1 + conv(uyt, self.ddx2)*self.isddx2   ) / (4 * self.lm)
+               + duydy2 ) / (2 * self.lm)
+        exy = (conv(uxt, self.ddy1)*self.isddy1 + duxdy2 ) / (2 * self.lm)
+        eyx = (conv(uyt, self.ddx1)*self.isddx1 + duydx2 ) / (2 * self.lm)
 
-        # Adjust defs on frontier
-        coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu)
-        temp = exx[self.y_frontier_def]
-        exx[self.x_frontier_def] += coef * eyy[self.x_frontier_def]
-        eyy[self.y_frontier_def] += coef * temp
+        exx[self.out_corner_def] *= 2
+        eyy[self.out_corner_def] *= 2
+        exy[self.out_corner_def] *= 2
+        eyx[self.out_corner_def] *= 2
 
+        #Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
+        exx_x = 0.5*conv(exx,self.meany) /2 +0.5*duxdx2 / self.lm
+        eyy_x = conv(eyy,self.meany) /2
+        exy_x = conv(exy, self.meany) /2
+        eyx_x = 0.5*conv(eyx, self.meany) /2 +0.5*duydx2/ self.lm
 
-        #Average to have def on edges _x perpendicular to x, and _y perpendicular to y
-        exx_x = conv(exx,self.meany) / 2
-        eyy_x = conv(eyy,self.meany) / 2
-        exy_x = conv(exy, self.meany) / 2
-        exx_y = conv(exx, self.meanx) / 2
-        eyy_y = conv(eyy, self.meanx) / 2
-        exy_y = conv(exy, self.meanx) / 2
+        #duydx2 /2 necessary for exy/eyx because of epsilonxy definition
+        exx_y = conv(exx, self.meanx) /2
+        eyy_y = 0.5*conv(eyy, self.meanx)/2+0.5*duydy2/ self.lm
+        exy_y = 0.5*conv(exy, self.meanx)/2+0.5*duxdy2/ self.lm
+        eyx_y = conv(eyx, self.meanx)/2
 
+        #Calculate complete shear deformation exy
+        exy_x += eyx_x
+        exy_y += eyx_y
+        exy_x /=2
+        exy_y /=2
+
+        #Calculate stress from def
         sxx_x = (self.elas_lambda + 2 * self.elas_mu) * exx_x + self.elas_lambda * eyy_x
         sxy_x =  (2 * self.elas_mu) * exy_x
 
@@ -306,13 +320,7 @@ class ElasticProblem:
         sxy_y =  (2 * self.elas_mu) * exy_y
 
         #Frontier adjustments
-        # sxx stress is zero on x frontier, same for syy on y frontier
-        sxx_x[self.x_frontier_edge] = 0
-        syy_y[self.y_frontier_edge] = 0
-        sxy_x[self.x_frontier_edge] = 0
-        sxy_y[self.y_frontier_edge] = 0
-
-        #Set to zero outside the solid
+        #Set to zero outside of the bulk
         sxx_x[self.not_solid_x_edge] = 0
         syy_y[self.not_solid_y_edge] = 0
         sxy_x[self.not_solid_x_edge] = 0
