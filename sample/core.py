@@ -287,8 +287,8 @@ class ElasticProblem:
                duxdx2 ) / (2 *self.lm)
         eyy = (conv(uyt, self.ddy1)*self.isddy1
                + duydy2 ) / (2 * self.lm)
-        exy = (conv(uxt, self.ddy1)*self.isddy1 + duxdy2 ) / (4 * self.lm)
-        eyx = (conv(uyt, self.ddx1)*self.isddx1 + duydx2 ) / (4 * self.lm)
+        exy = (conv(uxt, self.ddy1)*self.isddy1 + duxdy2 ) / (2 * self.lm)
+        eyx = (conv(uyt, self.ddx1)*self.isddx1 + duydx2 ) / (2 * self.lm)
 
         # multiply by two on frontiers to compensate where isddx/isddy = 0
         exx[self.y_frontier_def] *= 2
@@ -297,19 +297,22 @@ class ElasticProblem:
         eyx[self.corner_def] *= 2
 
         #Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
-        exx_x = 0.5*conv(exx,self.meany)+0.5*duxdx2
-        eyy_x = conv(eyy,self.meany)
-        exy_x = conv(exy, self.meany)
-        eyx_x = 0.5*conv(eyx, self.meany)+0.5*duydx2
+        exx_x = 0.5*conv(exx,self.meany) /2 +0.5*duxdx2 / self.lm
+        eyy_x = conv(eyy,self.meany) /2
+        exy_x = conv(exy, self.meany) /2
+        eyx_x = 0.5*conv(eyx, self.meany) /2 +0.5*duydx2/ self.lm
 
-        exx_y = conv(exx, self.meanx)
-        eyy_y = 0.5*conv(eyy, self.meanx)+0.5*duydy2
-        exy_y = 0.5*conv(exy, self.meanx)+0.5*duxdy2
-        eyx_y = conv(eyx, self.meanx)
+        #duydx2 /2 necessary for exy/eyx because of epsilonxy definition
+        exx_y = conv(exx, self.meanx) /2
+        eyy_y = 0.5*conv(eyy, self.meanx)/2+0.5*duydy2/ self.lm
+        exy_y = 0.5*conv(exy, self.meanx)/2+0.5*duxdy2/ self.lm
+        eyx_y = conv(eyx, self.meanx)/2
 
         #Calculate complete shear deformation exy
         exy_x += eyx_x
         exy_y += eyx_y
+        exy_x /=2
+        exy_y /=2
 
         # Adjust defs on frontier
         coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu)
