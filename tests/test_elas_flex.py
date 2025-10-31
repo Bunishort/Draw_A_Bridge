@@ -7,7 +7,8 @@ nx=k*7
 ny=k*9
 
 lx = k*5
-ly = k*5
+# ly = k*5
+ly = 4
 
 x = np.arange(nx) - (nx-1)/2
 y = np.arange(ny) - (ny-1)/2
@@ -20,10 +21,11 @@ solid = np.zeros([nx,ny],dtype=bool)
 solid[np.bitwise_and(np.abs(gridx)<=lx/2,
     np.abs(gridy)<=ly/2)] = True
 
-max_iter=1000
+max_iter=1000*10
 E=1
 nu = 0.4
-px = 0.01
+px = 0.0
+py = 0.01
 
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
 elas_mu = E/2/(1+nu)
@@ -36,9 +38,12 @@ uy_imp=ux_imp
 px_bound = np.zeros(solid.shape)
 px_bound[gridx > (lx/2-lm)] = px
 py_bound = np.zeros(solid.shape)
+py_bound[gridx > (lx/2-lm)] = py
+
 
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
-                                  px_bound=px_bound,py_bound=py_bound,max_iter=max_iter,max_res = max_res)
+                                  px_bound=px_bound,py_bound=py_bound,max_iter=max_iter,max_res = max_res,
+                                  precond_type = 'robust', precond_n = 30)
 
 n_iter,resx,resy,res_max_convergence,convergence_hist  = test.cg_loop()
 
@@ -49,13 +54,25 @@ resy2 = by - a_u_y
 
 sxx_x,sxy_x,syy_y,sxy_y = test.calc_stress(test.ux, test.uy)
 
-plt.figure()
-plt.plot(np.sum(sxx_x,axis=1))
+# plt.figure()
+# plt.plot(np.sum(sxx_x,axis=1))
+#
+# plt.figure()
+# ux_ref = lm*(x - np.min(gridx[solid])) * (1 - nu **2 ) / E * px
+# plt.plot(lm*x, ux_ref,'k')
+# plt.plot(lm*x, test.ux[:,int(nx/2)])
 
 plt.figure()
 ux_ref = lm*(x - np.min(gridx[solid])) * (1 - nu **2 ) / E * px
 plt.plot(lm*x, ux_ref,'k')
-plt.plot(lm*x, test.ux[:,int(nx/2)])
+plt.plot(lm*x, np.sum(test.ux*test.bulk,1) / np.sum(test.bulk.astype(float),1 ))
+plt.ylabel('Ux')
+plt.xlabel('x')
+
+plt.figure()
+plt.plot(lm*x, np.sum(test.uy*test.bulk,1) / np.sum(test.bulk.astype(float),1 ))
+plt.ylabel('Uy')
+plt.xlabel('x')
 plt.show()
 
 
