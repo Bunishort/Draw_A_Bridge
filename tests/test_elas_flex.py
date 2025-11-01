@@ -2,13 +2,13 @@ from context import sample
 import numpy as np
 import matplotlib.pyplot as plt
 
-k = 3
+k = 6
 nx=k*7
 ny=k*9
 
 lx = k*5
 # ly = k*5
-ly = 4
+ly = 6
 
 x = np.arange(nx) - (nx-1)/2
 y = np.arange(ny) - (ny-1)/2
@@ -54,8 +54,8 @@ resy2 = by - a_u_y
 
 sxx_x,sxy_x,syy_y,sxy_y = test.calc_stress(test.ux, test.uy)
 
-# plt.figure()
-# plt.plot(np.sum(sxx_x,axis=1))
+plt.figure()
+plt.plot(np.sum(sxy_x,axis=1))
 #
 # plt.figure()
 # ux_ref = lm*(x - np.min(gridx[solid])) * (1 - nu **2 ) / E * px
