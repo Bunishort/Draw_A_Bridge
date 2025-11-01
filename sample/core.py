@@ -293,8 +293,19 @@ class ElasticProblem:
         # multiply by two on frontiers to compensate where isddx/isddy = 0
         exx[self.y_frontier_def] *= 2
         eyy[self.x_frontier_def] *= 2
-        exy[self.corner_def] *= 2
-        eyx[self.corner_def] *= 2
+        # exy[self.corner_def] *= 2
+        # eyx[self.corner_def] *= 2 # TODO check which formula is best
+        exy[self.x_frontier_def] *= 2
+        eyx[self.y_frontier_def] *= 2
+
+        # frontier correction TODO clean
+        coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu)
+        xfront = np.bitwise_and(self.x_frontier_def, np.bitwise_not(self.corner_def))
+        yfront = np.bitwise_and(self.y_frontier_def, np.bitwise_not(self.corner_def))
+        exx[xfront] = coef * eyy[xfront]
+        eyy[yfront] = coef * exx[yfront]
+        exy[yfront] = -eyx[yfront]
+        eyx[xfront] = -exy[xfront]
 
         #Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
         exx_x = 0.5*conv(exx,self.meany) /2 +0.5*duxdx2 / self.lm
