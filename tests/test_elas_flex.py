@@ -73,10 +73,12 @@ plt.figure()
 plt.plot(lm*x, np.sum(test.uy*test.bulk,1) / np.sum(test.bulk.astype(float),1 ))
 plt.ylabel('Uy')
 plt.xlabel('x')
-plt.show()
 
 plt.figure()
 plt.plot(gridx[:,0], np.sum(sxx_x * gridy * lm,axis=1))
 plt.plot(gridx[:,0], -np.sum(test.py_bound * test.frontier * lm)
          * (np.max(gridx[test.frontier]) - gridx ))
+
+plt.show()
+
 1+1
