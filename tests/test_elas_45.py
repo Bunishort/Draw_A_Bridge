@@ -10,12 +10,21 @@ lx = k*5
 # ly = k*5
 ly = 10
 
+theta = 45 * np.pi / 180
+lm=1.5
+
 x = np.arange(nx) - (nx-1)/2
 y = np.arange(ny) - (ny-1)/2
+x *= lm
+y *= lm
 
 max_res = 1e-6
 
-gridy,gridx = np.meshgrid(y,x)
+gridY,gridX = np.meshgrid(y,x)
+cos = np.cos(theta)
+sin = np.sin(theta)
+gridx = cos * gridX + sin * gridY
+gridy = -sin * gridX + cos * gridY
 
 solid = np.zeros([nx,ny],dtype=bool)
 solid[np.bitwise_and(np.abs(gridx)<=lx/2,
@@ -24,12 +33,13 @@ solid[np.bitwise_and(np.abs(gridx)<=lx/2,
 max_iter=1000*10
 E=1
 nu = 0.4
-px = 0.0
-py = 0.01
+pX = 0.0
+pY = 0.01
+px = cos * pX - sin * pY
+py = sin * pX + cos * pY
 
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
 elas_mu = E/2/(1+nu)
-lm=1.5
 ux_imp=np.zeros(solid.shape)
 ux_imp[:,:] = np.nan
 ux_imp[gridx < (-lx/2+lm)] =0
@@ -54,30 +64,30 @@ resy2 = by - a_u_y
 
 sxx_x,sxy_x,syy_y,sxy_y = test.calc_stress(test.ux, test.uy)
 
-plt.figure()
-plt.plot(np.sum(sxy_x,axis=1))
+# plt.figure()
+# plt.plot(np.sum(sxy_x,axis=1))
 #
 # plt.figure()
 # ux_ref = lm*(x - np.min(gridx[solid])) * (1 - nu **2 ) / E * px
 # plt.plot(lm*x, ux_ref,'k')
 # plt.plot(lm*x, test.ux[:,int(nx/2)])
 
+uX = []
+uY = []
+for xi in x:
+    isok = np.bitwise_and( gridx < (xi +lm), gridx >= (xi - lm))
+    uX.append(np.sum(test.ux[isok] * cos + test.uy[isok] * sin) / np.sum(test.solid[isok].astype(float)))
+    uY.append(np.sum(-test.ux[isok] * sin + test.uy[isok] * cos) / np.sum(test.solid[isok].astype(float)))
+
 plt.figure()
-ux_ref = lm*(x - np.min(gridx[solid])) * (1 - nu **2 ) / E * px
-plt.plot(lm*x, ux_ref,'k')
-plt.plot(lm*x, np.sum(test.ux*test.bulk,1) / np.sum(test.bulk.astype(float),1 ))
+plt.plot(x, uX)
 plt.ylabel('Ux')
 plt.xlabel('x')
 
 plt.figure()
-plt.plot(lm*x, np.sum(test.uy*test.bulk,1) / np.sum(test.bulk.astype(float),1 ))
+plt.plot(x, uY)
 plt.ylabel('Uy')
 plt.xlabel('x')
-
-plt.figure()
-plt.plot(gridx[:,0], np.sum(sxx_x * gridy * lm,axis=1))
-plt.plot(gridx[:,0], -np.sum(test.py_bound * test.frontier * lm)
-         * (np.max(gridx[test.frontier]) - gridx ))
 
 plt.show()
 
