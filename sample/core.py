@@ -286,13 +286,13 @@ class ElasticProblem:
 
         #First, calculate def at mesh cell centers
         duxdx2 = conv(uxt, self.ddx2)*self.isddx2 / (2 * self.lm)
-        duxdy2 = conv(uxt, self.ddy2)*self.isddy2 / (2 * self.lm)
-        duydx2 = conv(uyt, self.ddx2)*self.isddx2 / (2 * self.lm)
+        duxdy2 = conv(uxt, self.ddy2)*self.isddy2 / (4 * self.lm)
+        duydx2 = conv(uyt, self.ddx2)*self.isddx2 / (4 * self.lm)
         duydy2 = conv(uyt,self.ddy2) * self.isddy2 / (2 * self.lm)
         exx = conv(uxt, self.ddx1)*self.isddx1 / (2 * self.lm) + duxdx2
         eyy = conv(uyt, self.ddy1)*self.isddy1 / (2 * self.lm) + duydy2
-        exy = conv(uxt, self.ddy1)*self.isddy1 / (2 * self.lm) + duxdy2
-        eyx = conv(uyt, self.ddx1)*self.isddx1 / (2 * self.lm) + duydx2
+        exy = conv(uxt, self.ddy1)*self.isddy1 / (4 * self.lm) + duxdy2
+        eyx = conv(uyt, self.ddx1)*self.isddx1 / (4 * self.lm) + duydx2
 
         # multiply by two on frontiers to compensate where isddx/isddy = 0
         exx[self.y_frontier_def] *= 2
@@ -321,15 +321,12 @@ class ElasticProblem:
         #Calculate complete shear deformation exy
         exy_x += eyx_x
         exy_y += eyx_y
-        exy_x /=2
-        exy_y /=2
 
-        # Adjust defs on frontier
-        coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu)
-        exx_x[self.x_frontier_edge] = coef * eyy_x[self.x_frontier_edge]
-        exy_x[self.x_frontier_edge] = 0
-        eyy_y[self.y_frontier_edge] = coef * exx_y[self.y_frontier_edge]
-        exy_y[self.y_frontier_edge] = 0
+        # Adjust defs on frontier : not necessary because more efficiently done directly on stress
+        # exx_x[self.x_frontier_edge] = self.coef * eyy_x[self.x_frontier_edge]
+        # exy_x[self.x_frontier_edge] = 0
+        # eyy_y[self.y_frontier_edge] = self.coef * exx_y[self.y_frontier_edge]
+        # exy_y[self.y_frontier_edge] = 0
 
         #Calculate stress from def
         sxx_x = (self.elas_lambda + 2 * self.elas_mu) * exx_x + self.elas_lambda * eyy_x
@@ -339,12 +336,13 @@ class ElasticProblem:
         sxy_y =  (2 * self.elas_mu) * exy_y
 
         #Frontier adjustments
-        # TODO : check, it should not be necessary
         # sxx stress is zero on x frontier, same for syy on y frontier
         sxx_x[self.x_frontier_edge] = 0
         syy_y[self.y_frontier_edge] = 0
+        sxy_x[self.x_frontier_edge] = 0
+        sxy_y[self.y_frontier_edge] = 0
 
-        #Set to zero outside the solid - this one might be necessary
+        #Set to zero outside the solid
         sxx_x[self.not_solid_x_edge] = 0
         syy_y[self.not_solid_y_edge] = 0
         sxy_x[self.not_solid_x_edge] = 0
