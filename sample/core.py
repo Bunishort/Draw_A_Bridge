@@ -1,7 +1,10 @@
 import numpy as np
-from scipy.signal import convolve2d,correlate2d
-from .convolutions import addition_convolution
+# from scipy.signal import convolve2d,correlate2d
+# from .convolutions import addition_convolution
 from cv2 import filter2D
+from torchgen.native_function_generation import self_to_out_signature
+
+
 ###Remark : pyqt6 needed only for matplotlib show, maybe not necessary for pygame !
 
 def get_frontier(solid):
@@ -156,6 +159,9 @@ class ElasticProblem:
 
         self.frontier_def = np.bitwise_or(np.bitwise_not(self.isddx1),
                                              np.bitwise_not(self.isddx2))
+        self.coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu) #Correction coef for plane strain
+        self.x_frontier_def_s = np.bitwise_and(self.x_frontier_def, np.bitwise_not(self.corner_def))
+        self.y_frontier_def_s = np.bitwise_and(self.y_frontier_def, np.bitwise_not(self.corner_def))
 
     def def_kernel(self):
         if self.kernel_type=='plane strain':
@@ -293,31 +299,26 @@ class ElasticProblem:
         # multiply by two on frontiers to compensate where isddx/isddy = 0
         exx[self.y_frontier_def] *= 2
         eyy[self.x_frontier_def] *= 2
-        # exy[self.corner_def] *= 2
-        # eyx[self.corner_def] *= 2 # TODO check which formula is best
         exy[self.x_frontier_def] *= 2
         eyx[self.y_frontier_def] *= 2
 
-        # frontier correction TODO clean
-        coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu)
-        xfront = np.bitwise_and(self.x_frontier_def, np.bitwise_not(self.corner_def))
-        yfront = np.bitwise_and(self.y_frontier_def, np.bitwise_not(self.corner_def))
-        exx[xfront] = coef * eyy[xfront]
-        eyy[yfront] = coef * exx[yfront]
-        exy[yfront] = -eyx[yfront]
-        eyx[xfront] = -exy[xfront]
+        # frontier correction
+        exx[self.x_frontier_def_s] = self.coef * eyy[self.x_frontier_def_s]
+        eyy[self.y_frontier_def_s] = self.coef * exx[self.y_frontier_def_s]
+        exy[self.y_frontier_def_s] = -eyx[self.y_frontier_def_s]
+        eyx[self.x_frontier_def_s] = -exy[self.x_frontier_def_s]
 
         #Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
-        exx_x = 0.5*conv(exx,self.meany) /2 +0.5*duxdx2 / self.lm
-        eyy_x = conv(eyy,self.meany) /2
-        exy_x = conv(exy, self.meany) /2
-        eyx_x = 0.5*conv(eyx, self.meany) /2 +0.5*duydx2/ self.lm
+        exx_x = conv(exx, self.meany) / 4 + duxdx2 / 2 / self.lm
+        eyy_x = conv(eyy, self.meany) / 2
+        exy_x = conv(exy, self.meany) / 2
+        eyx_x = conv(eyx, self.meany) / 4 + duydx2 / 2 / self.lm
 
         #duydx2 /2 necessary for exy/eyx because of epsilonxy definition
-        exx_y = conv(exx, self.meanx) /2
-        eyy_y = 0.5*conv(eyy, self.meanx)/2+0.5*duydy2/ self.lm
-        exy_y = 0.5*conv(exy, self.meanx)/2+0.5*duxdy2/ self.lm
-        eyx_y = conv(eyx, self.meanx)/2
+        exx_y = conv(exx, self.meanx) / 2
+        eyy_y = conv(eyy, self.meanx) / 4 + duydy2 / 2 / self.lm
+        exy_y = conv(exy, self.meanx) / 4 + duxdy2 / 2 / self.lm
+        eyx_y = conv(eyx, self.meanx) / 2
 
         #Calculate complete shear deformation exy
         exy_x += eyx_x
