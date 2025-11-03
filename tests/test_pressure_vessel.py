@@ -8,8 +8,8 @@ from scipy.interpolate import interpn
 import timeit
 start = timeit.default_timer()
 
-nx=2*64
-ny=2*64
+nx=64
+ny=64
 L = 25
 lm= L/nx
 max_res = 1e-6
@@ -18,7 +18,7 @@ ri = 5#internal radius
 ro = 10#external radius
 pi = 0.1
 
-max_iter=10*2000
+max_iter=5*2000
 E=1
 nu = 0.3
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
@@ -33,15 +33,15 @@ gridx = gridx*lm
 r = np.sqrt(gridx**2+gridy**2)
 
 solid = np.zeros([nx,ny],dtype=bool)
-solid[np.bitwise_and(r>=(ri-lm),r<=(ro+lm))]= True
+solid[np.bitwise_and(r>=ri,r<=ro)]= True
 #solid = sample.core.remove_single_points(solid)
 
-frontier,bulk,corn = sample.core.get_frontier(solid)
-nnx,nny = sample.core.calc_normal(bulk)
+frontier,bulk = sample.core.get_frontier(solid)
+nnx,nny = sample.core.calc_normal(solid)
 
-bulk_ind = np.where(bulk)
+frontier_ind = np.where(frontier)
 ux_imp=np.zeros(solid.shape)*np.nan
-ux_imp[bulk_ind[0][0],bulk_ind[1][0]] = 0
+ux_imp[frontier_ind[0][0],frontier_ind[1][0]] = 0
 uy_imp=ux_imp
 
 px_bound = np.zeros(solid.shape)

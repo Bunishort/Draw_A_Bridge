@@ -17,7 +17,7 @@ gridy,gridx = np.meshgrid(y,x)
 solid = np.zeros([nx,ny],dtype=bool)
 solid[np.bitwise_and(np.abs(gridx)<=lx/2,
     np.abs(gridy)<=ly/2)] = True
-frontier,bulk,corn=get_frontier(solid)
+frontier,bulk=get_frontier(solid)
 
 max_iter=2000
 E=1
@@ -36,7 +36,7 @@ uy_imp[u_free] = np.nan
 px_bound = np.zeros(solid.shape)
 py_bound = np.zeros(solid.shape)
 fx_imp = np.zeros(solid.shape)
-fx_imp[int((nx-1)/2),int((ny-1)/2)] = 20
+#fx_imp[int((nx-1)/2),int((ny-1)/2)] = 20
 
 
 
