@@ -65,12 +65,12 @@ plt.plot(np.sum(sxy_x,axis=1))
 plt.figure()
 ux_ref = lm*(x - np.min(gridx[solid])) * (1 - nu **2 ) / E * px
 plt.plot(lm*x, ux_ref,'k')
-plt.plot(lm*x, np.sum(test.ux*test.bulk,1) / np.sum(test.bulk.astype(float),1 ))
+plt.plot(lm*x, np.sum(test.ux*test.solid,1) / np.sum(test.solid.astype(float),1 ))
 plt.ylabel('Ux')
 plt.xlabel('x')
 
 plt.figure()
-plt.plot(lm*x, np.sum(test.uy*test.bulk,1) / np.sum(test.bulk.astype(float),1 ))
+plt.plot(lm*x, np.sum(test.uy*test.solid,1) / np.sum(test.solid.astype(float),1 ))
 plt.ylabel('Uy')
 plt.xlabel('x')
 

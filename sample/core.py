@@ -160,6 +160,7 @@ class ElasticProblem:
         self.frontier_def = np.bitwise_or(np.bitwise_not(self.isddx1),
                                              np.bitwise_not(self.isddx2))
         self.coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu) #Correction coef for plane strain
+        # frontiers without corners :
         self.x_frontier_def_s = np.bitwise_and(self.x_frontier_def, np.bitwise_not(self.corner_def))
         self.y_frontier_def_s = np.bitwise_and(self.y_frontier_def, np.bitwise_not(self.corner_def))
 
@@ -274,7 +275,6 @@ class ElasticProblem:
         by = -self.fy_imp
         bx[self.frontier] -= self.px_bound[self.frontier] / self.lm
         by[self.frontier] -= self.py_bound[self.frontier] / self.lm
-
 
         bx[np.bitwise_not(np.isnan(self.ux_imp))] = 0
         by[np.bitwise_not(np.isnan(self.uy_imp))] = 0
