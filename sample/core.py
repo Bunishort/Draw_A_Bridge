@@ -143,6 +143,12 @@ class ElasticProblem:
         self.not_solid_x_edge = conv(self.solid.astype(int), self.ddx2**2) == 0
         self.not_solid_y_edge = conv(self.solid.astype(int), self.ddy2**2) == 0
 
+        self.isstress_x_edge = np.bitwise_and(np.bitwise_not(self.x_frontier_edge),
+                                              np.bitwise_not(self.not_solid_x_edge))
+        self.isstress_y_edge = np.bitwise_and(np.bitwise_not(self.y_frontier_edge),
+                                              np.bitwise_not(self.not_solid_y_edge))
+
+
         tempisddx1 = conv(self.solid.astype(int), self.ddx1) != 0
         self.x_frontier_def = np.bitwise_or(tempisddx1,
                                                 self.x_frontier_edge)
@@ -256,11 +262,11 @@ class ElasticProblem:
         a_u_x = (conv(sxx_x,self.ddxx) + conv(sxy_y,self.ddyy)) / self.lm
         a_u_y = (conv(syy_y, self.ddyy) + conv(sxy_x, self.ddxx)) / self.lm
 
-        a_u_x[np.bitwise_not(self.solid)] = 0
-        a_u_y[np.bitwise_not(self.solid)] = 0
+        a_u_x *= self.solid
+        a_u_y *= self.solid
 
-        a_u_x[self.is_uimp] = 0
-        a_u_y[self.is_uimp] = 0
+        a_u_x *= np.bitwise_not(self.is_uimp)
+        a_u_y *= np.bitwise_not(self.is_uimp)
 
         return -a_u_x,-a_u_y
 
@@ -337,16 +343,10 @@ class ElasticProblem:
 
         #Frontier adjustments
         # sxx stress is zero on x frontier, same for syy on y frontier
-        sxx_x[self.x_frontier_edge] = 0
-        syy_y[self.y_frontier_edge] = 0
-        sxy_x[self.x_frontier_edge] = 0
-        sxy_y[self.y_frontier_edge] = 0
-
-        #Set to zero outside the solid
-        sxx_x[self.not_solid_x_edge] = 0
-        syy_y[self.not_solid_y_edge] = 0
-        sxy_x[self.not_solid_x_edge] = 0
-        sxy_y[self.not_solid_y_edge] = 0
+        sxx_x *= self.isstress_x_edge
+        syy_y *= self.isstress_y_edge
+        sxy_x *= self.isstress_x_edge
+        sxy_y *= self.isstress_y_edge
 
         return sxx_x,sxy_x,syy_y,sxy_y
 
