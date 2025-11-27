@@ -259,8 +259,8 @@ class ElasticProblem:
         sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress(uxt,uyt)
 
         # We could remove this /lm division by multiplying b by lm
-        a_u_x = (conv(sxx_x,self.ddxx) + conv(sxy_y,self.ddyy)) / self.lm
-        a_u_y = (conv(syy_y, self.ddyy) + conv(sxy_x, self.ddxx)) / self.lm
+        a_u_x = (conv(sxx_x,self.ddxx / self.lm) + conv(sxy_y,self.ddyy / self.lm))
+        a_u_y = (conv(syy_y, self.ddyy / self.lm) + conv(sxy_x, self.ddxx) / self.lm)
 
         a_u_x *= self.solid
         a_u_y *= self.solid
@@ -291,14 +291,14 @@ class ElasticProblem:
         #Calculate the stress in the center of the mesh edges
 
         #First, calculate def at mesh cell centers
-        duxdx2 = conv(uxt, self.ddx2)*self.isddx2 / (2 * self.lm)
-        duxdy2 = conv(uxt, self.ddy2)*self.isddy2 / (4 * self.lm)
-        duydx2 = conv(uyt, self.ddx2)*self.isddx2 / (4 * self.lm)
-        duydy2 = conv(uyt,self.ddy2) * self.isddy2 / (2 * self.lm)
-        exx = conv(uxt, self.ddx1)*self.isddx1 / (2 * self.lm) + duxdx2
-        eyy = conv(uyt, self.ddy1)*self.isddy1 / (2 * self.lm) + duydy2
-        exy = conv(uxt, self.ddy1)*self.isddy1 / (4 * self.lm) + duxdy2
-        eyx = conv(uyt, self.ddx1)*self.isddx1 / (4 * self.lm) + duydx2
+        duxdx2 = conv(uxt, self.ddx2 / (2 * self.lm))*self.isddx2
+        duxdy2 = conv(uxt, self.ddy2 / (4 * self.lm))*self.isddy2
+        duydx2 = conv(uyt, self.ddx2 / (4 * self.lm))*self.isddx2
+        duydy2 = conv(uyt, self.ddy2 / (2 * self.lm)) * self.isddy2
+        exx = conv(uxt, self.ddx1 / (2 * self.lm))*self.isddx1  + duxdx2
+        eyy = conv(uyt, self.ddy1 / (2 * self.lm))*self.isddy1 + duydy2
+        exy = conv(uxt, self.ddy1 / (4 * self.lm))*self.isddy1 + duxdy2
+        eyx = conv(uyt, self.ddx1 / (4 * self.lm))*self.isddx1 + duydx2
 
         # multiply by two on frontiers to compensate where isddx/isddy = 0
         exx[self.y_frontier_def] *= 2
@@ -313,16 +313,16 @@ class ElasticProblem:
         eyx[self.x_frontier_def_s] = -exy[self.x_frontier_def_s]
 
         #Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
-        exx_x = conv(exx, self.meany) / 4 + duxdx2
-        eyy_x = conv(eyy, self.meany) / 2
-        exy_x = conv(exy, self.meany) / 2
-        eyx_x = conv(eyx, self.meany) / 4 + duydx2
+        exx_x = conv(exx, self.meany / 4) + duxdx2
+        eyy_x = conv(eyy, self.meany / 2)
+        exy_x = conv(exy, self.meany / 2)
+        eyx_x = conv(eyx, self.meany / 4) + duydx2
 
         #duydx2 /2 necessary for exy/eyx because of epsilonxy definition
-        exx_y = conv(exx, self.meanx) / 2
-        eyy_y = conv(eyy, self.meanx) / 4 + duydy2
-        exy_y = conv(exy, self.meanx) / 4 + duxdy2
-        eyx_y = conv(eyx, self.meanx) / 2
+        exx_y = conv(exx, self.meanx / 2)
+        eyy_y = conv(eyy, self.meanx / 4) + duydy2
+        exy_y = conv(exy, self.meanx / 4) + duxdy2
+        eyx_y = conv(eyx, self.meanx / 2)
 
         #Calculate complete shear deformation exy
         exy_x += eyx_x
