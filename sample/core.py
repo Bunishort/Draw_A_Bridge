@@ -296,7 +296,7 @@ class ElasticProblem:
 
         return -bx,-by
 
-    def calc_stress(self,uxt,uyt):
+    def calc_def(self,uxt,uyt):
         #Calculate the stress in the center of the mesh edges
 
         #First, calculate def at mesh cell centers
@@ -342,6 +342,11 @@ class ElasticProblem:
         # exy_x[self.x_frontier_edge] = 0
         # eyy_y[self.y_frontier_edge] = self.coef * exx_y[self.y_frontier_edge]
         # exy_y[self.y_frontier_edge] = 0
+
+        return exx_x,eyy_x,exy_x, eyy_y,exx_y,exy_y
+
+    def calc_stress(self,uxt,uyt):
+        exx_x, eyy_x, exy_x, eyy_y, exx_y, exy_y = self.calc_def(uxt,uyt)
 
         #Calculate stress from def
         sxx_x = (self.elas_lambda + 2 * self.elas_mu) * exx_x + self.elas_lambda * eyy_x
