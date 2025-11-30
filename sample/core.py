@@ -249,6 +249,15 @@ class ElasticProblem:
             dy = resy + beta*dy
         return n_iter,resx,resy,res_max_convergence,convergence_hist
 
+    def explicit_init(self,**kwargs):
+        self.vol_mass = kwargs.get('vol_mass',1)
+        self.dt = kwargs.get('dt',1)
+        for var in ['vx','vy','exx_old', 'eyy_old','exy_old', 'sxx_old', 'syy_old', 'sxy_old']:
+            setattr(self,var,kwargs.get(var,np.zeros(self.solid.shape)))
+        self.is_explicit = True
+
+
+
     def calc_a_u(self,uxt,uyt):
         #In the bulk, a_u = div(sigma)
         #On the frontier, div(sigma) is modified to take into account the boundary condition
