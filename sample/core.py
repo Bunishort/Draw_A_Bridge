@@ -345,9 +345,7 @@ class ElasticProblem:
 
         return exx_x,eyy_x,exy_x, eyy_y,exx_y,exy_y
 
-    def calc_stress(self,uxt,uyt):
-        exx_x, eyy_x, exy_x, eyy_y, exx_y, exy_y = self.calc_def(uxt,uyt)
-
+    def calc_stress_eps(self, exx_x, eyy_x, exy_x, eyy_y, exx_y, exy_y):
         #Calculate stress from def
         sxx_x = (self.elas_lambda + 2 * self.elas_mu) * exx_x + self.elas_lambda * eyy_x
         sxy_x =  (2 * self.elas_mu) * exy_x
@@ -364,3 +362,15 @@ class ElasticProblem:
 
         return sxx_x,sxy_x,syy_y,sxy_y
 
+    def calc_stress(self,uxt,uyt):
+        exx_x, eyy_x, exy_x, eyy_y, exx_y, exy_y = self.calc_def(uxt,uyt)
+        return self.calc_stress_eps(exx_x, eyy_x, exy_x, eyy_y, exx_y, exy_y )
+
+    def calc_stress_explicit(self, uxt, uyt):
+        #######
+        # eps = self.calc_def(uxt,uyt)
+        # eps_visc = kk * eps + kk * eps_old
+        # sigma_temp = kk * self.calc_stress_eps(eps_visc)
+        # sigma = kk * sigma_temp
+        #
+        return sxx_x,sxy_x,syy_y,sxy_y
