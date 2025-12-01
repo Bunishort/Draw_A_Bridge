@@ -280,6 +280,7 @@ class ElasticProblem:
 
         sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress(uxt,uyt)
 
+
         # We could remove this /lm division by multiplying b by lm
         a_u_x = (conv(sxx_x,self.ddxx / self.lm) + conv(sxy_y,self.ddyy / self.lm))
         a_u_y = (conv(syy_y, self.ddyy / self.lm) + conv(sxy_x, self.ddxx) / self.lm)
@@ -290,7 +291,7 @@ class ElasticProblem:
         a_u_x *= np.bitwise_not(self.is_uimp)
         a_u_y *= np.bitwise_not(self.is_uimp)
 
-        return -a_u_x,-a_u_y
+        return a_u_x,a_u_y
 
     def calc_b(self):
         #In the bulk, b= fx_imp, fy_imp (volumic forces, no inertia taken into account at this stage)
@@ -307,7 +308,7 @@ class ElasticProblem:
         bx[np.bitwise_not(np.isnan(self.ux_imp))] = 0
         by[np.bitwise_not(np.isnan(self.uy_imp))] = 0
 
-        return -bx,-by
+        return bx,by
 
     def calc_def(self,uxt,uyt):
         #Calculate the stress in the center of the mesh edges
@@ -411,3 +412,8 @@ class ElasticProblem:
         sxy_y += self.etasdt / self.G0 / self.denom * self.sxy_y_old
 
         return sxx_x,sxy_x,syy_y,sxy_y
+
+    def explicit_step(self):
+        sxx_x, sxy_x, syy_y, sxy_y = self.calc_stress_explicit(self.ux,self.uy)
+        bx, by = self.calc_b()
+        a_u_x, a_u_y = self.calc_a_u(self.ux, self.uy)
