@@ -279,8 +279,9 @@ class ElasticProblem:
         #uxt,uyt are 2d matrices of displacements
 
         sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress(uxt,uyt)
+        return self.calc_a_u_sig(sxx_x,sxy_x,syy_y,sxy_y)
 
-
+    def calc_a_u_sig(self,sxx_x,sxy_x,syy_y,sxy_y ):
         # We could remove this /lm division by multiplying b by lm
         a_u_x = (conv(sxx_x,self.ddxx / self.lm) + conv(sxy_y,self.ddyy / self.lm))
         a_u_y = (conv(syy_y, self.ddyy / self.lm) + conv(sxy_x, self.ddxx) / self.lm)
