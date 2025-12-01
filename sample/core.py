@@ -170,6 +170,28 @@ class ElasticProblem:
         self.x_frontier_def_s = np.bitwise_and(self.x_frontier_def, np.bitwise_not(self.corner_def))
         self.y_frontier_def_s = np.bitwise_and(self.y_frontier_def, np.bitwise_not(self.corner_def))
 
+        self.is_explicit = kwargs.get('is_explicit',False)
+        if self.is_explicit:
+            self.vol_mass = kwargs.get('vol_mass', 1)
+            self.dt = kwargs.get('dt', 1)
+            for var in ['vx', 'vy', 'exx_x_old', 'eyy_x_old', 'exy_x_old', 'sxx_x_old', 'syy_x_old', 'sxy_x_old',
+                'exx_y_old','eyy_y_old', 'exy_y_old', 'sxx_y_old', 'syy_y_old', 'sxy_y_old']:
+                setattr(self, var, kwargs.get(var, np.zeros(self.solid.shape)))
+
+            self.ratio = kwargs.get('ratio', 0.99)  # must be between 0 and 1
+            if (self.ratio >= 1) or (self.ratio <= 0):
+                print('Error : Ratio must be strictly between 0 and 1')
+            self.tau = kwargs.get('tau', 1)
+
+            self.G0 = 1 / self.ratio
+            self.G1 = 1 / (1 - self.ratio)
+            self.eta1 = self.tau * (self.G1 + self.G0)
+
+            self.denom = 1 + self.G1 / self.G0 + self.eta1 / self.G0 / self.dt
+            self.etasdt = self.eta1 / self.dt
+
+
+
     def def_kernel(self):
         if self.kernel_type=='plane strain':
 
@@ -248,15 +270,6 @@ class ElasticProblem:
             dx = resx + beta*dx
             dy = resy + beta*dy
         return n_iter,resx,resy,res_max_convergence,convergence_hist
-
-    def explicit_init(self,**kwargs):
-        self.vol_mass = kwargs.get('vol_mass',1)
-        self.dt = kwargs.get('dt',1)
-        for var in ['vx','vy','exx_old', 'eyy_old','exy_old', 'sxx_old', 'syy_old', 'sxy_old']:
-            setattr(self,var,kwargs.get(var,np.zeros(self.solid.shape)))
-        self.is_explicit = True
-
-
 
     def calc_a_u(self,uxt,uyt):
         #In the bulk, a_u = div(sigma)
@@ -373,4 +386,28 @@ class ElasticProblem:
         # sigma_temp = kk * self.calc_stress_eps(eps_visc)
         # sigma = kk * sigma_temp
         #
+
+        def_list = np.array([
+         self.exx_x_old.copy(),
+         self.eyy_x_old.copy(),
+         self.exy_x_old.copy(),
+         self.eyy_y_old.copy(),
+         self.exx_y_old.copy(),
+         self.exy_y_old.copy()])
+
+        # Could be optimzed by keeping np array in memory directly, but harder to read
+        [self.exx_x_old, self.eyy_x_old, self.exy_x_old,
+         self.eyy_y_old, self.exx_y_old, self.exy_y_old] = self.calc_def(uxt, uyt)
+        def_list *= -(self.etasdt) / self.denom
+        def_list += (self.G1 + self.etasdt) / self.denom * np.array(
+            [self.exx_x_old, self.eyy_x_old, self.exy_x_old,self.eyy_y_old, self.exx_y_old, self.exy_y_old])
+
+        sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress_eps(
+            *[def_list[i,:,:] for i in range(0,6)])
+
+        sxx_x += self.etasdt / self.G0 / self.denom * self.sxx_x_old
+        sxy_x += self.etasdt / self.G0 / self.denom * self.sxy_x_old
+        syy_y += self.etasdt / self.G0 / self.denom * self.syy_y_old
+        sxy_y += self.etasdt / self.G0 / self.denom * self.sxy_y_old
+
         return sxx_x,sxy_x,syy_y,sxy_y
