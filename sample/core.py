@@ -412,6 +412,11 @@ class ElasticProblem:
         syy_y += self.etasdt / self.G0 / self.denom * self.syy_y_old
         sxy_y += self.etasdt / self.G0 / self.denom * self.sxy_y_old
 
+        self.sxx_x_old = sxx_x
+        self.sxy_x_old = sxy_x
+        self.syy_y_old = syy_y
+        self.sxy_y_old = sxy_y
+
         return sxx_x,sxy_x,syy_y,sxy_y
 
     def explicit_step(self):
