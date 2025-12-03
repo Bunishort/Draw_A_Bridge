@@ -19,6 +19,7 @@ gridy,gridx = np.meshgrid(y,x)
 solid = np.zeros([nx,ny],dtype=bool)
 solid[np.bitwise_and(np.abs(gridx)<=lx/2,
     np.abs(gridy)<=ly/2)] = True
+ixmax = int(np.max(gridx[solid]))
 
 # simulation parameter
 max_iter=1000
@@ -31,7 +32,7 @@ lm=1.5
 vol_mass = 1
 dt = 1/3
 ratio = 0.1  # must be between 0 and 1
-tau = dt*2
+tau = dt*10
 
 c_p = np.sqrt(E / ratio * (1 - nu) / (vol_mass * (1 + nu) * (1 - 2 * nu)))
 c_s = np.sqrt(E / ratio /  (2 * (1 + nu)) / vol_mass)
@@ -58,6 +59,8 @@ test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
                                   px_bound=px_bound,py_bound=py_bound,max_iter=max_iter,max_res = max_res,
                                   is_explicit = True, vol_mass=vol_mass, dt = dt, ratio = ratio, tau = tau)
 
+uxt = [0,]
+itet = [0,]
 fig,ax = plt.subplots(1,1)
 t = ax.text(-0.1,0,'0')
 im = ax.imshow(test.ux,vmin = -0.1, vmax = 0.5)
@@ -67,6 +70,8 @@ for i in range(0,nstep):
         im.set_array(test.ux)
         t.set_text(str(i))
         plt.pause(1/1000)
+        uxt.append(test.ux[ixmax,int(nx/2)])
+        itet.append(i)
 
 plt.title('Ux')
 sxx_x,sxy_x,syy_y,sxy_y = test.calc_stress(test.ux, test.uy)
@@ -90,6 +95,12 @@ plt.plot(lm*x, ux_ref,'k')
 plt.plot(lm*x, uxv[:,int(nx/2)], label="explicit")
 plt.plot(lm*x, test.ux[:,int(nx/2)], label="implicit")
 plt.legend()
+
+
+plt.figure()
+plt.plot(itet, uxt)
+plt.xlabel('iteration')
+plt.ylabel('X displacement')
 
 plt.show()
 
