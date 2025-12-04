@@ -25,7 +25,7 @@ elas_lambda = E*nu /(1+nu)/(1-2*nu)
 elas_mu = E/2/(1+nu)
 
 vol_mass = 1
-dt = 1/30
+dt = 1/30 
 ratio = 0.2  # must be between 0 and 1
 tau = 2
 
