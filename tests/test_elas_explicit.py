@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 k = 3
 nx=k*7
-ny=k*9
+ny=k*7
 
 lx = k*5
 ly = k*5
@@ -27,11 +27,11 @@ E=1
 nu = 0.4
 px = 0.01
 
-lm=1.5
+lm = 4.5/k
 
-vol_mass = 1
+vol_mass = 0.5
 dt = 1/3
-ratio = 0.1  # must be between 0 and 1
+ratio = 0.2  # must be between 0 and 1
 tau = dt*10
 
 c_p = np.sqrt(E / ratio * (1 - nu) / (vol_mass * (1 + nu) * (1 - 2 * nu)))

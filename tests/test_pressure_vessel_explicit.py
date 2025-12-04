@@ -8,14 +8,14 @@ from scipy.interpolate import interpn
 import timeit
 start = timeit.default_timer()
 
-nx=4*64
-ny=4*64
-L = 4*25
+nx=64
+ny=64
+L = 25
 lm= L/nx
 max_res = 1e-6
 
-ri = 4*5#internal radius
-ro = 4*10#external radius
+ri = 5#internal radius
+ro = 10#external radius
 pi = 0.1
 
 max_iter=5*2000
@@ -25,7 +25,7 @@ elas_lambda = E*nu /(1+nu)/(1-2*nu)
 elas_mu = E/2/(1+nu)
 
 vol_mass = 1
-dt = 1/30 
+dt = 1/30
 ratio = 0.2  # must be between 0 and 1
 tau = 2
 
