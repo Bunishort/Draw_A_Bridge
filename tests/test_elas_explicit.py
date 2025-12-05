@@ -30,7 +30,7 @@ px = 0.01
 lm = 4.5/k
 
 vol_mass = 0.5
-dt = 1/3
+dt = 1/3 * 1.4
 ratio = 0.2  # must be between 0 and 1
 tau = 3
 
