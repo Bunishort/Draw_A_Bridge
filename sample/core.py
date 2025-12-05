@@ -395,15 +395,15 @@ class ElasticProblem:
         sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress_eps(exx_x, eyy_x, exy_x,
          eyy_y, exx_y, exy_y)
 
-        sxx_x *= self.dt
-        sxy_x *= self.dt
-        syy_y *= self.dt
-        sxy_y *= self.dt
+        sxx_x *= (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
+        sxy_x *= (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
+        syy_y *= (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
+        sxy_y *= (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
 
-        sxx_x += self.sxx_x_old * (1 - self.explicit_a * self.dt)
-        sxy_x += self.sxy_x_old * (1 - self.explicit_a * self.dt)
-        syy_y += self.syy_y_old * (1 - self.explicit_a * self.dt)
-        sxy_y += self.sxy_y_old * (1 - self.explicit_a * self.dt)
+        sxx_x += self.sxx_x_old * np.exp(-self.explicit_a * self.dt)
+        sxy_x += self.sxy_x_old * np.exp(-self.explicit_a * self.dt)
+        syy_y += self.syy_y_old * np.exp(-self.explicit_a * self.dt)
+        sxy_y += self.sxy_y_old * np.exp(-self.explicit_a * self.dt)
 
         self.sxx_x_old = sxx_x
         self.sxy_x_old = sxy_x
