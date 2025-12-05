@@ -174,8 +174,8 @@ class ElasticProblem:
         if self.is_explicit:
             self.vol_mass = kwargs.get('vol_mass', 1)
             self.dt = kwargs.get('dt', 1)
-            for var in ['vx', 'vy', 'exx_x_old', 'eyy_x_old', 'exy_x_old', 'sxx_x_old', 'syy_x_old', 'sxy_x_old',
-                'exx_y_old','eyy_y_old', 'exy_y_old', 'sxx_y_old', 'syy_y_old', 'sxy_y_old']:
+            for var in ['vx', 'vy', 'sxx_x_old', 'syy_x_old', 'sxy_x_old',
+                 'sxx_y_old', 'syy_y_old', 'sxy_y_old']:
                 setattr(self, var, kwargs.get(var, np.zeros(self.solid.shape)))
 
             self.ratio = kwargs.get('ratio', 0.99)  # must be between 0 and 1
@@ -187,10 +187,8 @@ class ElasticProblem:
             self.G1 = 1 / (1 - self.ratio)
             self.eta1 = self.tau * (self.G1 + self.G0)
 
-            self.denom = 1 + self.G1 / self.G0 + self.eta1 / self.G0 / self.dt
-            self.etasdt = self.eta1 / self.dt
-
-
+            self.explicit_a = (self.G1 + self.G0) / self.eta1
+            self.explicit_b = (self.G1 * self.G0) / self.eta1
 
     def def_kernel(self):
         if self.kernel_type=='plane strain':
@@ -381,7 +379,7 @@ class ElasticProblem:
         exx_x, eyy_x, exy_x, eyy_y, exx_y, exy_y = self.calc_def(uxt,uyt)
         return self.calc_stress_eps(exx_x, eyy_x, exy_x, eyy_y, exx_y, exy_y )
 
-    def calc_stress_explicit(self, uxt, uyt):
+    def calc_stress_explicit(self):
         #######
         # eps = self.calc_def(uxt,uyt)
         # eps_visc = kk * eps + kk * eps_old
@@ -389,28 +387,23 @@ class ElasticProblem:
         # sigma = kk * sigma_temp
         #
 
-        def_list = np.array([
-         self.exx_x_old.copy(),
-         self.eyy_x_old.copy(),
-         self.exy_x_old.copy(),
-         self.eyy_y_old.copy(),
-         self.exx_y_old.copy(),
-         self.exy_y_old.copy()])
+        [exx_x, eyy_x, exy_x,
+         eyy_y, exx_y, exy_y] = self.calc_def(
+            self.explicit_b * self.ux + self.G0 * self.vx,
+            self.explicit_b * self.uy + self.G0 * self.vy)
 
-        # Could be optimzed by keeping np array in memory directly, but harder to read
-        [self.exx_x_old, self.eyy_x_old, self.exy_x_old,
-         self.eyy_y_old, self.exx_y_old, self.exy_y_old] = self.calc_def(uxt, uyt)
-        def_list *= -(self.etasdt) / self.denom
-        def_list += (self.G1 + self.etasdt) / self.denom * np.array(
-            [self.exx_x_old, self.eyy_x_old, self.exy_x_old,self.eyy_y_old, self.exx_y_old, self.exy_y_old])
+        sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress_eps(exx_x, eyy_x, exy_x,
+         eyy_y, exx_y, exy_y)
 
-        sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress_eps(
-            *[def_list[i,:,:] for i in range(0,6)])
+        sxx_x *= self.dt
+        sxy_x *= self.dt
+        syy_y *= self.dt
+        sxy_y *= self.dt
 
-        sxx_x += self.etasdt / self.G0 / self.denom * self.sxx_x_old
-        sxy_x += self.etasdt / self.G0 / self.denom * self.sxy_x_old
-        syy_y += self.etasdt / self.G0 / self.denom * self.syy_y_old
-        sxy_y += self.etasdt / self.G0 / self.denom * self.sxy_y_old
+        sxx_x += self.sxx_x_old * (1 - self.explicit_a * self.dt)
+        sxy_x += self.sxy_x_old * (1 - self.explicit_a * self.dt)
+        syy_y += self.syy_y_old * (1 - self.explicit_a * self.dt)
+        sxy_y += self.sxy_y_old * (1 - self.explicit_a * self.dt)
 
         self.sxx_x_old = sxx_x
         self.sxy_x_old = sxy_x
@@ -420,7 +413,7 @@ class ElasticProblem:
         return sxx_x,sxy_x,syy_y,sxy_y
 
     def explicit_step(self):
-        sxx_x, sxy_x, syy_y, sxy_y = self.calc_stress_explicit(self.ux,self.uy)
+        sxx_x, sxy_x, syy_y, sxy_y = self.calc_stress_explicit()
         bx, by = self.calc_b()
         a_u_x, a_u_y = self.calc_a_u_sig(sxx_x, sxy_x, syy_y, sxy_y )
 
