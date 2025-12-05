@@ -32,7 +32,7 @@ lm = 4.5/k
 vol_mass = 0.5
 dt = 1/3
 ratio = 0.2  # must be between 0 and 1
-tau = dt*10
+tau = 3
 
 c_p = np.sqrt(E / ratio * (1 - nu) / (vol_mass * (1 + nu) * (1 - 2 * nu)))
 c_s = np.sqrt(E / ratio /  (2 * (1 + nu)) / vol_mass)
