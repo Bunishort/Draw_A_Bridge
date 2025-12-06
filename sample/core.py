@@ -417,8 +417,8 @@ class ElasticProblem:
         bx, by = self.calc_b()
         a_u_x, a_u_y = self.calc_a_u_sig(sxx_x, sxy_x, syy_y, sxy_y )
 
-        acc_x = ( a_u_x - bx ) / self.vol_mass / (self.lm ** 2)
-        acc_y = ( a_u_y - by ) / self.vol_mass / (self.lm ** 2)
+        acc_x = ( a_u_x - bx ) / self.vol_mass
+        acc_y = ( a_u_y - by ) / self.vol_mass
 
         self.vx = self.vx + acc_x * self.dt
         self.vy = self.vy + acc_y * self.dt

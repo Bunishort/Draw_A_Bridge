@@ -2,7 +2,7 @@ from context import sample
 import numpy as np
 import matplotlib.pyplot as plt
 
-k = 6
+k = 3
 nx=k*7
 ny=k*7
 
@@ -30,7 +30,7 @@ px = 0.01
 lm = 4.5/k
 
 vol_mass = 0.5
-dt = 1/3 * 1.4 /4
+dt = 0.3/2
 ratio = 0.2  # must be between 0 and 1
 tau = 3
 
