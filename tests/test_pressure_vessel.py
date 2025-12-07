@@ -53,7 +53,8 @@ py_bound[np.bitwise_and(r <= ri+lm,nny>0)] = -pi
 
 
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
-                                  px_bound=px_bound,py_bound=py_bound,max_iter=max_iter, max_res=max_res)
+                                  px_bound=px_bound,py_bound=py_bound,max_iter=max_iter, max_res=max_res,
+                                  precond_type = 'compute', precond_n = 25, precond = True)
 
 n_iter,resx,resy,res_max_convergence,convergence_hist  = test.cg_loop()
 

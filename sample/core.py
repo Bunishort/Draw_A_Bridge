@@ -83,6 +83,10 @@ def conv(matrix,kernel):
         anch = (-1,-1)
     return filter2D(matrix.astype(np.float32),-1,kernel.astype(np.float32),anchor=anch)
 
+def conv_big(matrix, kernel):
+
+    # return correlate2d(matrix, kernel, 'same')
+    return conv(matrix,kernel)
 
 class ElasticProblem:
     """
@@ -190,6 +194,12 @@ class ElasticProblem:
             self.explicit_a = (self.G1 + self.G0) / self.eta1
             self.explicit_b = (self.G1 * self.G0) / self.eta1
 
+        self.precond = kwargs.get('precond',False)
+        self.precond_type = kwargs.get('precond_type','formula')
+        self.precond_n = kwargs.get('precond_n',15)
+        self.precond_xx, self.precond_xy, self.precond_yy, self.precond_yx = self.def_precond()
+
+
     def def_kernel(self):
         if self.kernel_type=='plane strain':
 
@@ -210,6 +220,59 @@ class ElasticProblem:
         else:
             raise ValueError("Only \'plane strain\' is available")
         return ddx1,ddx2,ddy1,ddy2,meanx,meany,ddxx,ddyy
+
+    def def_precond(self):
+
+        nx = self.precond_n
+        ny = self.precond_n
+        x = np.arange(nx) - np.floor((nx - 1) / 2)
+        y = np.arange(ny) - np.floor((ny - 1) / 2)
+        gridy, gridx = np.meshgrid(y, x)
+        r = (1+np.sqrt(gridx ** 2 + gridy ** 2))
+
+        if self.precond_type == 'formula':
+            precond = 1 / (r**2)
+            # precond = np.exp((1-r))
+            precond_xx = precond
+            precond_xy = precond * gridx * gridy / ( 1 + np.sqrt(gridx**2 * gridy**2))
+            precond_yy = precond
+            precond_yx = precond_xy.transpose()
+        elif self.precond_type == 'robust':
+            precond = 1 / (r**2)
+            # precond = np.exp((1-r))
+            precond_xx = precond
+            precond_xy = precond * 0
+            precond_yy = precond
+            precond_yx = precond_xy.transpose()
+        elif self.precond_type == 'compute':
+            #Compute a preconditioning matrix using the results for a square with 0 displacement on edges,
+            #And unit displacement in the center
+            solid = np.ones([nx, ny], dtype=bool)
+            ux_imp = np.zeros(solid.shape)
+            ux_imp[1:-1, 1:-1] = np.nan
+            uy_imp = ux_imp.copy()
+            ux_imp[r == 1] = 1
+            uy_imp[r == 1] = 0
+
+
+            test = ElasticProblem(solid, self.elas_lambda, self.elas_mu, self.lm, ux_imp, uy_imp,
+                                  max_res = self.max_res, precond_type = 'formula')
+            n_iter, resx, resy, res_max_convergence, convergence_hist = test.cg_loop()
+            precond_xx = test.ux
+            precond_xy = test.uy
+            precond_yy = test.ux.transpose()
+            precond_yx = test.uy.transpose()
+        elif self.precond_type == 'none':
+            precond = np.ones([1,1])
+            # precond = np.exp((1-r))
+            precond_xx = precond
+            precond_xy = precond * 0
+            precond_yy = precond
+            precond_yx = precond * 0
+        else:
+            error(str(self.precond_type) + 'not a valid precond type')
+
+        return precond_xx, precond_xy, precond_yy, precond_yx
 
     def cg_loop(self):
         """
@@ -237,6 +300,16 @@ class ElasticProblem:
         resy = by-a_u_y
         dx = resx
         dy = resy
+        if self.precond:
+            # preconditioning d
+            pdx = conv_big(dx, self.precond_xx) + conv_big(dy, self.precond_yx)
+            pdy = conv_big(dy, self.precond_yy) + conv_big(dx, self.precond_xy)
+            pdx[np.bitwise_or(self.is_uimp,np.bitwise_not(self.solid))] = 0
+            pdy[np.bitwise_or(self.is_uimp,np.bitwise_not(self.solid))] = 0
+
+        else:
+            pdx=dx
+            pdy=dy
 
         # Convvergence loop
         while n_iter <= self.max_iter and res_max_convergence > self.max_res:
@@ -244,12 +317,12 @@ class ElasticProblem:
             n_iter=n_iter+1
 
             #Calculate new displacement field
-            a_d_x,a_d_y = self.calc_a_u(dx,dy)
+            a_d_x,a_d_y = self.calc_a_u(pdx,pdy)
             d_a_d = np.dot(dx.ravel(),a_d_x.ravel()) + np.dot(dy.ravel(),a_d_y.ravel())
             alpha = (np.dot(resx.ravel(),dx.ravel()) + np.dot(resy.ravel(),dy.ravel())) / d_a_d
 
-            self.ux = self.ux + alpha * dx
-            self.uy = self.uy + alpha * dy
+            self.ux = self.ux + alpha * pdx
+            self.uy = self.uy + alpha * pdy
 
             #Calculate new residual
             resx = resx - alpha * a_d_x
@@ -267,6 +340,21 @@ class ElasticProblem:
                     / d_a_d)
             dx = resx + beta*dx
             dy = resy + beta*dy
+
+            if self.precond:
+                #preconditioning
+                pdx = conv_big(dx, self.precond_xx) + conv_big(dy, self.precond_yx)
+                pdy = conv_big(dy, self.precond_yy) + conv_big(dx, self.precond_xy)
+
+                # Pas besoin de mettre ces lignes la a chaque itéaration car avec isddx/y ces points
+                # ne sont pas pris en compte dans le calcul de sigma. Mais évite des additions alors...
+                pdx[np.bitwise_or(self.is_uimp,np.bitwise_not(self.solid))] = 0
+                pdy[np.bitwise_or(self.is_uimp,np.bitwise_not(self.solid))] = 0
+
+            else:
+                pdx = dx
+                pdy = dy
+
         return n_iter,resx,resy,res_max_convergence,convergence_hist
 
     def calc_a_u(self,uxt,uyt):
