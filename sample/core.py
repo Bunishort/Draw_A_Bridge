@@ -173,6 +173,11 @@ class ElasticProblem:
         # frontiers without corners :
         self.x_frontier_def_s = np.bitwise_and(self.x_frontier_def, np.bitwise_not(self.corner_def))
         self.y_frontier_def_s = np.bitwise_and(self.y_frontier_def, np.bitwise_not(self.corner_def))
+        #Preconditioning options
+        self.precond = kwargs.get('precond',False)
+        self.precond_type = kwargs.get('precond_type','formula')
+        self.precond_n = kwargs.get('precond_n',15)
+        self.precond_xx, self.precond_xy, self.precond_yy, self.precond_yx = self.def_precond()
 
         self.is_explicit = kwargs.get('is_explicit',False)
         if self.is_explicit:
@@ -194,10 +199,11 @@ class ElasticProblem:
             self.explicit_a = (self.G1 + self.G0) / self.eta1
             self.explicit_b = (self.G1 * self.G0) / self.eta1
 
-        self.precond = kwargs.get('precond',False)
-        self.precond_type = kwargs.get('precond_type','formula')
-        self.precond_n = kwargs.get('precond_n',15)
-        self.precond_xx, self.precond_xy, self.precond_yy, self.precond_yx = self.def_precond()
+            if self.precond:
+                self.precond_norm_xx = conv_big(self.solid, self.precond_xx)
+                self.precond_norm_xy = conv_big(self.solid, self.precond_xy)
+                self.precond_norm_yy = conv_big(self.solid, self.precond_yy)
+                self.precond_norm_yx = conv_big(self.solid, self.precond_yx)
 
 
     def def_kernel(self):
@@ -507,6 +513,12 @@ class ElasticProblem:
 
         acc_x = ( a_u_x - bx ) / self.vol_mass
         acc_y = ( a_u_y - by ) / self.vol_mass
+
+        if self.precond:
+            acc_x = (conv_big(acc_x / self.precond_norm_xx, self.precond_xx)
+                     + conv_big(acc_y / self.precond_norm_yx, self.precond_yx))
+            acc_y = (conv_big(acc_y / self.precond_norm_yy, self.precond_yy)
+                     + conv_big(acc_x / self.precond_norm_xy, self.precond_xy))
 
         self.vx = self.vx + acc_x * self.dt
         self.vy = self.vy + acc_y * self.dt
