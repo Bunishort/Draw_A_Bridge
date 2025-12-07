@@ -25,8 +25,8 @@ elas_lambda = E*nu /(1+nu)/(1-2*nu)
 elas_mu = E/2/(1+nu)
 
 vol_mass = 1
-dt = 1/30
-ratio = 0.2  # must be between 0 and 1
+dt = 1/20
+ratio = 0.4  # must be between 0 and 1
 tau = 2
 
 c_p = np.sqrt(E / ratio * (1 - nu) / (vol_mass * (1 + nu) * (1 - 2 * nu)))
@@ -38,7 +38,7 @@ print( 'Shear: ' + str(c_s * dt / lm))
 
 
 nstep = 4000
-iplot = 10
+iplot = 100
 
 x = np.arange(nx) - (nx-1)/2
 y = np.arange(ny) - (ny-1)/2
@@ -88,12 +88,14 @@ uxv = test.ux.copy()
 uyv = test.uy.copy()
 
 
+stop = timeit.default_timer()
+print('Explicit loop Time: ', stop - start)
+print('Average time step time: ', (stop - start) / nstep)
+
 n_iter,resx,resy,res_max_convergence,convergence_hist  = test.cg_loop()
 
 sxx_x,sxy_x,syy_y,sxy_y = test.calc_stress(test.ux, test.uy)
 
-stop = timeit.default_timer()
-print('Time: ', stop - start)
 
 r = (np.arange(5*nx) - (5*nx-1)/2)/(5*nx) *L
 A = pi*ri**2 / (ro**2-ri**2)
