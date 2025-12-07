@@ -201,11 +201,20 @@ class ElasticProblem:
             self.explicit_b = (self.G1 * self.G0) / self.eta1
 
             if self.precond:
-                self.precond_norm_xx = conv_big(self.solid, np.abs(self.precond_xx))
-                self.precond_norm_xy = conv_big(self.solid, np.abs(self.precond_xy))
-                self.precond_norm_yy = conv_big(self.solid, np.abs(self.precond_yy))
-                self.precond_norm_yx = conv_big(self.solid, np.abs(self.precond_yx))
+                self.movable = np.bitwise_and(self.solid, np.bitwise_not(self.is_uimp))
+                precond_norm_xx = conv_big(self.movable, np.abs(self.precond_xx))
+                precond_norm_xy = conv_big(self.movable, np.abs(self.precond_xy))
+                precond_norm_yy = conv_big(self.movable, np.abs(self.precond_yy))
+                precond_norm_yx = conv_big(self.movable, np.abs(self.precond_yx))
 
+                # Remove the zeros (which whould be outside the solid exclusively, so no impact)
+                precond_norm_xx[precond_norm_xx == 0] = 1
+                precond_norm_xy[precond_norm_xy == 0] = 1
+                precond_norm_yy[precond_norm_yy == 0] = 1
+                precond_norm_yx[precond_norm_yx == 0] = 1
+
+                self.precond_norm_x = np.sqrt(precond_norm_xx**2 + precond_norm_xy**2)
+                self.precond_norm_y = np.sqrt(precond_norm_yy**2 + precond_norm_yx**2)
 
     def def_kernel(self):
         if self.kernel_type=='plane strain':
@@ -520,11 +529,12 @@ class ElasticProblem:
         if self.precond:
             #repartitioning the acceleration on surrounding cells, keeping the total accel constant.
             # ( would need adaptation if vol mass not constant)
-            acc_x = (conv_big(acc_x / self.precond_norm_xx, self.precond_xx)
-                     + conv_big(acc_y / self.precond_norm_yx, self.precond_yx))
-            acc_y = (conv_big(acc_y / self.precond_norm_yy, self.precond_yy)
-                     + conv_big(acc_x / self.precond_norm_xy, self.precond_xy))
-
+            acc_x = (conv_big(acc_x / self.precond_norm_x, self.precond_xx)
+                     + conv_big(acc_y / self.precond_norm_y, self.precond_yx))
+            acc_y = (conv_big(acc_y / self.precond_norm_y, self.precond_yy)
+                     + conv_big(acc_x / self.precond_norm_x, self.precond_xy))
+            acc_x[np.bitwise_not(self.movable)] = 0
+            acc_y[np.bitwise_not(self.movable)] = 0
 
         self.vx = self.vx + acc_x * self.dt
         self.vy = self.vy + acc_y * self.dt

@@ -46,7 +46,7 @@ print( 'Compression : ' + str(c_p * dt / lm))
 print( 'Shear: ' + str(c_s * dt / lm))
 
 nstep = 1000
-iplot = 1
+iplot = 10
 
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
 elas_mu = E/2/(1+nu)
@@ -74,7 +74,7 @@ for i in range(0,nstep):
     if np.mod(i,iplot) ==0:
         im.set_array(test.ux)
         t.set_text(str(i))
-        plt.pause(1/1)
+        plt.pause(1/100)
         uxt.append(test.ux[ixmax,int(nx/2)])
         itet.append(i)
 
