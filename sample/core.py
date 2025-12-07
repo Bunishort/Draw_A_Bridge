@@ -1,3 +1,4 @@
+from logging import error
 import numpy as np
 # from scipy.signal import convolve2d,correlate2d
 # from .convolutions import addition_convolution
@@ -200,10 +201,10 @@ class ElasticProblem:
             self.explicit_b = (self.G1 * self.G0) / self.eta1
 
             if self.precond:
-                self.precond_norm_xx = conv_big(self.solid, self.precond_xx)
-                self.precond_norm_xy = conv_big(self.solid, self.precond_xy)
-                self.precond_norm_yy = conv_big(self.solid, self.precond_yy)
-                self.precond_norm_yx = conv_big(self.solid, self.precond_yx)
+                self.precond_norm_xx = conv_big(self.solid, np.abs(self.precond_xx))
+                self.precond_norm_xy = conv_big(self.solid, np.abs(self.precond_xy))
+                self.precond_norm_yy = conv_big(self.solid, np.abs(self.precond_yy))
+                self.precond_norm_yx = conv_big(self.solid, np.abs(self.precond_yx))
 
 
     def def_kernel(self):
@@ -251,23 +252,26 @@ class ElasticProblem:
             precond_yy = precond
             precond_yx = precond_xy.transpose()
         elif self.precond_type == 'compute':
-            #Compute a preconditioning matrix using the results for a square with 0 displacement on edges,
-            #And unit displacement in the center
-            solid = np.ones([nx, ny], dtype=bool)
-            ux_imp = np.zeros(solid.shape)
-            ux_imp[1:-1, 1:-1] = np.nan
-            uy_imp = ux_imp.copy()
-            ux_imp[r == 1] = 1
-            uy_imp[r == 1] = 0
+            if self.precond_n >= 7:
+                #Compute a preconditioning matrix using the results for a square with 0 displacement on edges,
+                #And unit displacement in the center
+                solid = np.ones([nx, ny], dtype=bool)
+                ux_imp = np.zeros(solid.shape)
+                ux_imp[1:-1, 1:-1] = np.nan
+                uy_imp = ux_imp.copy()
+                ux_imp[r == 1] = 1
+                uy_imp[r == 1] = 0
 
 
-            test = ElasticProblem(solid, self.elas_lambda, self.elas_mu, self.lm, ux_imp, uy_imp,
-                                  max_res = self.max_res, precond_type = 'formula')
-            n_iter, resx, resy, res_max_convergence, convergence_hist = test.cg_loop()
-            precond_xx = test.ux
-            precond_xy = test.uy
-            precond_yy = test.ux.transpose()
-            precond_yx = test.uy.transpose()
+                test = ElasticProblem(solid, self.elas_lambda, self.elas_mu, self.lm, ux_imp, uy_imp,
+                                      max_res = self.max_res, precond_type = 'formula')
+                n_iter, resx, resy, res_max_convergence, convergence_hist = test.cg_loop()
+                precond_xx = test.ux
+                precond_xy = test.uy
+                precond_yy = test.ux.transpose()
+                precond_yx = test.uy.transpose()
+            else:
+                error('precond_n must be >= 7 for ''compute'' option')
         elif self.precond_type == 'none':
             precond = np.ones([1,1])
             # precond = np.exp((1-r))
@@ -422,7 +426,7 @@ class ElasticProblem:
         exy[self.x_frontier_def] *= 2
         eyx[self.y_frontier_def] *= 2
 
-        # frontier correction
+        # frontier correction to be coherent with sigma.normal = 0
         exx[self.x_frontier_def_s] = self.coef * eyy[self.x_frontier_def_s]
         eyy[self.y_frontier_def_s] = self.coef * exx[self.y_frontier_def_s]
         exy[self.y_frontier_def_s] = -eyx[self.y_frontier_def_s]
@@ -475,11 +479,9 @@ class ElasticProblem:
 
     def calc_stress_explicit(self):
         #######
-        # eps = self.calc_def(uxt,uyt)
-        # eps_visc = kk * eps + kk * eps_old
-        # sigma_temp = kk * self.calc_stress_eps(eps_visc)
-        # sigma = kk * sigma_temp
-        #
+        # Calculating stress for a Standard Linear Solid (Zener)
+        # Viscoelastic parameters G0/G1/Eta1 normalized so that the long term response
+        # is the same as the elastic response
 
         [exx_x, eyy_x, exy_x,
          eyy_y, exx_y, exy_y] = self.calc_def(
@@ -507,6 +509,7 @@ class ElasticProblem:
         return sxx_x,sxy_x,syy_y,sxy_y
 
     def explicit_step(self):
+        #Explicit step using LeapFrog method
         sxx_x, sxy_x, syy_y, sxy_y = self.calc_stress_explicit()
         bx, by = self.calc_b()
         a_u_x, a_u_y = self.calc_a_u_sig(sxx_x, sxy_x, syy_y, sxy_y )
@@ -515,10 +518,13 @@ class ElasticProblem:
         acc_y = ( a_u_y - by ) / self.vol_mass
 
         if self.precond:
+            #repartitioning the acceleration on surrounding cells, keeping the total accel constant.
+            # ( would need adaptation if vol mass not constant)
             acc_x = (conv_big(acc_x / self.precond_norm_xx, self.precond_xx)
                      + conv_big(acc_y / self.precond_norm_yx, self.precond_yx))
             acc_y = (conv_big(acc_y / self.precond_norm_yy, self.precond_yy)
                      + conv_big(acc_x / self.precond_norm_xy, self.precond_xy))
+
 
         self.vx = self.vx + acc_x * self.dt
         self.vy = self.vy + acc_y * self.dt

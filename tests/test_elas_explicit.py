@@ -30,9 +30,13 @@ px = 0.01
 lm = 4.5/k
 
 vol_mass = 0.5
-dt = 0.3/2
+dt = 0.3
 ratio = 0.2  # must be between 0 and 1
 tau = 3
+
+precond = True
+precond_type = 'compute'
+precond_n = 7
 
 c_p = np.sqrt(E / ratio * (1 - nu) / (vol_mass * (1 + nu) * (1 - 2 * nu)))
 c_s = np.sqrt(E / ratio /  (2 * (1 + nu)) / vol_mass)
@@ -42,7 +46,7 @@ print( 'Compression : ' + str(c_p * dt / lm))
 print( 'Shear: ' + str(c_s * dt / lm))
 
 nstep = 1000
-iplot = 10
+iplot = 1
 
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
 elas_mu = E/2/(1+nu)
@@ -57,7 +61,8 @@ py_bound = np.zeros(solid.shape)
 
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
                                   px_bound=px_bound,py_bound=py_bound,max_iter=max_iter,max_res = max_res,
-                                  is_explicit = True, vol_mass=vol_mass, dt = dt, ratio = ratio, tau = tau)
+                                  is_explicit = True, vol_mass=vol_mass, dt = dt, ratio = ratio, tau = tau,
+                                  precond_type = precond_type, precond_n = precond_n, precond = precond)
 
 uxt = [0,]
 itet = [0,]
@@ -69,7 +74,7 @@ for i in range(0,nstep):
     if np.mod(i,iplot) ==0:
         im.set_array(test.ux)
         t.set_text(str(i))
-        plt.pause(1/1000)
+        plt.pause(1/1)
         uxt.append(test.ux[ixmax,int(nx/2)])
         itet.append(i)
 
