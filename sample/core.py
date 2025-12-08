@@ -260,6 +260,14 @@ class ElasticProblem:
             precond_xy = precond * 0
             precond_yy = precond
             precond_yx = precond_xy.transpose()
+        elif self.precond_type == 'linear':
+            precond = 1 - (r - 1) / np.floor((nx - 1) / 2)
+            precond[precond<0] = 0
+            # precond = np.exp((1-r))
+            precond_xx = precond
+            precond_xy = precond * 0
+            precond_yy = precond
+            precond_yx = precond_xy.transpose()
         elif self.precond_type == 'compute':
             if self.precond_n >= 7:
                 #Compute a preconditioning matrix using the results for a square with 0 displacement on edges,
