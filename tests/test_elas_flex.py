@@ -43,7 +43,7 @@ py_bound[gridx > (lx/2-lm)] = py
 
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
                                   px_bound=px_bound,py_bound=py_bound,max_iter=max_iter,max_res = max_res,
-                                  precond_type = 'robust', precond_n = 30)
+                                  precond_type = 'robust', precond_n = 3)
 
 n_iter,resx,resy,res_max_convergence,convergence_hist  = test.cg_loop()
 
@@ -75,6 +75,7 @@ plt.ylabel('Uy')
 plt.xlabel('x')
 
 plt.figure()
+plt.title('Moment Mz')
 plt.plot(gridx[:,0], np.sum(sxx_x * gridy * lm,axis=1))
 plt.plot(gridx[:,0], -np.sum(test.py_bound * test.frontier * lm)
          * (np.max(gridx[test.frontier]) - gridx ))
