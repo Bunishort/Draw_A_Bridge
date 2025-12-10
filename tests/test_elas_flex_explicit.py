@@ -3,19 +3,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 
-k = 6
+k = 5
 nx=k*7
 ny=k*7
 
 lx = k*5
-ly = 10
+ly = 2
 
 x = np.arange(nx) - (nx-1)/2
 y = np.arange(ny) - (ny-1)/2
+gridy,gridx = np.meshgrid(y,x)
 
 max_res = 1e-6
 
-gridy,gridx = np.meshgrid(y,x)
 
 solid = np.zeros([nx,ny],dtype=bool)
 solid[np.bitwise_and(np.abs(gridx)<=lx/2,
@@ -26,14 +26,14 @@ ixmax = int(np.max(gridx[solid]))
 max_iter=1000
 E=1
 nu = 0.4
-py = 0.01
+py = 0.01 /10
 
 lm = 4.5/k
 
 vol_mass = 0.5
-dt = 0.3 /2
+dt = 0.3 / 5
 ratio = 0.2  # must be between 0 and 1
-tau = 3
+tau = 3 *3
 
 precond = False
 precond_type = 'robust'
@@ -46,20 +46,21 @@ print( 'Max Sound speed * dt / lm ')
 print( 'Compression : ' + str(c_p * dt / lm))
 print( 'Shear: ' + str(c_s * dt / lm))
 
-nstep = 6000
-iplot = 10
+nstep = 12000
+iplot = 50
+kplot = 10
 
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
 elas_mu = E/2/(1+nu)
 ux_imp=np.zeros(solid.shape)
 ux_imp[:,:] = np.nan
-ux_imp[gridx < (-lx/2+lm)] =0
+ux_imp[gridx == np.min(gridx[solid])] =0
 uy_imp=ux_imp
 
 px_bound = np.zeros(solid.shape)
 py_bound = np.zeros(solid.shape)
-py_bound[gridx > (lx/2-lm)] = py
-
+# py_bound[gridx > (lx/2-lm)] = py
+py_bound[gridx == np.max(gridx[solid])] = py
 
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
                                   px_bound=px_bound,py_bound=py_bound,max_iter=max_iter,max_res = max_res,
@@ -68,9 +69,15 @@ test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
 
 uyt = [0,]
 itet = [0,]
+
+xplot = (np.arange(kplot * nx) - (kplot * nx-1)/2) / kplot
+yplot = (np.arange(kplot * ny) - (kplot * ny-1)/2) / kplot
+gridyplot,gridxplot = np.meshgrid(yplot,xplot)
+
+
 fig,ax = plt.subplots(1,1)
 t = ax.text(-0.1,0,'0')
-im = ax.imshow(test.uy,vmin = -0.1, vmax = 10)
+im = ax.imshow(0* gridxplot,vmin = -0.001, vmax = 0.002)
 for i in range(0,nstep):
     test.explicit_step()
     if np.mod(i,iplot) ==0:
@@ -80,10 +87,11 @@ for i in range(0,nstep):
         # interp = NearestNDInterpolator(list(zip(gridxx, gridyy)), test.uy[solid])
         # interp = LinearNDInterpolator(list(zip(gridxx, gridyy)), test.uy[solid])
         # Z = interp(gridx, gridy)
-        Z = griddata(list(zip(gridxx, gridyy)), test.uy[solid],
-                     (gridx, gridy), method='linear', rescale=False)
-        im.set_array(Z)
+        Z = griddata(list(zip(gridxx, gridyy)), test.sxy_y_old[solid],
+                     (gridxplot, gridyplot), method='linear', rescale=False)
 
+
+        im.set_array(Z)
         # im.set_array(test.uy)
         t.set_text(str(i))
         plt.pause(1/100)
