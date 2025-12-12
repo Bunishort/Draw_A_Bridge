@@ -99,8 +99,9 @@ for i in range(0,nstep):
         # Zplot = interpn((x,y),Z,(gridxplot,gridyplot),fill_value=np.nan, method="linear", bounds_error=False)
         # Zplot = zoom(Z,zoom=kplot,order=1)
 
-        Z = cv2.GaussianBlur(Z, (0, 0), sigmaX=1, sigmaY = 1)
         Zplot = cv2.resize(Z, None, fx=kplot, fy=kplot, interpolation=cv2.INTER_AREA)
+        kernel = np.ones((kplot, kplot), np.float32) / kplot**2
+        Zplot = cv2.filter2D(Zplot, -1, kernel)
         # Zplot = griddata(list(zip(gridxx, gridyy)), test.sxy_y_old[solid],
         #               (gridxplot, gridyplot), method='linear', rescale=False)
         #solution 1 : extrapoler ux partout pour avoir un truc cohérent, continu, bijectif
