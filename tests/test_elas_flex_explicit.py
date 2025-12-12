@@ -1,7 +1,8 @@
 from context import sample
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.interpolate import griddata
+from scipy.interpolate import griddata, interpn
+from scipy.ndimage import zoom
 
 k = 5
 nx=k*7
@@ -74,24 +75,38 @@ xplot = (np.arange(kplot * nx) - (kplot * nx-1)/2) / kplot
 yplot = (np.arange(kplot * ny) - (kplot * ny-1)/2) / kplot
 gridyplot,gridxplot = np.meshgrid(yplot,xplot)
 
-
 fig,ax = plt.subplots(1,1)
 t = ax.text(-0.1,0,'0')
 im = ax.imshow(0* gridxplot,vmin = -0.001, vmax = 0.002)
 for i in range(0,nstep):
     test.explicit_step()
     if np.mod(i,iplot) ==0:
+        Z = np.zeros(solid.shape)
+
         # Interpolate
         gridxx = gridx[solid] + test.ux[solid]
         gridyy = gridy[solid] + test.uy[solid]
-        # interp = NearestNDInterpolator(list(zip(gridxx, gridyy)), test.uy[solid])
-        # interp = LinearNDInterpolator(list(zip(gridxx, gridyy)), test.uy[solid])
-        # Z = interp(gridx, gridy)
-        Z = griddata(list(zip(gridxx, gridyy)), test.sxy_y_old[solid],
-                     (gridxplot, gridyplot), method='linear', rescale=False)
+        xi_solid = interpn((x, y), gridx, (gridxx, gridyy), method='nearest')
+        yi_solid = interpn((x, y), gridy, (gridxx, gridyy), method='nearest')
+        xi_solid += (nx-1)/2
+        yi_solid += (ny-1)/2
+        xi_solid = xi_solid.astype(int)
+        yi_solid = yi_solid.astype(int)
 
+        Z[xi_solid,yi_solid] = test.sxy_y_old[solid]
+        #upscaling
+        # Zplot = interpn((x,y),Z,(gridxplot,gridyplot),fill_value=np.nan, method="linear", bounds_error=False)
+        Zplot = zoom(Z,zoom=kplot,order=1)
+        # Zplot = griddata(list(zip(gridxx, gridyy)), test.sxy_y_old[solid],
+        #               (gridxplot, gridyplot), method='linear', rescale=False)
+        #solution 1 : extrapoler ux partout pour avoir un truc cohérent, continu, bijectif
+        #solution 2 : calculer la distance à chaque point, mettre à 0 les points trop loins
+        #solution 3 : solution 1 mais uniquement sur le contour do solide, où l'on met des nan pour que derrière ca soit bien interpolé
+        #solution 4 : faire en sorte que ux et uy soient des multiples de lm puis... ??? Magic ?
+        #solution 5 : for i,j in gridxx, gridyy, find minimum distance on the regular grid
+        # opencv ? scipy image ?
 
-        im.set_array(Z)
+        im.set_array(Zplot)
         # im.set_array(test.uy)
         t.set_text(str(i))
         plt.pause(1/100)
