@@ -103,10 +103,10 @@ for i in range(0,nstep):
         gridyy = gridyplot[solidplot] + uy_plot[solidplot]
         xi_solid = interpn((xplot, yplot), gridxplot, (gridxx, gridyy), method='nearest')
         yi_solid = interpn((xplot, yplot), gridyplot, (gridxx, gridyy), method='nearest')
-        xi_solid += (kplot * nx-1)/2 / kplot
-        yi_solid += (kplot * ny-1)/2 / kplot
         xi_solid *= kplot
         yi_solid *= kplot
+        xi_solid += (kplot * nx - 1) / 2
+        yi_solid += (kplot * ny - 1) / 2
         xi_solid = xi_solid.astype(int)
         yi_solid = yi_solid.astype(int)
 
@@ -132,7 +132,7 @@ uyv = test.uy.copy()
 
 plt.figure()
 plt.imshow(out_plot*solidplot)
-plt.title('uy_plot')
+plt.title('out_plot*solidplot')
 
 plt.figure()
 plt.imshow(test.vy)
