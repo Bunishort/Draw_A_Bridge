@@ -87,7 +87,7 @@ solidplot_norm[solidplot_norm == 0] = 0.001
 
 fig,ax = plt.subplots(1,1)
 t = ax.text(-0.1,0,'0')
-im = ax.imshow(0* gridxplot,vmin = -0.001, vmax = 0.002)
+im = ax.imshow(0* gridxplot,vmin = -0.003, vmax = 0.003)
 for i in range(0,nstep):
     test.explicit_step()
     if np.mod(i,iplot) ==0:
@@ -103,8 +103,8 @@ for i in range(0,nstep):
         gridyy = gridyplot[solidplot] + uy_plot[solidplot]
         xi_solid = interpn((xplot, yplot), gridxplot, (gridxx, gridyy), method='nearest')
         yi_solid = interpn((xplot, yplot), gridyplot, (gridxx, gridyy), method='nearest')
-        xi_solid += (nx-1)/2
-        yi_solid += (ny-1)/2
+        xi_solid += (kplot * nx-1)/2 / kplot
+        yi_solid += (kplot * ny-1)/2 / kplot
         xi_solid *= kplot
         yi_solid *= kplot
         xi_solid = xi_solid.astype(int)
@@ -131,7 +131,7 @@ sxx_x,sxy_x,syy_y,sxy_y = test.calc_stress(test.ux, test.uy)
 uyv = test.uy.copy()
 
 plt.figure()
-plt.imshow(uy_plot*solidplot)
+plt.imshow(out_plot*solidplot)
 plt.title('uy_plot')
 
 plt.figure()
