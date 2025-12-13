@@ -77,8 +77,13 @@ yplot = (np.arange(kplot * ny) - (kplot * ny-1)/2) / kplot
 gridyplot,gridxplot = np.meshgrid(yplot,xplot)
 solidplot = interpn((x, y), solid, (gridxplot, gridyplot), method='nearest', bounds_error=False, fill_value=False)
 solidplot=solidplot.astype(bool)
-filter_plot_small = np.ones((int(kplot), int(kplot)))
-filter_plot_big = np.ones((int(2*kplot -1), int(2*kplot -1)))
+solidplot_norm=  interpn((x, y), solid, (gridxplot, gridyplot), method='linear', bounds_error=False, fill_value=0)
+solidplot_norm[solidplot_norm == 0] = 0.001
+
+# maybe custom made interpn using thiese filters could be faster
+# filter_plot_small = np.ones((int(kplot), int(kplot)))
+# filter_plot_big = np.ones((int(2*kplot -1), int(2*kplot -1)))
+# starting by setting u only on known points... and not forgetting norm
 
 fig,ax = plt.subplots(1,1)
 t = ax.text(-0.1,0,'0')
@@ -89,9 +94,9 @@ for i in range(0,nstep):
         Z = np.zeros(gridxplot.shape)
 
         # Interpolate u on big grid
-        ux_plot = interpn((x, y), test.ux, (gridxplot, gridyplot), method='linear', bounds_error=False, fill_value=0)
-        uy_plot = interpn((x, y), test.uy, (gridxplot, gridyplot), method='linear', bounds_error=False, fill_value=0)
-        out_plot = interpn((x, y), test.sxy_y_old, (gridxplot, gridyplot), method='linear', bounds_error=False, fill_value=0)
+        ux_plot = interpn((x, y), test.ux, (gridxplot, gridyplot), method='linear', bounds_error=False, fill_value=0) / solidplot_norm
+        uy_plot = interpn((x, y), test.uy, (gridxplot, gridyplot), method='linear', bounds_error=False, fill_value=0) / solidplot_norm
+        out_plot = interpn((x, y), test.sxy_y_old, (gridxplot, gridyplot), method='linear', bounds_error=False, fill_value=0) / solidplot_norm
 
         # interpolate solid position with displacement
         gridxx = gridxplot[solidplot] + ux_plot[solidplot]
