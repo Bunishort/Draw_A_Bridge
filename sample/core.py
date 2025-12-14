@@ -91,6 +91,7 @@ def conv_big(matrix, kernel):
 
 class ElasticProblem:
     """
+    TODO update these comments
     :param solid: Bool 2d matrix containing the position of the solid on the grid (1 if solid, 0 if not)
     :param elas_lambda
     :param elas_mu : Lamé elastic coefficients
@@ -200,6 +201,15 @@ class ElasticProblem:
             self.explicit_a = (self.G1 + self.G0) / self.eta1
             self.explicit_b = (self.G1 * self.G0) / self.eta1
 
+            #Calculate sound speed for check
+            E = self.elas_mu * (3 * self.elas_lambda + 2 * self.elas_mu) / (self.elas_lambda + self.elas_mu)
+            nu = self.elas_lambda / 2 / (self.elas_lambda + self.elas_mu)
+            self.c_p = np.sqrt(E / self.ratio * (1 - nu) / (self.vol_mass * (1 + nu) * (1 - 2 * nu)))
+            self.c_s = np.sqrt(E / self.ratio / (2 * (1 + nu)) / self.vol_mass)
+            if self.c_p * self.dt / self.lm >1:
+                print('Warning : Max Sound speed * dt / lm for Compression > 1 : ' + str(self.c_p * self.dt / self.lm))
+            if self.c_s * self.dt / self.lm> 1:
+                print('Warning : Max Sound speed * dt / lm for Shear > 1 : ' + str(self.c_s * self.dt / self.lm))
             if self.precond:
                 self.movable = np.bitwise_and(self.solid, np.bitwise_not(self.is_uimp))
                 precond_norm_xx = conv_big(self.movable, np.abs(self.precond_xx))

@@ -33,7 +33,7 @@ py = 0.01 /10
 lm = 4.5/k
 
 vol_mass = 0.5
-dt = 0.3 / 5
+dt = 1 / 5
 ratio = 0.2  # must be between 0 and 1
 tau = 3 *3
 
@@ -48,7 +48,7 @@ print( 'Max Sound speed * dt / lm ')
 print( 'Compression : ' + str(c_p * dt / lm))
 print( 'Shear: ' + str(c_s * dt / lm))
 
-nstep = 12000
+nstep = 4000
 iplot = 50
 kplot = 10
 
