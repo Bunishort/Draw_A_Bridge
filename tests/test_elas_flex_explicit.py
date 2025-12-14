@@ -68,6 +68,13 @@ test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
                                   px_bound=px_bound,py_bound=py_bound,max_iter=max_iter,max_res = max_res,
                                   is_explicit = True, vol_mass=vol_mass, dt = dt, ratio = ratio, tau = tau,
                                   precond_type = precond_type, precond_n = precond_n, precond = precond)
+anim = sample.interface.ExplicitAnimation(test, nstep = nstep, plot_interval = iplot, upscale_factor = kplot,
+                                          probe_fields = ['sxy_y_old',],
+                                          probe_ix = [ixmax,], probe_iy = [int(nx/2),], y_dec = 0.5, min_scale = -0.003,
+                                            max_scale = 0.003)
+
+anim.animate()
+
 
 uyt = [0,]
 itet = [0,]
