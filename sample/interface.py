@@ -1,4 +1,4 @@
-from core import conv
+from sample.core import conv
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata, interpn
@@ -29,9 +29,11 @@ class ExplicitAnimation:
 
         self.iplot = [0, ]
         self.elas =  elas
+        self.nx = elas.solid.shape[0]
+        self.ny = elas.solid.shape[1]
 
-        self.x = np.arange(self.elas.nx) - (self.elas.nx - 1) / 2
-        self.y = np.arange(self.elas.ny) - (self.elas.ny - 1) / 2
+        self.x = np.arange(self.nx) - (self.nx - 1) / 2
+        self.y = np.arange(self.ny) - (self.ny - 1) / 2
 
         self.x_dec = kwargs.get("x_dec",0)
         self.y_dec = kwargs.get("y_dec",0)
@@ -40,8 +42,8 @@ class ExplicitAnimation:
         self.pause = kwargs.get("pause",1/100)
 
     def animate(self):
-        xplot = (np.arange(self.upscale_factor * self.elas.nx) - (self.upscale_factor * self.elas.nx - 1) / 2) / self.upscale_factor
-        yplot = (np.arange(self.upscale_factor * self.elas.ny) - (self.upscale_factor * self.elas.ny - 1) / 2) / self.upscale_factor
+        xplot = (np.arange(self.upscale_factor * self.nx) - (self.upscale_factor * self.nx - 1) / 2) / self.upscale_factor
+        yplot = (np.arange(self.upscale_factor * self.ny) - (self.upscale_factor * self.ny - 1) / 2) / self.upscale_factor
         gridyplot, gridxplot = np.meshgrid(yplot, xplot)
         solidplot = interpn((self.x, self.y), self.elas.solid, (gridxplot, gridyplot), method='nearest', bounds_error=False,
                             fill_value=False)
@@ -80,8 +82,8 @@ class ExplicitAnimation:
                 yi_solid = interpn((xplot, yplot), gridyplot, (gridxx, gridyy), method='nearest')
                 xi_solid *= self.upscale_factor
                 yi_solid *= self.upscale_factor
-                xi_solid += (self.upscale_factor * self.elas.nx - 1) / 2
-                yi_solid += (self.upscale_factor * self.elas.ny - 1) / 2
+                xi_solid += (self.upscale_factor * self.nx - 1) / 2
+                yi_solid += (self.upscale_factor * self.ny - 1) / 2
                 xi_solid = xi_solid.astype(int)
                 yi_solid = yi_solid.astype(int)
 
