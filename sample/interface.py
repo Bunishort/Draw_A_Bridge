@@ -40,6 +40,7 @@ class ExplicitAnimation:
         self.min_scale = kwargs.get("min_scale",0)
         self.max_scale = kwargs.get("max_scale",1)
         self.pause = kwargs.get("pause",1/100)
+        self.plot_field = kwargs.get('plot_field','ux')
 
     def animate(self):
         xplot = (np.arange(self.upscale_factor * self.nx) - (self.upscale_factor * self.nx - 1) / 2) / self.upscale_factor
@@ -71,7 +72,7 @@ class ExplicitAnimation:
                                   fill_value=0) / solidplot_norm
                 uy_plot = interpn((self.x, self.y), self.elas.uy, (gridxplot, gridyplot), method='linear', bounds_error=False,
                                   fill_value=0) / solidplot_norm
-                out_plot = interpn((self.x + self.x_dec, self.y + self.y_dec), self.elas.sxy_y_old, (gridxplot, gridyplot), method='linear',
+                out_plot = interpn((self.x + self.x_dec, self.y + self.y_dec), getattr(self.elas, self.plot_field), (gridxplot, gridyplot), method='linear',
                                    bounds_error=False, fill_value=0) / solidplot_norm
                 # y+0.5 because stress are not computed on the same grid as displacements !
 

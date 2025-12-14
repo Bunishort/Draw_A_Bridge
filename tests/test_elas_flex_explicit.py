@@ -69,14 +69,14 @@ test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
                                   is_explicit = True, vol_mass=vol_mass, dt = dt, ratio = ratio, tau = tau,
                                   precond_type = precond_type, precond_n = precond_n, precond = precond)
 anim = sample.interface.ExplicitAnimation(test, nstep = nstep, plot_interval = iplot, upscale_factor = kplot,
-                                          probe_fields = ['sxy_y_old',],
+                                          probe_fields = ['uy'], plot_field = 'sxy_y_old',
                                           probe_ix = [ixmax,], probe_iy = [int(nx/2),], y_dec = 0.5, min_scale = -0.003,
                                             max_scale = 0.003)
 
 anim.animate()
 
 
-uyt = anim.probe_vals['sxy_y_old' + str(ixmax) + '_' + str(int(nx/2))]
+uyt = anim.probe_vals['uy' + str(ixmax) + '_' + str(int(nx/2))]
 itet = anim.iplot
 
 plt.title('Uy')
