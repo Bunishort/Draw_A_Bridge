@@ -21,7 +21,7 @@ class ExplicitAnimation:
         self.upscale_factor = kwargs.get('upscale_factor', 5)
         self.probe_fields = kwargs.get('probe_fields', ['u_x',])
         self.probe_ix = kwargs.get('probe_ix', [0.0,])
-        self.probe_iy = kwargs.get('probe_ix', [0.0,])
+        self.probe_iy = kwargs.get('probe_iy', [0.0,])
 
         self.probe_vals = {}
         for (field,i,j) in zip(self.probe_fields, self.probe_ix, self.probe_iy):
