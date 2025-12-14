@@ -79,7 +79,8 @@ solidplot = interpn((x, y), solid, (gridxplot, gridyplot), method='nearest', bou
 solidplot=solidplot.astype(bool)
 solidplot_norm=  interpn((x, y), solid, (gridxplot, gridyplot), method='linear', bounds_error=False, fill_value=0)
 solidplot_norm[solidplot_norm == 0] = 0.001
-
+solidplot_def = solidplot.copy()
+smooth_filter = np.array([[1,1,1],[1,0,1], [1,1,1]]) /8
 # maybe custom made interpn using thiese filters could be faster
 # filter_plot_small = np.ones((int(kplot), int(kplot)))
 # filter_plot_big = np.ones((int(2*kplot -1), int(2*kplot -1)))
@@ -96,7 +97,8 @@ for i in range(0,nstep):
         # Interpolate u on big grid
         ux_plot = interpn((x, y), test.ux, (gridxplot, gridyplot), method='linear', bounds_error=False, fill_value=0) / solidplot_norm
         uy_plot = interpn((x, y), test.uy, (gridxplot, gridyplot), method='linear', bounds_error=False, fill_value=0) / solidplot_norm
-        out_plot = interpn((x, y), test.sxy_y_old, (gridxplot, gridyplot), method='linear', bounds_error=False, fill_value=0) / solidplot_norm
+        out_plot = interpn((x, y+0.5), test.sxy_y_old, (gridxplot, gridyplot), method='linear', bounds_error=False, fill_value=0) / solidplot_norm
+        #y+0.5 because stress are not computed on the same grid as displacements !
 
         # interpolate solid position with displacement
         gridxx = gridxplot[solidplot] + ux_plot[solidplot]
@@ -110,7 +112,11 @@ for i in range(0,nstep):
         xi_solid = xi_solid.astype(int)
         yi_solid = yi_solid.astype(int)
 
+        solidplot_def[:] = False
+        solidplot_def[xi_solid,yi_solid] = True # ! the same value may appear more than once in xi_solid,yi_solid
         Z[xi_solid,yi_solid] = out_plot[solidplot]
+        Zsmooth = sample.core.conv(Z, smooth_filter)
+        Z[np.bitwise_not(solidplot_def)] = Zsmooth[np.bitwise_not(solidplot_def)]
         #               (gridxplot, gridyplot), method='linear', rescale=False)
         #solution 1 : extrapoler ux partout pour avoir un truc cohérent, continu, bijectif
         #solution 2 : calculer la distance à chaque point, mettre à 0 les points trop loins
