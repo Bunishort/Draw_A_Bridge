@@ -72,9 +72,7 @@ anim = sample.interface.ExplicitAnimation(test, nstep = nstep, plot_interval = i
                                           probe_fields = ['uy'], plot_field = 'sxy_y_old',
                                           probe_ix = [ixmax,], probe_iy = [int(nx/2),], y_dec = 0.5, min_scale = -0.003,
                                             max_scale = 0.003)
-
 anim.animate()
-
 
 uyt = anim.probe_vals['uy' + str(ixmax) + '_' + str(int(nx/2))]
 itet = anim.iplot

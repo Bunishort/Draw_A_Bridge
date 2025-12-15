@@ -6,7 +6,6 @@ matplotlib.use('TkAgg')
 from scipy.interpolate import interpn
 
 import timeit
-start = timeit.default_timer()
 
 nx=4*64
 ny=4*64
@@ -39,6 +38,8 @@ print( 'Shear: ' + str(c_s * dt / lm))
 
 nstep = 4000
 iplot = 100
+kplot = 2
+
 
 x = np.arange(nx) - (nx-1)/2
 y = np.arange(ny) - (ny-1)/2
@@ -67,6 +68,7 @@ px_bound[np.bitwise_and(r <= ri+lm,nnx>0)] = -pi
 py_bound[np.bitwise_and(r <= ri+lm,nny<0)] = pi
 py_bound[np.bitwise_and(r <= ri+lm,nny>0)] = -pi
 
+start = timeit.default_timer()
 
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
                                   px_bound=px_bound,py_bound=py_bound,max_iter=max_iter, max_res=max_res,
@@ -89,6 +91,18 @@ uyv = test.uy.copy()
 
 
 stop = timeit.default_timer()
+print('Explicit loop Time: ', stop - start)
+print('Average time step time: ', (stop - start) / nstep)
+
+start = timeit.default_timer()
+
+anim = sample.interface.ExplicitAnimation(test, nstep = nstep, plot_interval = iplot, upscale_factor = kplot,
+                                          probe_fields = [], plot_field = 'sxy_y_old',
+                                          probe_ix = [], probe_iy = [], y_dec = 0.5, min_scale = -0.003,
+                                            max_scale = 0.003)
+anim.animate()
+stop = timeit.default_timer()
+
 print('Explicit loop Time: ', stop - start)
 print('Average time step time: ', (stop - start) / nstep)
 
