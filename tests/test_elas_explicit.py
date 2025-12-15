@@ -47,6 +47,7 @@ print( 'Shear: ' + str(c_s * dt / lm))
 
 nstep = 1000
 iplot = 10
+kplot=3
 
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
 elas_mu = E/2/(1+nu)
@@ -64,19 +65,14 @@ test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
                                   is_explicit = True, vol_mass=vol_mass, dt = dt, ratio = ratio, tau = tau,
                                   precond_type = precond_type, precond_n = precond_n, precond = precond)
 
-uxt = [0,]
-itet = [0,]
-fig,ax = plt.subplots(1,1)
-t = ax.text(-0.1,0,'0')
-im = ax.imshow(test.ux,vmin = -0.1, vmax = 0.5)
-for i in range(0,nstep):
-    test.explicit_step()
-    if np.mod(i,iplot) ==0:
-        im.set_array(test.ux)
-        t.set_text(str(i))
-        plt.pause(1/100)
-        uxt.append(test.ux[ixmax,int(nx/2)])
-        itet.append(i)
+
+anim = sample.interface.ExplicitAnimation(test, nstep = nstep, plot_interval = iplot, upscale_factor = kplot,
+                                          probe_fields = ['ux',], plot_field = 'sxy_y_old',
+                                          probe_ix = [ixmax,], probe_iy = [int(nx/2),], y_dec = 0.5, min_scale = -0.003,
+                                            max_scale = 0.003)
+anim.animate()
+uxt = anim.probe_vals['ux' + str(ixmax) + '_' + str(int(nx/2))]
+itet = anim.iplot
 
 plt.title('Ux')
 sxx_x,sxy_x,syy_y,sxy_y = test.calc_stress(test.ux, test.uy)
