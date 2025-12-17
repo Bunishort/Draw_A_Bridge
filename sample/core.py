@@ -12,8 +12,8 @@ def get_frontier(solid):
     # Calculate all the points at the frontier of the solid
     # Frontier = at least one neighbour point is not solid (including diagonals)
     # Bulk is the solid minus the frontier
-    kernel = np.ones([3, 3])
-    temp = conv(solid.astype(int), kernel)
+    kernel = np.ones([3, 3], dtype = np.float32)
+    temp = conv(solid.astype(np.float32), kernel)
     frontier = np.bitwise_and(solid, temp < 8)
     bulk = np.bitwise_and(solid, np.bitwise_not(frontier))
 
@@ -22,14 +22,14 @@ def get_frontier(solid):
 def remove_single_points(solid):
     # Remove point with no enough neighbours
     # Point needs at least 2 consecutive neighbors to be OK
-    kernel = np.array([[1, 1, 0],[0, 0, 0],[0, 0, 0]])
+    kernel = np.array([[1, 1, 0],[0, 0, 0],[0, 0, 0]], dtype = np.float32)
     temp = conv(solid, kernel)
     temp2 = temp>=2
 
-    kernels= [np.array([[0, 1, 1], [0, 0, 0], [0, 0, 0]]), np.array([[0, 0, 1], [0, 0, 1], [0, 0, 0]]),
-              np.array([[0, 0, 0], [0, 0, 1], [0, 0, 1]]), np.array([[0, 0, 0], [0, 0, 0], [0, 1, 1]]),
-              np.array([[0, 0, 0], [0, 0, 0], [1, 1, 0]]), np.array([[0, 0, 0], [1, 0, 0], [1, 0, 0]]),
-              np.array([[1, 0, 0], [1, 0, 0], [0, 0, 0]])]
+    kernels= [np.array([[0, 1, 1], [0, 0, 0], [0, 0, 0]], dtype = np.float32), np.array([[0, 0, 1], [0, 0, 1], [0, 0, 0]], dtype = np.float32),
+              np.array([[0, 0, 0], [0, 0, 1], [0, 0, 1]], dtype = np.float32), np.array([[0, 0, 0], [0, 0, 0], [0, 1, 1]], dtype = np.float32),
+              np.array([[0, 0, 0], [0, 0, 0], [1, 1, 0]], dtype = np.float32), np.array([[0, 0, 0], [1, 0, 0], [1, 0, 0]], dtype = np.float32),
+              np.array([[1, 0, 0], [1, 0, 0], [0, 0, 0]], dtype = np.float32)]
 
     for kernel in kernels:
         temp = conv(solid, kernel)
@@ -41,15 +41,15 @@ def remove_single_points(solid):
 
 def calc_normal(solid):
     # Calculate the normals to the solid boundaries on nodes
-    kernelx = np.zeros([3, 3])
+    kernelx = np.zeros([3, 3], dtype = np.float32)
     kernelx[2, 1] = -1
     kernelx[0, 1] = 1
-    kernely = np.zeros([3, 3])
+    kernely = np.zeros([3, 3], dtype = np.float32)
     kernely[1, 2] = -1
     kernely[1, 0] = 1
 
-    nx = conv(solid.astype(int), kernelx)
-    ny = conv(solid.astype(int), kernely)
+    nx = conv(solid.astype(np.float32), kernelx)
+    ny = conv(solid.astype(np.float32), kernely)
     n = np.sqrt(nx ** 2 + ny ** 2)
     ok = n > 0
     nx[ok] = nx[ok] / n[ok]
@@ -74,20 +74,21 @@ def interp_stress(xq,yq,xnodes,ynodes,sxx_x,sxy_x,syy_y,sxy_y):
 
     return sxx,syy,sxy
 
+def conv22(matrix,kernel):
+    #COnvolution for 2*2 kernel with specific anchor
+    return filter2D(matrix,-1,kernel,anchor=(0,0))
+
+
 def conv(matrix,kernel):
-    #return convolve2d(matrix,kernel,'same')
-    #return correlate2d(matrix, kernel, 'same')
-    #return addition_convolution(matrix,kernel)
+    #Convolution for kernels others than 2*2
+    return filter2D(matrix,-1,kernel,anchor=(-1,-1))
+
+def conv_big(matrix, kernel):
     if kernel.shape == (2,2):
         anch = (0,0)
     else:
         anch = (-1,-1)
-    return filter2D(matrix.astype(np.float32),-1,kernel.astype(np.float32),anchor=anch)
-
-def conv_big(matrix, kernel):
-
-    # return correlate2d(matrix, kernel, 'same')
-    return conv(matrix,kernel)
+    return filter2D(matrix,-1,kernel,anchor=anch)
 
 class ElasticProblem:
     """
@@ -118,20 +119,20 @@ class ElasticProblem:
     def __init__(self,solid,elas_lambda,elas_mu,lm,
                  ux_imp,uy_imp, **kwargs):
         self.solid=solid
-        self.elas_lambda = elas_lambda
-        self.elas_mu =elas_mu
-        self.lm = lm
-        self.ux_imp = ux_imp
-        self.uy_imp = uy_imp
+        self.elas_lambda = np.float32(elas_lambda)
+        self.elas_mu = np.float32(elas_mu)
+        self.lm = np.float32(lm)
+        self.ux_imp = np.float32(ux_imp)
+        self.uy_imp = np.float32(uy_imp)
         for var in ['px_bound','py_bound','fx_imp','fy_imp']:
-            setattr(self,var,kwargs.get(var,np.zeros(solid.shape)))
+            setattr(self,var,kwargs.get(var,np.zeros(solid.shape, dtype=np.float32)))
 
         self.fx_imp[np.bitwise_not(self.solid)] = 0
         self.fy_imp[np.bitwise_not(self.solid)] = 0
-        self.max_iter = kwargs.get('max_iter',200)
-        self.max_res = kwargs.get('max_res', 1e-6)
+        self.max_iter = np.float32(kwargs.get('max_iter',200))
+        self.max_res = np.float32(kwargs.get('max_res', 1e-6))
         for var in  ['ux','uy']:
-            setattr(self,var, np.zeros(solid.shape))
+            setattr(self,var, np.zeros(solid.shape, dtype=np.float32))
         self.kernel_type = 'plane strain'
         (self.ddx1,self.ddx2,self.ddy1,self.ddy2,self.meanx,self.meany,
          self.ddxx,self.ddyy) =\
@@ -143,11 +144,11 @@ class ElasticProblem:
                                       np.bitwise_not(np.isnan(self.uy_imp)))
         self.is_uimp = np.bitwise_and(self.is_uimp, self.solid)
 
-        self.x_frontier_edge = conv(self.solid.astype(int),self.ddx2) != 0
-        self.y_frontier_edge = conv(self.solid.astype(int), self.ddy2) != 0
+        self.x_frontier_edge = conv22(self.solid.astype(np.float32),self.ddx2) != 0
+        self.y_frontier_edge = conv22(self.solid.astype(np.float32), self.ddy2) != 0
 
-        self.not_solid_x_edge = conv(self.solid.astype(int), self.ddx2**2) == 0
-        self.not_solid_y_edge = conv(self.solid.astype(int), self.ddy2**2) == 0
+        self.not_solid_x_edge = conv22(self.solid.astype(np.float32), self.ddx2**2) == 0
+        self.not_solid_y_edge = conv22(self.solid.astype(np.float32), self.ddy2**2) == 0
 
         self.isstress_x_edge = np.bitwise_and(np.bitwise_not(self.x_frontier_edge),
                                               np.bitwise_not(self.not_solid_x_edge))
@@ -155,19 +156,19 @@ class ElasticProblem:
                                               np.bitwise_not(self.not_solid_y_edge))
 
 
-        tempisddx1 = conv(self.solid.astype(int), self.ddx1) != 0
+        tempisddx1 = conv22(self.solid.astype(np.float32), self.ddx1) != 0
         self.x_frontier_def = np.bitwise_or(tempisddx1,
                                                 self.x_frontier_edge)
-        tempisddy1 = conv(self.solid.astype(int), self.ddy1) != 0
+        tempisddy1 = conv22(self.solid.astype(np.float32), self.ddy1) != 0
         self.y_frontier_def = np.bitwise_or(tempisddy1,
                                                 self.y_frontier_edge)
         ## we could define only in_corner instead of corner for best performance...
         self.corner_def = np.bitwise_and(self.y_frontier_def, self.x_frontier_def)
 
-        self.isddx1 = conv(self.solid.astype(int), self.ddx1 ** 2) == 2
-        self.isddx2 = conv(self.solid.astype(int), self.ddx2 ** 2) == 2
-        self.isddy1 = conv(self.solid.astype(int), self.ddy1 ** 2) == 2
-        self.isddy2 = conv(self.solid.astype(int), self.ddy2 ** 2) == 2
+        self.isddx1 = conv22(self.solid.astype(np.float32), self.ddx1 ** 2) == 2
+        self.isddx2 = conv22(self.solid.astype(np.float32), self.ddx2 ** 2) == 2
+        self.isddy1 = conv22(self.solid.astype(np.float32), self.ddy1 ** 2) == 2
+        self.isddy2 = conv22(self.solid.astype(np.float32), self.ddy2 ** 2) == 2
 
         self.frontier_def = np.bitwise_or(np.bitwise_not(self.isddx1),
                                              np.bitwise_not(self.isddx2))
@@ -178,22 +179,22 @@ class ElasticProblem:
         #Preconditioning options
         self.precond = kwargs.get('precond',False)
         self.precond_type = kwargs.get('precond_type','formula')
-        self.precond_n = kwargs.get('precond_n',15)
+        self.precond_n = np.float32(kwargs.get('precond_n',15))
         self.precond_xx, self.precond_xy, self.precond_yy, self.precond_yx = self.def_precond()
 
         self.is_explicit = kwargs.get('is_explicit',False)
         if self.is_explicit:
-            self.vol_mass = kwargs.get('vol_mass', 1)
-            self.dt = kwargs.get('dt', 1)
+            self.vol_mass = np.float32(kwargs.get('vol_mass', 1))
+            self.dt = np.float32(kwargs.get('dt', 1))
             self.bx, self.by = self.calc_b()
             for var in ['vx', 'vy', 'sxx_x_old', 'syy_x_old', 'sxy_x_old',
                  'sxx_y_old', 'syy_y_old', 'sxy_y_old']:
-                setattr(self, var, kwargs.get(var, np.zeros(self.solid.shape)))
+                setattr(self, var, kwargs.get(var, np.zeros(self.solid.shape, dtype = np.float32)))
 
-            self.ratio = kwargs.get('ratio', 0.99)  # must be between 0 and 1
+            self.ratio = np.float32(kwargs.get('ratio', 0.99) ) # must be between 0 and 1
             if (self.ratio >= 1) or (self.ratio <= 0):
                 print('Error : Ratio must be strictly between 0 and 1')
-            self.tau = kwargs.get('tau', 1)
+            self.tau = np.float32(kwargs.get('tau', 1))
 
             self.G0 = 1 / self.ratio
             self.G1 = 1 / (1 - self.ratio)
@@ -234,15 +235,15 @@ class ElasticProblem:
             # epsilon_xx = ddx * ux / (2 lm)
             # epsilon_yy = ddy * uy / (2 lm)
             # epsilon_xy = (ddy * ux + ddx * uy) / (4 lm)
-            ddx1 = np.array([[-1, 0], [1, 0]])
-            ddx2 = np.array([[0, -1], [0, 1]])
-            ddy1 = np.array([[-1,1],[0,0]])
-            ddy2 = np.array([[0, 0], [-1, 1]])
+            ddx1 = np.array([[-1, 0], [1, 0]], dtype=np.float32)
+            ddx2 = np.array([[0, -1], [0, 1]], dtype=np.float32)
+            ddy1 = np.array([[-1,1],[0,0]], dtype=np.float32)
+            ddy2 = np.array([[0, 0], [-1, 1]], dtype=np.float32)
 
-            meanx = np.array([[1, 0], [1, 0]])
+            meanx = np.array([[1, 0], [1, 0]], dtype=np.float32)
             meany = np.transpose(meanx)
 
-            ddxx = np.array([[-1, 0, 0], [1, 0, 0], [0, 0, 0]])
+            ddxx = np.array([[-1, 0, 0], [1, 0, 0], [0, 0, 0]], dtype=np.float32)
             ddyy = np.transpose(ddxx)
         else:
             raise ValueError("Only \'plane strain\' is available")
@@ -439,14 +440,14 @@ class ElasticProblem:
         #Calculate the stress in the center of the mesh edges
 
         #First, calculate def at mesh cell centers
-        duxdx2 = conv(uxt, self.ddx2 / (2 * self.lm))*self.isddx2
-        duxdy2 = conv(uxt, self.ddy2 / (4 * self.lm))*self.isddy2
-        duydx2 = conv(uyt, self.ddx2 / (4 * self.lm))*self.isddx2
-        duydy2 = conv(uyt, self.ddy2 / (2 * self.lm)) * self.isddy2
-        exx = conv(uxt, self.ddx1 / (2 * self.lm))*self.isddx1  + duxdx2
-        eyy = conv(uyt, self.ddy1 / (2 * self.lm))*self.isddy1 + duydy2
-        exy = conv(uxt, self.ddy1 / (4 * self.lm))*self.isddy1 + duxdy2
-        eyx = conv(uyt, self.ddx1 / (4 * self.lm))*self.isddx1 + duydx2
+        duxdx2 = conv22(uxt, self.ddx2 / (2 * self.lm))*self.isddx2
+        duxdy2 = conv22(uxt, self.ddy2 / (4 * self.lm))*self.isddy2
+        duydx2 = conv22(uyt, self.ddx2 / (4 * self.lm))*self.isddx2
+        duydy2 = conv22(uyt, self.ddy2 / (2 * self.lm)) * self.isddy2
+        exx = conv22(uxt, self.ddx1 / (2 * self.lm))*self.isddx1  + duxdx2
+        eyy = conv22(uyt, self.ddy1 / (2 * self.lm))*self.isddy1 + duydy2
+        exy = conv22(uxt, self.ddy1 / (4 * self.lm))*self.isddy1 + duxdy2
+        eyx = conv22(uyt, self.ddx1 / (4 * self.lm))*self.isddx1 + duydx2
 
         # multiply by two on frontiers to compensate where isddx/isddy = 0
         exx[self.y_frontier_def] *= 2
@@ -461,16 +462,16 @@ class ElasticProblem:
         eyx[self.x_frontier_def_s] = -exy[self.x_frontier_def_s]
 
         #Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
-        exx_x = conv(exx, self.meany / 4) + duxdx2
-        eyy_x = conv(eyy, self.meany / 2)
-        exy_x = conv(exy, self.meany / 2)
-        eyx_x = conv(eyx, self.meany / 4) + duydx2
+        exx_x = conv22(exx, self.meany / 4) + duxdx2
+        eyy_x = conv22(eyy, self.meany / 2)
+        exy_x = conv22(exy, self.meany / 2)
+        eyx_x = conv22(eyx, self.meany / 4) + duydx2
 
         #duydx2 /2 necessary for exy/eyx because of epsilonxy definition
-        exx_y = conv(exx, self.meanx / 2)
-        eyy_y = conv(eyy, self.meanx / 4) + duydy2
-        exy_y = conv(exy, self.meanx / 4) + duxdy2
-        eyx_y = conv(eyx, self.meanx / 2)
+        exx_y = conv22(exx, self.meanx / 2)
+        eyy_y = conv22(eyy, self.meanx / 4) + duydy2
+        exy_y = conv22(exy, self.meanx / 4) + duxdy2
+        eyx_y = conv22(eyx, self.meanx / 2)
 
         #Calculate complete shear deformation exy
         exy_x += eyx_x
@@ -554,8 +555,8 @@ class ElasticProblem:
         #     acc_x[np.bitwise_not(self.movable)] = 0
         #     acc_y[np.bitwise_not(self.movable)] = 0
 
-        self.vx = self.vx + acc_x * self.dt
-        self.vy = self.vy + acc_y * self.dt
+        self.vx += acc_x * self.dt
+        self.vy += acc_y * self.dt
 
-        self.ux = self.ux + self.vx * self.dt
-        self.uy = self.uy + self.vy * self.dt
+        self.ux += self.vx * self.dt
+        self.uy += self.vy * self.dt
