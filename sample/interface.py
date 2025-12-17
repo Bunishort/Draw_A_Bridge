@@ -59,47 +59,51 @@ class ExplicitAnimation:
         # filter_plot_big = np.ones((int(2*self.upscale_factor -1), int(2*self.upscale_factor -1)))
         # starting by setting u only on known points... and not forgetting norm
 
-        fig, ax = plt.subplots(1, 1)
-        t = ax.text(-0.1, 0, '0')
-        im = ax.imshow(0 * gridxplot, vmin=self.min_scale, vmax=self.max_scale)
-        for i in range(0, self.nstep):
-            self.elas.explicit_step()
-            if np.mod(i, self.plot_interval) == 0:
-                z = np.zeros(gridxplot.shape)
+        if self.plot_interval <= self.nstep:
+            fig, ax = plt.subplots(1, 1)
+            t = ax.text(-0.1, 0, '0')
+            im = ax.imshow(0 * gridxplot, vmin=self.min_scale, vmax=self.max_scale)
+            for i in range(0, self.nstep):
+                self.elas.explicit_step()
+                if np.mod(i, self.plot_interval) == 0:
+                    z = np.zeros(gridxplot.shape)
 
-                # Interpolate u on big grid
-                ux_plot = interpn((self.x, self.y), self.elas.ux, (gridxplot, gridyplot), method='linear', bounds_error=False,
-                                  fill_value=0) / solidplot_norm
-                uy_plot = interpn((self.x, self.y), self.elas.uy, (gridxplot, gridyplot), method='linear', bounds_error=False,
-                                  fill_value=0) / solidplot_norm
-                out_plot = interpn((self.x + self.x_dec, self.y + self.y_dec), getattr(self.elas, self.plot_field), (gridxplot, gridyplot), method='linear',
-                                   bounds_error=False, fill_value=0) / solidplot_norm
-                # y+0.5 because stress are not computed on the same grid as displacements !
+                    # Interpolate u on big grid
+                    ux_plot = interpn((self.x, self.y), self.elas.ux, (gridxplot, gridyplot), method='linear', bounds_error=False,
+                                      fill_value=0) / solidplot_norm
+                    uy_plot = interpn((self.x, self.y), self.elas.uy, (gridxplot, gridyplot), method='linear', bounds_error=False,
+                                      fill_value=0) / solidplot_norm
+                    out_plot = interpn((self.x + self.x_dec, self.y + self.y_dec), getattr(self.elas, self.plot_field), (gridxplot, gridyplot), method='linear',
+                                       bounds_error=False, fill_value=0) / solidplot_norm
+                    # y+0.5 because stress are not computed on the same grid as displacements !
 
-                # interpolate solid position with displacement
-                gridxx = gridxplot[solidplot] + ux_plot[solidplot]
-                gridyy = gridyplot[solidplot] + uy_plot[solidplot]
-                xi_solid = interpn((xplot, yplot), gridxplot, (gridxx, gridyy), method='nearest')
-                yi_solid = interpn((xplot, yplot), gridyplot, (gridxx, gridyy), method='nearest')
-                xi_solid *= self.upscale_factor
-                yi_solid *= self.upscale_factor
-                xi_solid += (self.upscale_factor * self.nx - 1) / 2
-                yi_solid += (self.upscale_factor * self.ny - 1) / 2
-                xi_solid = xi_solid.astype(int)
-                yi_solid = yi_solid.astype(int)
+                    # interpolate solid position with displacement
+                    gridxx = gridxplot[solidplot] + ux_plot[solidplot]
+                    gridyy = gridyplot[solidplot] + uy_plot[solidplot]
+                    xi_solid = interpn((xplot, yplot), gridxplot, (gridxx, gridyy), method='nearest')
+                    yi_solid = interpn((xplot, yplot), gridyplot, (gridxx, gridyy), method='nearest')
+                    xi_solid *= self.upscale_factor
+                    yi_solid *= self.upscale_factor
+                    xi_solid += (self.upscale_factor * self.nx - 1) / 2
+                    yi_solid += (self.upscale_factor * self.ny - 1) / 2
+                    xi_solid = xi_solid.astype(int)
+                    yi_solid = yi_solid.astype(int)
 
-                solidplot_def[:] = False
-                solidplot_def[
-                    xi_solid, yi_solid] = True  # ! the same value may appear more than once in xi_solid,yi_solid
-                z[xi_solid, yi_solid] = out_plot[solidplot]
-                zsmooth = conv(z, smooth_filter)
-                z[np.bitwise_not(solidplot_def)] = zsmooth[np.bitwise_not(solidplot_def)]
+                    solidplot_def[:] = False
+                    solidplot_def[
+                        xi_solid, yi_solid] = True  # ! the same value may appear more than once in xi_solid,yi_solid
+                    z[xi_solid, yi_solid] = out_plot[solidplot]
+                    zsmooth = conv(z, smooth_filter)
+                    z[np.bitwise_not(solidplot_def)] = zsmooth[np.bitwise_not(solidplot_def)]
 
-                im.set_array(z)
-                t.set_text(str(i))
-                plt.pause(self.pause)
+                    im.set_array(z)
+                    t.set_text(str(i))
+                    plt.pause(self.pause)
 
-                for (field, ii, j) in zip(self.probe_fields, self.probe_ix, self.probe_iy):
-                    self.probe_vals[field + str(ii) + '_' + str(j)].append(getattr(self.elas, field)[ii, j])
+                    for (field, ii, j) in zip(self.probe_fields, self.probe_ix, self.probe_iy):
+                        self.probe_vals[field + str(ii) + '_' + str(j)].append(getattr(self.elas, field)[ii, j])
 
-                self.iplot.append(i)
+                    self.iplot.append(i)
+        else:
+            for i in range(0, self.nstep):
+                self.elas.explicit_step()

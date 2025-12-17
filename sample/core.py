@@ -538,11 +538,10 @@ class ElasticProblem:
     def explicit_step(self):
         #Explicit step using LeapFrog method
         sxx_x, sxy_x, syy_y, sxy_y = self.calc_stress_explicit()
-        bx, by = self.calc_b()
         a_u_x, a_u_y = self.calc_a_u_sig(sxx_x, sxy_x, syy_y, sxy_y )
 
-        acc_x = ( a_u_x - bx ) / self.vol_mass
-        acc_y = ( a_u_y - by ) / self.vol_mass
+        acc_x = ( a_u_x - self.bx ) / self.vol_mass
+        acc_y = ( a_u_y - self.by ) / self.vol_mass
 
         if self.precond:
             #repartitioning the acceleration on surrounding cells, keeping the total accel constant.

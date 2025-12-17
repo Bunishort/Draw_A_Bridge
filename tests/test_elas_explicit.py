@@ -1,6 +1,7 @@
 from context import sample
 import numpy as np
 import matplotlib.pyplot as plt
+import timeit
 
 k = 3
 nx=k*7
@@ -30,11 +31,11 @@ px = 0.01
 lm = 4.5/k
 
 vol_mass = 0.5
-dt = 0.3 * 2
+dt = 0.3
 ratio = 0.2  # must be between 0 and 1
 tau = 3
 
-precond = True
+precond = False
 precond_type = 'robust'
 precond_n = 7
 
@@ -45,9 +46,9 @@ print( 'Max Sound speed * dt / lm ')
 print( 'Compression : ' + str(c_p * dt / lm))
 print( 'Shear: ' + str(c_s * dt / lm))
 
-nstep = 1000
-iplot = 10
-kplot=3
+nstep = 10000
+iplot = 10001
+kplot=1
 
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
 elas_mu = E/2/(1+nu)
@@ -60,6 +61,8 @@ px_bound = np.zeros(solid.shape)
 px_bound[gridx > (lx/2-lm)] = px
 py_bound = np.zeros(solid.shape)
 
+start = timeit.default_timer()
+
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
                                   px_bound=px_bound,py_bound=py_bound,max_iter=max_iter,max_res = max_res,
                                   is_explicit = True, vol_mass=vol_mass, dt = dt, ratio = ratio, tau = tau,
@@ -71,6 +74,12 @@ anim = sample.interface.ExplicitAnimation(test, nstep = nstep, plot_interval = i
                                           probe_ix = [ixmax,], probe_iy = [int(nx/2),], y_dec = 0.5, min_scale = -0.003,
                                             max_scale = 0.003)
 anim.animate()
+
+stop = timeit.default_timer()
+print('Explicit loop Time: ', stop - start)
+print('Average time step time: ', (stop - start) / nstep)
+
+
 uxt = anim.probe_vals['ux' + str(ixmax) + '_' + str(int(nx/2))]
 itet = anim.iplot
 
