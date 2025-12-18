@@ -3,9 +3,8 @@ import numpy as np
 # from scipy.signal import convolve2d,correlate2d
 # from .convolutions import addition_convolution
 from cv2 import filter2D
-from torchgen.native_function_generation import self_to_out_signature
-
-
+# from torchgen.native_function_generation import self_to_out_signature
+from line_profiler import profile
 ###Remark : pyqt6 needed only for matplotlib show, maybe not necessary for pygame !
 
 def get_frontier(solid):
@@ -435,7 +434,7 @@ class ElasticProblem:
         by[np.bitwise_not(np.isnan(self.uy_imp))] = 0
 
         return bx,by
-
+    @profile
     def calc_def(self,uxt,uyt):
         #Calculate the stress in the center of the mesh edges
 
@@ -506,6 +505,7 @@ class ElasticProblem:
         exx_x, eyy_x, exy_x, eyy_y, exx_y, exy_y = self.calc_def(uxt,uyt)
         return self.calc_stress_eps(exx_x, eyy_x, exy_x, eyy_y, exx_y, exy_y )
 
+    @profile
     def calc_stress_explicit(self):
         #######
         # Calculating stress for a Standard Linear Solid (Zener)
@@ -537,6 +537,7 @@ class ElasticProblem:
 
         return sxx_x,sxy_x,syy_y,sxy_y
 
+    @profile
     def explicit_step(self):
         #Explicit step using LeapFrog method
         sxx_x, sxy_x, syy_y, sxy_y = self.calc_stress_explicit()
