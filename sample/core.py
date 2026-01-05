@@ -443,6 +443,7 @@ class ElasticProblem:
         duxdy2 = conv22(uxt, self.ddy2 / (4 * self.lm))*self.isddy2
         duydx2 = conv22(uyt, self.ddx2 / (4 * self.lm))*self.isddx2
         duydy2 = conv22(uyt, self.ddy2 / (2 * self.lm)) * self.isddy2
+
         exx = conv22(uxt, self.ddx1 / (2 * self.lm))*self.isddx1  + duxdx2
         eyy = conv22(uyt, self.ddy1 / (2 * self.lm))*self.isddy1 + duydy2
         exy = conv22(uxt, self.ddy1 / (4 * self.lm))*self.isddy1 + duxdy2
@@ -451,7 +452,7 @@ class ElasticProblem:
         # multiply by two on frontiers to compensate where isddx/isddy = 0
         exx[self.y_frontier_def] *= 2
         eyy[self.x_frontier_def] *= 2
-        exy[self.x_frontier_def] *= 2
+        exy[self.x_frontier_def] += 2
         eyx[self.y_frontier_def] *= 2
 
         # frontier correction to be coherent with sigma.normal = 0
