@@ -471,8 +471,8 @@ class ElasticProblem:
 
         #duydx2 /2 necessary for exy/eyx because of epsilonxy definition
         exx_y = conv22(exx, self.meanx / 2)
-        eyy_y = conv22(eyy, self.meanx / 4) + duydy2
-        exy_y = conv22_test(exy, self.meanx / 4, exy) + duxdy2
+        eyy_y = conv22_test(eyy, self.meanx / 4,eyy) + duydy2
+        exy_y = conv22(exy, self.meanx / 4) + duxdy2
         eyx_y = conv22(eyx, self.meanx / 2)
 
         #Calculate complete shear deformation exy

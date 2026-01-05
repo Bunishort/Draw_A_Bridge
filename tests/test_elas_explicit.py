@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import timeit
 
-k = 11
+k = 21
 nx=k*7
 ny=k*7
 
