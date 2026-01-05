@@ -76,7 +76,9 @@ def interp_stress(xq,yq,xnodes,ynodes,sxx_x,sxy_x,syy_y,sxy_y):
 def conv22(matrix,kernel):
     #COnvolution for 2*2 kernel with specific anchor
     return filter2D(matrix,-1,kernel,anchor=(0,0))
-
+def conv22_test(matrix,kernel,out):
+    #COnvolution for 2*2 kernel with specific anchor
+    return filter2D(matrix,-1,kernel,dst=out,anchor=(0,0))
 
 def conv(matrix,kernel):
     #Convolution for kernels others than 2*2
@@ -452,7 +454,7 @@ class ElasticProblem:
         # multiply by two on frontiers to compensate where isddx/isddy = 0
         exx[self.y_frontier_def] *= 2
         eyy[self.x_frontier_def] *= 2
-        exy[self.x_frontier_def] += 2
+        exy[self.x_frontier_def] *= 2
         eyx[self.y_frontier_def] *= 2
 
         # frontier correction to be coherent with sigma.normal = 0
@@ -470,7 +472,7 @@ class ElasticProblem:
         #duydx2 /2 necessary for exy/eyx because of epsilonxy definition
         exx_y = conv22(exx, self.meanx / 2)
         eyy_y = conv22(eyy, self.meanx / 4) + duydy2
-        exy_y = conv22(exy, self.meanx / 4) + duxdy2
+        exy_y = conv22_test(exy, self.meanx / 4, exy) + duxdy2
         eyx_y = conv22(eyx, self.meanx / 2)
 
         #Calculate complete shear deformation exy

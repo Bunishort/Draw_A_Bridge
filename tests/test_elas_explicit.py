@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import timeit
 
-k = 3
+k = 11
 nx=k*7
 ny=k*7
 
@@ -31,7 +31,7 @@ px = 0.01
 lm = 4.5/k
 
 vol_mass = 0.5
-dt = 0.3
+dt = 0.3 / 7
 ratio = 0.2  # must be between 0 and 1
 tau = 3
 
@@ -46,19 +46,19 @@ print( 'Max Sound speed * dt / lm ')
 print( 'Compression : ' + str(c_p * dt / lm))
 print( 'Shear: ' + str(c_s * dt / lm))
 
-nstep = 10000
-iplot = 10001
+nstep = 1000
+iplot = 100
 kplot=1
 
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
 elas_mu = E/2/(1+nu)
 ux_imp=np.zeros(solid.shape)
 ux_imp[:,:] = np.nan
-ux_imp[gridx < (-lx/2+lm)] =0
+ux_imp[gridx == np.min(gridx[solid])] =0
 uy_imp=ux_imp
 
 px_bound = np.zeros(solid.shape)
-px_bound[gridx > (lx/2-lm)] = px
+px_bound[gridx == np.max(gridx[solid])] = px
 py_bound = np.zeros(solid.shape)
 
 start = timeit.default_timer()

@@ -50,7 +50,7 @@ print( 'Shear: ' + str(c_s * dt / lm))
 
 nstep = 4000
 iplot = 50
-kplot = 10
+kplot = 3
 
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
 elas_mu = E/2/(1+nu)
