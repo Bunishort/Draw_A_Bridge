@@ -437,19 +437,49 @@ class ElasticProblem:
 
         return bx,by
 
+    @profile
     def calc_stress(self,uxt,uyt):
         # Calculate the stress in the center of the mesh edges
 
-        # First, calculate def at mesh cell centers
-        duxdx2 = conv22(uxt, self.ddx2 / (2 * self.lm)) * self.isddx2
-        duxdy2 = conv22(uxt, self.ddy2 / (4 * self.lm)) * self.isddy2
-        duydx2 = conv22(uyt, self.ddx2 / (4 * self.lm)) * self.isddx2
-        duydy2 = conv22(uyt, self.ddy2 / (2 * self.lm)) * self.isddy2
+        # First, unpack self.xxx variables into local variables
+        ddx1 = self.ddx1
+        ddx2 = self.ddx2
+        ddy1 = self.ddy1
+        ddy2 = self.ddy2
 
-        exx = conv22(uxt, self.ddx1 / (2 * self.lm)) * self.isddx1 + duxdx2
-        eyy = conv22(uyt, self.ddy1 / (2 * self.lm)) * self.isddy1 + duydy2
-        exy = conv22(uxt, self.ddy1 / (4 * self.lm)) * self.isddy1 + duxdy2
-        eyx = conv22(uyt, self.ddx1 / (4 * self.lm)) * self.isddx1 + duydx2
+        isddx1 = self.isddx1
+        isddx2 = self.isddx2
+        isddy1 = self.isddy1
+        isddy2 = self.isddy2
+
+
+        meanx = self.meanx
+        meany = self.meany
+
+        lm = self.lm
+
+        # First, calculate def at mesh cell centers
+        duxdx2 = conv22(uxt, ddx2 / (2 * lm))
+        duxdx2 *= isddx2
+        duxdy2 = conv22(uxt, ddy2 / (4 * lm))
+        duxdy2 *= isddy2
+        duydx2 = conv22(uyt, ddx2 / (4 * lm))
+        duydx2 *= isddx2
+        duydy2 = conv22(uyt, ddy2 / (2 * lm))
+        duydy2 *= isddy2
+
+        exx = conv22(uxt, ddx1 / (2 * lm))
+        exx *= isddx1
+        exx += duxdx2
+        eyy = conv22(uyt, ddy1 / (2 * lm))
+        eyy *= isddy1
+        eyy += duydy2
+        exy = conv22(uxt, ddy1 / (4 * lm))
+        exy *= isddy1
+        exy += duxdy2
+        eyx = conv22(uyt, ddx1 / (4 * lm))
+        eyx *= isddx1
+        eyx += duydx2
 
         # multiply by two on frontiers to compensate where isddx/isddy = 0
         exx[self.y_frontier_def] *= 2
@@ -464,16 +494,20 @@ class ElasticProblem:
         eyx[self.x_frontier_def_s] = -exy[self.x_frontier_def_s]
 
         # Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
-        exx_x = conv22(exx, self.meany / 4) + duxdx2
-        eyy_x = conv22(eyy, self.meany / 2)
-        exy_x = conv22(exy, self.meany / 2)
-        eyx_x = conv22(eyx, self.meany / 4) + duydx2
+        exx_x = conv22(exx, meany / 4)
+        exx_x += duxdx2
+        eyy_x = conv22(eyy, meany / 2)
+        exy_x = conv22(exy, meany / 2)
+        eyx_x = conv22(eyx, meany / 4)
+        eyx_x += duydx2
 
         # duydx2 /2 necessary for exy/eyx because of epsilonxy definition
-        exx_y = conv22(exx, self.meanx / 2)
-        eyy_y = conv22_test(eyy, self.meanx / 4, eyy) + duydy2
-        exy_y = conv22(exy, self.meanx / 4) + duxdy2
-        eyx_y = conv22(eyx, self.meanx / 2)
+        exx_y = conv22(exx, meanx / 2)
+        eyy_y = conv22(eyy, meanx / 4)
+        eyy_y += duydy2
+        exy_y = conv22(exy, meanx / 4)
+        exy_y += duxdy2
+        eyx_y = conv22(eyx, meanx / 2)
 
         # Calculate complete shear deformation exy
         exy_x += eyx_x
@@ -488,11 +522,19 @@ class ElasticProblem:
         ### Now calculate stress from def #######
 
         # Calculate stress from def
-        sxx_x = (self.elas_lambda + 2 * self.elas_mu) * exx_x + self.elas_lambda * eyy_x
-        sxy_x = (2 * self.elas_mu) * exy_x
+        #sxx_x is only an alias to avoid allocating memory
+        sxx_x = exx_x
+        syy_y = eyy_y
+        sxy_x = exy_x
+        sxy_y = exy_y
 
-        syy_y = (self.elas_lambda + 2 * self.elas_mu) * eyy_y + self.elas_lambda * exx_y
-        sxy_y = (2 * self.elas_mu) * exy_y
+        sxx_x *= (self.elas_lambda + 2 * self.elas_mu)
+        sxx_x += self.elas_lambda * eyy_x
+        sxy_x *= (2 * self.elas_mu)
+
+        syy_y *= (self.elas_lambda + 2 * self.elas_mu)
+        syy_y += self.elas_lambda * exx_y
+        sxy_y *= (2 * self.elas_mu)
 
         # Frontier adjustments
         # sxx stress is zero on x frontier, same for syy on y frontier
@@ -510,32 +552,28 @@ class ElasticProblem:
         # Viscoelastic parameters G0/G1/Eta1 normalized so that the long term response
         # is the same as the elastic response
 
-        # [exx_x, eyy_x, exy_x,
-        #  eyy_y, exx_y, exy_y] = self.calc_def(
-        #     self.explicit_b * self.ux + self.G0 * self.vx,
-        #     self.explicit_b * self.uy + self.G0 * self.vy)
-        #
-        # sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress_eps(exx_x, eyy_x, exy_x,
-        #  eyy_y, exx_y, exy_y)
-        #
+
         sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress(
             self.explicit_b * self.ux + self.G0 * self.vx,
             self.explicit_b * self.uy + self.G0 * self.vy)
 
-        sxx_x *= (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
-        sxy_x *= (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
-        syy_y *= (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
-        sxy_y *= (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
 
-        sxx_x += self.sxx_x_old * np.exp(-self.explicit_a * self.dt)
-        sxy_x += self.sxy_x_old * np.exp(-self.explicit_a * self.dt)
-        syy_y += self.syy_y_old * np.exp(-self.explicit_a * self.dt)
-        sxy_y += self.sxy_y_old * np.exp(-self.explicit_a * self.dt)
+        temp = (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
+        sxx_x *= temp
+        sxy_x *= temp
+        syy_y *= temp
+        sxy_y *= temp
 
-        self.sxx_x_old = sxx_x
-        self.sxy_x_old = sxy_x
-        self.syy_y_old = syy_y
-        self.sxy_y_old = sxy_y
+        temp = np.exp(-self.explicit_a * self.dt)
+        sxx_x += self.sxx_x_old * temp
+        sxy_x += self.sxy_x_old * temp
+        syy_y += self.syy_y_old * temp
+        sxy_y += self.sxy_y_old * temp
+
+        self.sxx_x_old[:] = sxx_x
+        self.sxy_x_old[:] = sxy_x
+        self.syy_y_old[:] = syy_y
+        self.sxy_y_old[:] = sxy_y
 
         return sxx_x,sxy_x,syy_y,sxy_y
 
