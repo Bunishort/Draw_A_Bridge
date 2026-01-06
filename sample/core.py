@@ -446,6 +446,16 @@ class ElasticProblem:
         ddx2 = self.ddx2
         ddy1 = self.ddy1
         ddy2 = self.ddy2
+        lm = self.lm
+
+        ddx1_2lm = ddx1 / 2 / lm
+        ddx1_4lm = ddx1 / 4 / lm
+        ddx2_2lm = ddx2 / 2 / lm
+        ddx2_4lm = ddx2 / 4 / lm
+        ddy1_2lm = ddy1 / 2 / lm
+        ddy1_4lm = ddy1 / 4 / lm
+        ddy2_2lm = ddy2 / 2 / lm
+        ddy2_4lm = ddy2 / 4 / lm
 
         isddx1 = self.isddx1
         isddx2 = self.isddx2
@@ -453,31 +463,32 @@ class ElasticProblem:
         isddy2 = self.isddy2
 
 
-        meanx = self.meanx
-        meany = self.meany
+        meanx_2 = self.meanx / 2
+        meany_2 = self.meany / 2
+        meanx_4 = meanx_2 / 2
+        meany_4 = meany_2 / 2
 
-        lm = self.lm
 
         # First, calculate def at mesh cell centers
-        duxdx2 = conv22(uxt, ddx2 / (2 * lm))
+        duxdx2 = conv22(uxt, ddx2_2lm)
         duxdx2 *= isddx2
-        duxdy2 = conv22(uxt, ddy2 / (4 * lm))
+        duxdy2 = conv22(uxt, ddy2_4lm)
         duxdy2 *= isddy2
-        duydx2 = conv22(uyt, ddx2 / (4 * lm))
+        duydx2 = conv22(uyt, ddx2_4lm)
         duydx2 *= isddx2
-        duydy2 = conv22(uyt, ddy2 / (2 * lm))
+        duydy2 = conv22(uyt, ddy2_2lm)
         duydy2 *= isddy2
 
-        exx = conv22(uxt, ddx1 / (2 * lm))
+        exx = conv22(uxt, ddx1_2lm)
         exx *= isddx1
         exx += duxdx2
-        eyy = conv22(uyt, ddy1 / (2 * lm))
+        eyy = conv22(uyt, ddy1_2lm)
         eyy *= isddy1
         eyy += duydy2
-        exy = conv22(uxt, ddy1 / (4 * lm))
+        exy = conv22(uxt, ddy1_4lm)
         exy *= isddy1
         exy += duxdy2
-        eyx = conv22(uyt, ddx1 / (4 * lm))
+        eyx = conv22(uyt, ddx1_4lm)
         eyx *= isddx1
         eyx += duydx2
 
@@ -494,20 +505,20 @@ class ElasticProblem:
         eyx[self.x_frontier_def_s] = -exy[self.x_frontier_def_s]
 
         # Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
-        exx_x = conv22(exx, meany / 4)
+        exx_x = conv22(exx, meany_4)
         exx_x += duxdx2
-        eyy_x = conv22(eyy, meany / 2)
-        exy_x = conv22(exy, meany / 2)
-        eyx_x = conv22(eyx, meany / 4)
+        eyy_x = conv22(eyy, meany_2)
+        exy_x = conv22(exy, meany_2)
+        eyx_x = conv22(eyx, meany_4)
         eyx_x += duydx2
 
         # duydx2 /2 necessary for exy/eyx because of epsilonxy definition
-        exx_y = conv22(exx, meanx / 2)
-        eyy_y = conv22(eyy, meanx / 4)
+        exx_y = conv22(exx, meanx_2)
+        eyy_y = conv22(eyy, meanx_4)
         eyy_y += duydy2
-        exy_y = conv22(exy, meanx / 4)
+        exy_y = conv22(exy, meanx_4)
         exy_y += duxdy2
-        eyx_y = conv22(eyx, meanx / 2)
+        eyx_y = conv22(eyx, meanx_2)
 
         # Calculate complete shear deformation exy
         exy_x += eyx_x
