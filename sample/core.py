@@ -436,20 +436,20 @@ class ElasticProblem:
         by[np.bitwise_not(np.isnan(self.uy_imp))] = 0
 
         return bx,by
-    @profile
-    def calc_def(self,uxt,uyt):
-        #Calculate the stress in the center of the mesh edges
 
-        #First, calculate def at mesh cell centers
-        duxdx2 = conv22(uxt, self.ddx2 / (2 * self.lm))*self.isddx2
-        duxdy2 = conv22(uxt, self.ddy2 / (4 * self.lm))*self.isddy2
-        duydx2 = conv22(uyt, self.ddx2 / (4 * self.lm))*self.isddx2
+    def calc_stress(self,uxt,uyt):
+        # Calculate the stress in the center of the mesh edges
+
+        # First, calculate def at mesh cell centers
+        duxdx2 = conv22(uxt, self.ddx2 / (2 * self.lm)) * self.isddx2
+        duxdy2 = conv22(uxt, self.ddy2 / (4 * self.lm)) * self.isddy2
+        duydx2 = conv22(uyt, self.ddx2 / (4 * self.lm)) * self.isddx2
         duydy2 = conv22(uyt, self.ddy2 / (2 * self.lm)) * self.isddy2
 
-        exx = conv22(uxt, self.ddx1 / (2 * self.lm))*self.isddx1  + duxdx2
-        eyy = conv22(uyt, self.ddy1 / (2 * self.lm))*self.isddy1 + duydy2
-        exy = conv22(uxt, self.ddy1 / (4 * self.lm))*self.isddy1 + duxdy2
-        eyx = conv22(uyt, self.ddx1 / (4 * self.lm))*self.isddx1 + duydx2
+        exx = conv22(uxt, self.ddx1 / (2 * self.lm)) * self.isddx1 + duxdx2
+        eyy = conv22(uyt, self.ddy1 / (2 * self.lm)) * self.isddy1 + duydy2
+        exy = conv22(uxt, self.ddy1 / (4 * self.lm)) * self.isddy1 + duxdy2
+        eyx = conv22(uyt, self.ddx1 / (4 * self.lm)) * self.isddx1 + duydx2
 
         # multiply by two on frontiers to compensate where isddx/isddy = 0
         exx[self.y_frontier_def] *= 2
@@ -463,19 +463,19 @@ class ElasticProblem:
         exy[self.y_frontier_def_s] = -eyx[self.y_frontier_def_s]
         eyx[self.x_frontier_def_s] = -exy[self.x_frontier_def_s]
 
-        #Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
+        # Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
         exx_x = conv22(exx, self.meany / 4) + duxdx2
         eyy_x = conv22(eyy, self.meany / 2)
         exy_x = conv22(exy, self.meany / 2)
         eyx_x = conv22(eyx, self.meany / 4) + duydx2
 
-        #duydx2 /2 necessary for exy/eyx because of epsilonxy definition
+        # duydx2 /2 necessary for exy/eyx because of epsilonxy definition
         exx_y = conv22(exx, self.meanx / 2)
-        eyy_y = conv22_test(eyy, self.meanx / 4,eyy) + duydy2
+        eyy_y = conv22_test(eyy, self.meanx / 4, eyy) + duydy2
         exy_y = conv22(exy, self.meanx / 4) + duxdy2
         eyx_y = conv22(eyx, self.meanx / 2)
 
-        #Calculate complete shear deformation exy
+        # Calculate complete shear deformation exy
         exy_x += eyx_x
         exy_y += eyx_y
 
@@ -485,17 +485,16 @@ class ElasticProblem:
         # eyy_y[self.y_frontier_edge] = self.coef * exx_y[self.y_frontier_edge]
         # exy_y[self.y_frontier_edge] = 0
 
-        return exx_x,eyy_x,exy_x, eyy_y,exx_y,exy_y
+        ### Now calculate stress from def #######
 
-    def calc_stress_eps(self, exx_x, eyy_x, exy_x, eyy_y, exx_y, exy_y):
-        #Calculate stress from def
+        # Calculate stress from def
         sxx_x = (self.elas_lambda + 2 * self.elas_mu) * exx_x + self.elas_lambda * eyy_x
-        sxy_x =  (2 * self.elas_mu) * exy_x
+        sxy_x = (2 * self.elas_mu) * exy_x
 
         syy_y = (self.elas_lambda + 2 * self.elas_mu) * eyy_y + self.elas_lambda * exx_y
-        sxy_y =  (2 * self.elas_mu) * exy_y
+        sxy_y = (2 * self.elas_mu) * exy_y
 
-        #Frontier adjustments
+        # Frontier adjustments
         # sxx stress is zero on x frontier, same for syy on y frontier
         sxx_x *= self.isstress_x_edge
         syy_y *= self.isstress_y_edge
@@ -504,10 +503,6 @@ class ElasticProblem:
 
         return sxx_x,sxy_x,syy_y,sxy_y
 
-    def calc_stress(self,uxt,uyt):
-        exx_x, eyy_x, exy_x, eyy_y, exx_y, exy_y = self.calc_def(uxt,uyt)
-        return self.calc_stress_eps(exx_x, eyy_x, exy_x, eyy_y, exx_y, exy_y )
-
     @profile
     def calc_stress_explicit(self):
         #######
@@ -515,13 +510,17 @@ class ElasticProblem:
         # Viscoelastic parameters G0/G1/Eta1 normalized so that the long term response
         # is the same as the elastic response
 
-        [exx_x, eyy_x, exy_x,
-         eyy_y, exx_y, exy_y] = self.calc_def(
+        # [exx_x, eyy_x, exy_x,
+        #  eyy_y, exx_y, exy_y] = self.calc_def(
+        #     self.explicit_b * self.ux + self.G0 * self.vx,
+        #     self.explicit_b * self.uy + self.G0 * self.vy)
+        #
+        # sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress_eps(exx_x, eyy_x, exy_x,
+        #  eyy_y, exx_y, exy_y)
+        #
+        sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress(
             self.explicit_b * self.ux + self.G0 * self.vx,
             self.explicit_b * self.uy + self.G0 * self.vy)
-
-        sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress_eps(exx_x, eyy_x, exy_x,
-         eyy_y, exx_y, exy_y)
 
         sxx_x *= (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
         sxy_x *= (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
