@@ -515,9 +515,7 @@ class ElasticProblem:
         eyx_x += duydx2
 
         # duydx2 /2 necessary for exy/eyx because of epsilonxy definition
-        # exx_y = conv22(exx, meanx_2)
-        exx_y = exx / 2
-        exx_y[:-1,:] +=  exx_y[1:,:]
+        exx_y = conv22(exx, meanx_2)
         eyy_y = conv22(eyy, meanx_4)
         eyy_y += duydy2
         exy_y = conv22(exy, meanx_4)
