@@ -2,7 +2,7 @@ from logging import error
 import numpy as np
 # from scipy.signal import convolve2d,correlate2d
 # from .convolutions import addition_convolution
-from cv2 import filter2D
+from cv2 import filter2D, sepFilter2D
 # from torchgen.native_function_generation import self_to_out_signature
 from line_profiler import profile
 import numba
@@ -465,6 +465,8 @@ class ElasticProblem:
 
 
         meanx_2 = self.meanx / 2
+        meanx_2x = np.array([1, 0], dtype=np.float32)
+        meanx_2y = np.array([1/2, 1/2], dtype=np.float32)
         meany_2 = self.meany / 2
         meanx_4 = meanx_2 / 2
         meany_4 = meany_2 / 2
@@ -515,7 +517,8 @@ class ElasticProblem:
         eyx_x += duydx2
 
         # duydx2 /2 necessary for exy/eyx because of epsilonxy definition
-        exx_y = conv22(exx, meanx_2)
+        # exx_y = conv22(exx, meanx_2)
+        exx_y = sepFilter2D(exx, -1, meanx_2x, meanx_2y, anchor=(0,0))
         eyy_y = conv22(eyy, meanx_4)
         eyy_y += duydy2
         exy_y = conv22(exy, meanx_4)
