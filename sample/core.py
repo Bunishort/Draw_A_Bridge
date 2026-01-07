@@ -506,6 +506,7 @@ class ElasticProblem:
         eyx[self.x_frontier_def_s] = -exy[self.x_frontier_def_s]
 
         # Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
+        # Multiplied by the right factors to calculate stress directly
         exx_x = conv22(exx, meany_4)
         exx_x += duxdx2
         eyy_x = conv22(eyy, meany_2)
@@ -514,7 +515,9 @@ class ElasticProblem:
         eyx_x += duydx2
 
         # duydx2 /2 necessary for exy/eyx because of epsilonxy definition
-        exx_y = conv22(exx, meanx_2)
+        # exx_y = conv22(exx, meanx_2)
+        exx_y = exx / 2
+        exx_y[:-1,:] +=  exx_y[1:,:]
         eyy_y = conv22(eyy, meanx_4)
         eyy_y += duydy2
         exy_y = conv22(exy, meanx_4)
