@@ -5,6 +5,7 @@ import numpy as np
 from cv2 import filter2D
 # from torchgen.native_function_generation import self_to_out_signature
 from line_profiler import profile
+import numba
 ###Remark : pyqt6 needed only for matplotlib show, maybe not necessary for pygame !
 
 def get_frontier(solid):
@@ -79,6 +80,15 @@ def conv22(matrix,kernel):
 def conv22_test(matrix,kernel,out):
     #COnvolution for 2*2 kernel with specific anchor
     return filter2D(matrix,-1,kernel,dst=out,anchor=(0,0))
+
+@numba.njit(parallel=True, fastmath=True)
+def compute_mean_2(u, ux, uy):
+    nx, ny = u.shape
+    #for i in numba.prange(nx-1):
+    for i in range(nx - 1):
+        for j in range(ny-1):
+            ux[i,j] = 0.5 * ( u[i+1,j] + u[i,j] )
+            uy[i,j] = 0.5 * ( u[i,j+1] + u[i,j] )
 
 def conv(matrix,kernel):
     #Convolution for kernels others than 2*2
@@ -505,7 +515,11 @@ class ElasticProblem:
         eyx[self.x_frontier_def_s] = -exy[self.x_frontier_def_s]
 
         # Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
-        exx_x = conv22(exx, meany_4)
+        #exx_x = conv22(exx, meany_4)
+        exx_x = np.zeros(self.solid.shape)
+        exx_y = np.zeros(self.solid.shape)
+        compute_mean_2(exx, exx_y, exx_x)
+        exx_x /= 2
         exx_x += duxdx2
         eyy_x = conv22(eyy, meany_2)
         exy_x = conv22(exy, meany_2)
@@ -513,7 +527,7 @@ class ElasticProblem:
         eyx_x += duydx2
 
         # duydx2 /2 necessary for exy/eyx because of epsilonxy definition
-        exx_y = conv22(exx, meanx_2)
+        #exx_y = conv22(exx, meanx_2)
         eyy_y = conv22(eyy, meanx_4)
         eyy_y += duydy2
         exy_y = conv22(exy, meanx_4)
