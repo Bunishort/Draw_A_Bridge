@@ -77,9 +77,6 @@ def interp_stress(xq,yq,xnodes,ynodes,sxx_x,sxy_x,syy_y,sxy_y):
 def conv22(matrix,kernel):
     #COnvolution for 2*2 kernel with specific anchor
     return filter2D(matrix,-1,kernel,anchor=(0,0))
-def conv22_test(matrix,kernel,out):
-    #COnvolution for 2*2 kernel with specific anchor
-    return filter2D(matrix,-1,kernel,dst=out,anchor=(0,0))
 
 def conv(matrix,kernel):
     #Convolution for kernels others than 2*2
@@ -465,8 +462,6 @@ class ElasticProblem:
 
 
         meanx_2 = self.meanx / 2
-        meanx_2x = np.array([1, 0], dtype=np.float32)
-        meanx_2y = np.array([1/2, 1/2], dtype=np.float32)
         meany_2 = self.meany / 2
         meanx_4 = meanx_2 / 2
         meany_4 = meany_2 / 2
