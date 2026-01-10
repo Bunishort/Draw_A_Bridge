@@ -7,8 +7,8 @@ from scipy.interpolate import interpn
 
 import timeit
 
-nx=4*64
-ny=4*64
+nx=2*64
+ny=2*64
 L = 25
 lm= L/nx
 max_res = 1e-6
@@ -24,7 +24,7 @@ elas_lambda = E*nu /(1+nu)/(1-2*nu)
 elas_mu = E/2/(1+nu)
 
 vol_mass = 1
-dt = 1/20
+dt = 1/10
 ratio = 0.4  # must be between 0 and 1
 tau = 2
 
