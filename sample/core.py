@@ -143,16 +143,18 @@ class ElasticProblem:
                                       np.bitwise_not(np.isnan(self.uy_imp)))
         self.is_uimp = np.bitwise_and(self.is_uimp, self.solid)
 
+        self.solid_not_uimp = np.float32(np.bitwise_and(np.bitwise_not(self.is_uimp), self.solid))
+
         self.x_frontier_edge = conv22(self.solid.astype(np.float32),self.ddx2) != 0
         self.y_frontier_edge = conv22(self.solid.astype(np.float32), self.ddy2) != 0
 
         self.not_solid_x_edge = conv22(self.solid.astype(np.float32), self.ddx2**2) == 0
         self.not_solid_y_edge = conv22(self.solid.astype(np.float32), self.ddy2**2) == 0
 
-        self.isstress_x_edge = np.bitwise_and(np.bitwise_not(self.x_frontier_edge),
-                                              np.bitwise_not(self.not_solid_x_edge))
-        self.isstress_y_edge = np.bitwise_and(np.bitwise_not(self.y_frontier_edge),
-                                              np.bitwise_not(self.not_solid_y_edge))
+        self.isstress_x_edge = np.float32(np.bitwise_and(np.bitwise_not(self.x_frontier_edge),
+                                              np.bitwise_not(self.not_solid_x_edge)))
+        self.isstress_y_edge = np.float32(np.bitwise_and(np.bitwise_not(self.y_frontier_edge),
+                                              np.bitwise_not(self.not_solid_y_edge)))
 
 
         tempisddx1 = conv22(self.solid.astype(np.float32), self.ddx1) != 0
@@ -171,6 +173,12 @@ class ElasticProblem:
 
         self.frontier_def = np.bitwise_or(np.bitwise_not(self.isddx1),
                                              np.bitwise_not(self.isddx2))
+
+        self.isddx1 = np.float32(self.isddx1)
+        self.isddx2 = np.float32(self.isddx2)
+        self.isddy1 = np.float32(self.isddy1)
+        self.isddy2 = np.float32(self.isddy2)
+
         self.coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu) #Correction coef for plane strain
         # frontiers without corners :
         self.x_frontier_def_s = np.bitwise_and(self.x_frontier_def, np.bitwise_not(self.corner_def))
@@ -416,11 +424,8 @@ class ElasticProblem:
         a_u_x = (conv(sxx_x,self.ddxx / self.lm) + conv(sxy_y,self.ddyy / self.lm))
         a_u_y = (conv(syy_y, self.ddyy / self.lm) + conv(sxy_x, self.ddxx) / self.lm)
 
-        a_u_x *= self.solid
-        a_u_y *= self.solid
-
-        a_u_x *= np.bitwise_not(self.is_uimp)
-        a_u_y *= np.bitwise_not(self.is_uimp)
+        a_u_x *= self.solid_not_uimp
+        a_u_y *= self.solid_not_uimp
 
         return a_u_x,a_u_y
 
