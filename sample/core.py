@@ -181,6 +181,12 @@ class ElasticProblem:
         self.precond_n = np.float32(kwargs.get('precond_n',15))
         self.precond_xx, self.precond_xy, self.precond_yy, self.precond_yx = self.def_precond()
 
+        self.x_frontier_def = np.where(self.x_frontier_def)
+        self.y_frontier_def = np.where(self.y_frontier_def)
+        self.x_frontier_def_s = np.where(self.x_frontier_def_s)
+        self.y_frontier_def_s = np.where(self.y_frontier_def_s)
+
+
         self.is_explicit = kwargs.get('is_explicit',False)
         if self.is_explicit:
             self.vol_mass = np.float32(kwargs.get('vol_mass', 1))
