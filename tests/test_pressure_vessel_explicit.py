@@ -37,7 +37,7 @@ print( 'Shear: ' + str(c_s * dt / lm))
 
 
 nstep = 4000
-iplot = 100
+iplot = 10000
 kplot = 2
 
 
