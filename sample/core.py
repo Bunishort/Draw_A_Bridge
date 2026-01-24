@@ -521,15 +521,13 @@ class ElasticProblem:
 
         # Average + mod to have def on edges _x perpendicular to x, and _y perpendicular to y
         # Multiplied by the right factors to calculate stress directly
-        exx_x = conv22(exx, meany_4)
+        exx_x = conv22(exx + (2 * self.elas_lambda_ratio) * eyy, meany_4) # merging ex and ayy for stress computation
         exx_x += duxdx2
-        eyy_x = conv22(eyy, meany_2)
         exy_x = conv22(2 * exy + eyx, meany_4)#exy + eyx
         exy_x += duydx2
 
         # duydx2 /2 necessary for exy/eyx because of epsilonxy definition
-        exx_y = conv22(exx, meanx_2)
-        eyy_y = conv22(eyy, meanx_4)
+        eyy_y = conv22(eyy + (2 * self.elas_lambda_ratio) * exx, meanx_4)
         eyy_y += duydy2
         exy_y = conv22(exy + 2 * eyx , meanx_4) # exy + eyx
         exy_y += duxdy2
@@ -542,10 +540,6 @@ class ElasticProblem:
         syy_y = eyy_y
         sxy_x = exy_x
         sxy_y = exy_y
-
-        sxx_x += self.elas_lambda_ratio * eyy_x
-
-        syy_y += self.elas_lambda_ratio * exx_y
 
         # Frontier adjustments + multiplication by elastic constants
         # sxx stress is zero on x frontier, same for syy on y frontier
