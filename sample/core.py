@@ -248,12 +248,12 @@ class ElasticProblem:
             # epsilon_xx = ddx * ux / (2 lm)
             # epsilon_yy = ddy * uy / (2 lm)
             # epsilon_xy = (ddy * ux + ddx * uy) / (4 lm)
-            ddx1 = np.array([[-1, 0], [1, 0]], dtype=np.float32)
+            ddx1 = np.array([[-1,], [1,]], dtype=np.float32)
             ddx2 = np.array([[0, -1], [0, 1]], dtype=np.float32)
-            ddy1 = np.array([[-1,1],[0,0]], dtype=np.float32)
+            ddy1 = np.array([[-1,1],], dtype=np.float32)
             ddy2 = np.array([[0, 0], [-1, 1]], dtype=np.float32)
 
-            meanx = np.array([[1, 0], [1, 0]], dtype=np.float32)
+            meanx = np.array([[1,], [1,]], dtype=np.float32)
             meany = np.transpose(meanx)
 
             ddxx = np.array([[-1, 0, 0], [1, 0, 0], [0, 0, 0]], dtype=np.float32)
@@ -518,7 +518,7 @@ class ElasticProblem:
         exx_x = conv22(exx, meany_4)
         exx_x += duxdx2
         eyy_x = conv22(eyy, meany_2)
-        exy_x = conv22(exy, meany_2)
+        exy_x = conv22(exy, meany_2)#TODO try merge exy/eyx in 1 convol
         eyx_x = conv22(eyx, meany_4)
         eyx_x += duydx2
 
@@ -555,7 +555,7 @@ class ElasticProblem:
 
         syy_y *= (self.elas_lambda + 2 * self.elas_mu)
         syy_y += self.elas_lambda * exx_y
-        sxy_y *= (2 * self.elas_mu)
+        sxy_y *= (2 * self.elas_mu)#todo merge with line below
 
         # Frontier adjustments
         # sxx stress is zero on x frontier, same for syy on y frontier
