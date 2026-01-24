@@ -194,6 +194,12 @@ class ElasticProblem:
         self.x_frontier_def_s = np.where(self.x_frontier_def_s)
         self.y_frontier_def_s = np.where(self.y_frontier_def_s)
 
+        self.isstress_x_edge_lambda_2mu = self.isstress_x_edge * (self.elas_lambda + 2 * self.elas_mu)
+        self.isstress_y_edge_lambda_2mu = self.isstress_y_edge * (self.elas_lambda + 2 * self.elas_mu)
+        self.isstress_x_edge_2mu = self.isstress_x_edge *  2 * self.elas_mu
+        self.isstress_y_edge_2mu = self.isstress_y_edge *  2 * self.elas_mu
+        self.elas_lambda_ratio = self.elas_lambda / (self.elas_lambda + 2 * self.elas_mu)
+
 
         self.is_explicit = kwargs.get('is_explicit',False)
         if self.is_explicit:
@@ -537,20 +543,16 @@ class ElasticProblem:
         sxy_x = exy_x
         sxy_y = exy_y
 
-        sxx_x *= (self.elas_lambda + 2 * self.elas_mu)
-        sxx_x += self.elas_lambda * eyy_x
-        sxy_x *= (2 * self.elas_mu)
+        sxx_x += self.elas_lambda_ratio * eyy_x
 
-        syy_y *= (self.elas_lambda + 2 * self.elas_mu)
-        syy_y += self.elas_lambda * exx_y
-        sxy_y *= (2 * self.elas_mu)#todo merge with line below
+        syy_y += self.elas_lambda_ratio * exx_y
 
-        # Frontier adjustments
+        # Frontier adjustments + multiplication by elastic constants
         # sxx stress is zero on x frontier, same for syy on y frontier
-        sxx_x *= self.isstress_x_edge
-        syy_y *= self.isstress_y_edge
-        sxy_x *= self.isstress_x_edge
-        sxy_y *= self.isstress_y_edge
+        sxx_x *= self.isstress_x_edge_lambda_2mu
+        syy_y *= self.isstress_y_edge_lambda_2mu
+        sxy_x *= self.isstress_x_edge_2mu
+        sxy_y *= self.isstress_y_edge_2mu
 
         return sxx_x,sxy_x,syy_y,sxy_y
 
