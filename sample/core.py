@@ -199,7 +199,8 @@ class ElasticProblem:
         self.isstress_x_edge_2mu = self.isstress_x_edge *  2 * self.elas_mu
         self.isstress_y_edge_2mu = self.isstress_y_edge *  2 * self.elas_mu
         self.elas_lambda_ratio = self.elas_lambda / (self.elas_lambda + 2 * self.elas_mu)
-
+        self.meanx_4 = self.meanx / 4
+        self.meany_4 = self.meany / 4
 
         self.is_explicit = kwargs.get('is_explicit',False)
         if self.is_explicit:
@@ -477,12 +478,8 @@ class ElasticProblem:
         isddy1 = self.isddy1
         isddy2 = self.isddy2
 
-
-        meanx_2 = self.meanx / 2
-        meany_2 = self.meany / 2
-        meanx_4 = meanx_2 / 2
-        meany_4 = meany_2 / 2
-
+        meanx_4 = self.meanx_4
+        meany_4 = self.meany_4
 
         # First, calculate def at mesh cell centers
         duxdx2 = conv22(uxt, ddx2_2lm)
@@ -535,20 +532,15 @@ class ElasticProblem:
         ### Now calculate stress from def #######
 
         # Calculate stress from def
-        #sxx_x is only an alias to avoid allocating memory
-        sxx_x = exx_x
-        syy_y = eyy_y
-        sxy_x = exy_x
-        sxy_y = exy_y
 
         # Frontier adjustments + multiplication by elastic constants
         # sxx stress is zero on x frontier, same for syy on y frontier
-        sxx_x *= self.isstress_x_edge_lambda_2mu
-        syy_y *= self.isstress_y_edge_lambda_2mu
-        sxy_x *= self.isstress_x_edge_2mu
-        sxy_y *= self.isstress_y_edge_2mu
+        exx_x *= self.isstress_x_edge_lambda_2mu
+        eyy_y *= self.isstress_y_edge_lambda_2mu
+        exy_x *= self.isstress_x_edge_2mu
+        exy_y *= self.isstress_y_edge_2mu
 
-        return sxx_x,sxy_x,syy_y,sxy_y
+        return exx_x,exy_x,eyy_y,exy_y
 
     @profile
     def calc_stress_explicit(self):
