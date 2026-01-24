@@ -518,27 +518,15 @@ class ElasticProblem:
         exx_x = conv22(exx, meany_4)
         exx_x += duxdx2
         eyy_x = conv22(eyy, meany_2)
-        exy_x = conv22(exy, meany_2)#TODO try merge exy/eyx in 1 convol
-        eyx_x = conv22(eyx, meany_4)
-        eyx_x += duydx2
+        exy_x = conv22(2 * exy + eyx, meany_4)#exy + eyx
+        exy_x += duydx2
 
         # duydx2 /2 necessary for exy/eyx because of epsilonxy definition
         exx_y = conv22(exx, meanx_2)
         eyy_y = conv22(eyy, meanx_4)
         eyy_y += duydy2
-        exy_y = conv22(exy, meanx_4)
+        exy_y = conv22(exy + 2 * eyx , meanx_4) # exy + eyx
         exy_y += duxdy2
-        eyx_y = conv22(eyx, meanx_2)
-
-        # Calculate complete shear deformation exy
-        exy_x += eyx_x
-        exy_y += eyx_y
-
-        # Adjust defs on frontier : not necessary because more efficiently done directly on stress
-        # exx_x[self.x_frontier_edge] = self.coef * eyy_x[self.x_frontier_edge]
-        # exy_x[self.x_frontier_edge] = 0
-        # eyy_y[self.y_frontier_edge] = self.coef * exx_y[self.y_frontier_edge]
-        # exy_y[self.y_frontier_edge] = 0
 
         ### Now calculate stress from def #######
 
