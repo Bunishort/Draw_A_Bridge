@@ -201,6 +201,14 @@ class ElasticProblem:
         self.elas_lambda_ratio = self.elas_lambda / (self.elas_lambda + 2 * self.elas_mu)
         self.meanx_4 = self.meanx / 4
         self.meany_4 = self.meany / 4
+        self.ddx1_2lm = self.ddx1 / 2 / lm
+        self.ddx1_4lm = self.ddx1 / 4 / lm
+        self.ddx2_2lm = self.ddx2 / 2 / lm
+        self.ddx2_4lm = self.ddx2 / 4 / lm
+        self.ddy1_2lm = self.ddy1 / 2 / lm
+        self.ddy1_4lm = self.ddy1 / 4 / lm
+        self.ddy2_2lm = self.ddy2 / 2 / lm
+        self.ddy2_4lm = self.ddy2 / 4 / lm
 
         self.is_explicit = kwargs.get('is_explicit',False)
         if self.is_explicit:
@@ -426,10 +434,13 @@ class ElasticProblem:
         sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress(uxt,uyt)
         return self.calc_a_u_sig(sxx_x,sxy_x,syy_y,sxy_y)
 
+    @profile
     def calc_a_u_sig(self,sxx_x,sxy_x,syy_y,sxy_y ):
         # We could remove this /lm division by multiplying b by lm
-        a_u_x = (conv(sxx_x,self.ddxx / self.lm) + conv(sxy_y,self.ddyy / self.lm))
-        a_u_y = (conv(syy_y, self.ddyy / self.lm) + conv(sxy_x, self.ddxx) / self.lm)
+        a_u_x = (conv(sxx_x,self.ddxx / self.lm)
+                 + conv(sxy_y,self.ddyy / self.lm))
+        a_u_y = (conv(syy_y, self.ddyy / self.lm)
+                 + conv(sxy_x, self.ddxx) / self.lm)
 
         a_u_x *= self.solid_not_uimp
         a_u_y *= self.solid_not_uimp
@@ -458,21 +469,6 @@ class ElasticProblem:
         # Calculate the stress in the center of the mesh edges
 
         # First, unpack self.xxx variables into local variables
-        ddx1 = self.ddx1
-        ddx2 = self.ddx2
-        ddy1 = self.ddy1
-        ddy2 = self.ddy2
-        lm = self.lm
-
-        ddx1_2lm = ddx1 / 2 / lm
-        ddx1_4lm = ddx1 / 4 / lm
-        ddx2_2lm = ddx2 / 2 / lm
-        ddx2_4lm = ddx2 / 4 / lm
-        ddy1_2lm = ddy1 / 2 / lm
-        ddy1_4lm = ddy1 / 4 / lm
-        ddy2_2lm = ddy2 / 2 / lm
-        ddy2_4lm = ddy2 / 4 / lm
-
         isddx1 = self.isddx1
         isddx2 = self.isddx2
         isddy1 = self.isddy1
@@ -482,25 +478,25 @@ class ElasticProblem:
         meany_4 = self.meany_4
 
         # First, calculate def at mesh cell centers
-        duxdx2 = conv22(uxt, ddx2_2lm)
+        duxdx2 = conv22(uxt, self.ddx2_2lm)
         duxdx2 *= isddx2
-        duxdy2 = conv22(uxt, ddy2_4lm)
+        duxdy2 = conv22(uxt, self.ddy2_4lm)
         duxdy2 *= isddy2
-        duydx2 = conv22(uyt, ddx2_4lm)
+        duydx2 = conv22(uyt, self.ddx2_4lm)
         duydx2 *= isddx2
-        duydy2 = conv22(uyt, ddy2_2lm)
+        duydy2 = conv22(uyt, self.ddy2_2lm)
         duydy2 *= isddy2
 
-        exx = conv22(uxt, ddx1_2lm)
+        exx = conv22(uxt, self.ddx1_2lm)
         exx *= isddx1
         exx += duxdx2
-        eyy = conv22(uyt, ddy1_2lm)
+        eyy = conv22(uyt, self.ddy1_2lm)
         eyy *= isddy1
         eyy += duydy2
-        exy = conv22(uxt, ddy1_4lm)
+        exy = conv22(uxt, self.ddy1_4lm)
         exy *= isddy1
         exy += duxdy2
-        eyx = conv22(uyt, ddx1_4lm)
+        eyx = conv22(uyt, self.ddx1_4lm)
         eyx *= isddx1
         eyx += duydx2
 
@@ -580,8 +576,8 @@ class ElasticProblem:
         sxx_x, sxy_x, syy_y, sxy_y = self.calc_stress_explicit()
         a_u_x, a_u_y = self.calc_a_u_sig(sxx_x, sxy_x, syy_y, sxy_y )
 
-        acc_x = ( a_u_x - self.bx ) / self.vol_mass
-        acc_y = ( a_u_y - self.by ) / self.vol_mass
+        acc_x = ( a_u_x - self.bx ) #division by vol_mass on next line for speed
+        acc_y = ( a_u_y - self.by )
 
         # if self.precond:
         #     #repartitioning the acceleration on surrounding cells, keeping the total accel constant.
@@ -593,8 +589,8 @@ class ElasticProblem:
         #     acc_x[np.bitwise_not(self.movable)] = 0
         #     acc_y[np.bitwise_not(self.movable)] = 0
 
-        self.vx += acc_x * self.dt
-        self.vy += acc_y * self.dt
+        self.vx += acc_x * ( self.dt/ self.vol_mass )
+        self.vy += acc_y * ( self.dt/ self.vol_mass )
 
         self.ux += self.vx * self.dt
         self.uy += self.vy * self.dt
