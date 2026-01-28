@@ -126,6 +126,8 @@ class ElasticProblem:
         for var in ['px_bound','py_bound','fx_imp','fy_imp']:
             setattr(self,var,kwargs.get(var,np.zeros(solid.shape, dtype=np.float32)))
 
+        self.fx_imp_old = self.fx_imp.copy()
+        self.fy_imp_old = self.fy_imp.copy()
         self.fx_imp[np.bitwise_not(self.solid)] = 0
         self.fy_imp[np.bitwise_not(self.solid)] = 0
         self.max_iter = np.float32(kwargs.get('max_iter',200))
@@ -137,7 +139,6 @@ class ElasticProblem:
          self.ddxx,self.ddyy) =\
             self.def_kernel()
         self.frontier, self.bulk = get_frontier(self.solid)
-        self.nx, self.ny = calc_normal(self.solid)
 
         self.is_uimp = np.bitwise_and(np.bitwise_not(np.isnan(self.ux_imp)),
                                       np.bitwise_not(np.isnan(self.uy_imp)))
@@ -278,6 +279,79 @@ class ElasticProblem:
         else:
             raise ValueError("Only \'plane strain\' is available")
         return ddx1,ddx2,ddy1,ddy2,meanx,meany,ddxx,ddyy
+
+    def mod_solid(self,ix,iy,state):
+        #Function to modify the solid
+        # It means re initialising many things : all boundary conditions
+        (nx, ny) = self.solid.shape
+        ix = min(ix,nx-2)
+        iy = min(iy,ny-2)
+        if state > 0:
+            self.solid[ix:(ix+2),iy:(iy+2)] = True
+        else:
+            self.solid[ix,iy] = False
+
+        self.fx_imp = self.fx_imp_old.copy()
+        self.fy_imp = self.fy_imp_old.copy()
+        self.fx_imp[np.bitwise_not(self.solid)] = 0
+        self.fy_imp[np.bitwise_not(self.solid)] = 0
+        self.frontier, self.bulk = get_frontier(self.solid)
+
+        self.is_uimp = np.bitwise_and(np.bitwise_not(np.isnan(self.ux_imp)),
+                                      np.bitwise_not(np.isnan(self.uy_imp)))
+        self.is_uimp = np.bitwise_and(self.is_uimp, self.solid)
+
+        self.solid_not_uimp = np.float32(np.bitwise_and(np.bitwise_not(self.is_uimp), self.solid))
+
+        self.x_frontier_edge = conv22(self.solid.astype(np.float32),self.ddx2) != 0
+        self.y_frontier_edge = conv22(self.solid.astype(np.float32), self.ddy2) != 0
+
+        self.not_solid_x_edge = conv22(self.solid.astype(np.float32), self.ddx2**2) == 0
+        self.not_solid_y_edge = conv22(self.solid.astype(np.float32), self.ddy2**2) == 0
+
+        self.isstress_x_edge = np.float32(np.bitwise_and(np.bitwise_not(self.x_frontier_edge),
+                                              np.bitwise_not(self.not_solid_x_edge)))
+        self.isstress_y_edge = np.float32(np.bitwise_and(np.bitwise_not(self.y_frontier_edge),
+                                              np.bitwise_not(self.not_solid_y_edge)))
+
+        tempisddx1 = conv22(self.solid.astype(np.float32), self.ddx1) != 0
+        self.x_frontier_def = np.bitwise_or(tempisddx1,
+                                                self.x_frontier_edge)
+        tempisddy1 = conv22(self.solid.astype(np.float32), self.ddy1) != 0
+        self.y_frontier_def = np.bitwise_or(tempisddy1,
+                                                self.y_frontier_edge)
+        ## we could define only in_corner instead of corner for best performance...
+        self.corner_def = np.bitwise_and(self.y_frontier_def, self.x_frontier_def)
+
+        self.isddx1 = conv22(self.solid.astype(np.float32), self.ddx1 ** 2) == 2
+        self.isddx2 = conv22(self.solid.astype(np.float32), self.ddx2 ** 2) == 2
+        self.isddy1 = conv22(self.solid.astype(np.float32), self.ddy1 ** 2) == 2
+        self.isddy2 = conv22(self.solid.astype(np.float32), self.ddy2 ** 2) == 2
+
+        self.frontier_def = np.bitwise_or(np.bitwise_not(self.isddx1),
+                                             np.bitwise_not(self.isddx2))
+
+        self.isddx1 = np.float32(self.isddx1)
+        self.isddx2 = np.float32(self.isddx2)
+        self.isddy1 = np.float32(self.isddy1)
+        self.isddy2 = np.float32(self.isddy2)
+
+        self.x_frontier_def_s = np.bitwise_and(self.x_frontier_def, np.bitwise_not(self.corner_def))
+        self.y_frontier_def_s = np.bitwise_and(self.y_frontier_def, np.bitwise_not(self.corner_def))
+
+        self.x_frontier_def = np.where(self.x_frontier_def)
+        self.y_frontier_def = np.where(self.y_frontier_def)
+        self.x_frontier_def_s = np.where(self.x_frontier_def_s)
+        self.y_frontier_def_s = np.where(self.y_frontier_def_s)
+
+        self.isstress_x_edge_lambda_2mu = self.isstress_x_edge * (self.elas_lambda + 2 * self.elas_mu)
+        self.isstress_y_edge_lambda_2mu = self.isstress_y_edge * (self.elas_lambda + 2 * self.elas_mu)
+        self.isstress_x_edge_2mu = self.isstress_x_edge *  2 * self.elas_mu
+        self.isstress_y_edge_2mu = self.isstress_y_edge *  2 * self.elas_mu
+
+        self.bx, self.by = self.calc_b()
+
+        return
 
     def def_precond(self):
 
