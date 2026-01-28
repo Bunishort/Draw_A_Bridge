@@ -271,6 +271,8 @@ class ElasticProblem:
             meanx = np.array([[1,], [1,]], dtype=np.float32)
             meany = np.transpose(meanx)
 
+            # Could be made into 2*1 matrices with the appropriate anchor in convolution, but it does not seem like
+            # it would be faster
             ddxx = np.array([[-1, 0, 0], [1, 0, 0], [0, 0, 0]], dtype=np.float32)
             ddyy = np.transpose(ddxx)
         else:
