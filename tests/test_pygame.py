@@ -16,7 +16,7 @@ tau = 3
 
 nbstep = 10 # nb of steps per frame
 
-fx = 0.01*lm
+fx = 0.01*lm /10000
 
 c_p = np.sqrt(E / ratio * (1 - nu) / (vol_mass * (1 + nu) * (1 - 2 * nu)))
 c_s = np.sqrt(E / ratio /  (2 * (1 + nu)) / vol_mass)
@@ -84,11 +84,12 @@ def main():
 
         # Colorier la matière (ex: Blanc pour solide)
         mask = solver.solid
-        render_array[mask] = [200, 200, 200]
+        render_array[mask] = [20, 200, 20]
 
         # Superposer la contrainte (ex: Rouge selon l'intensité)
         # Astuce : utilisez la map de contrainte pour moduler la couleur rouge
-        stress_display = (solver.sxy_x_old / E * 255).astype(np.uint8)
+        # stress_display = (solver.sxy_x_old / E * 255).astype(np.uint8)
+        stress_display = (solver.ux / lm * 255).astype(np.uint8)
         render_array[mask, 0] = stress_display[mask]  # Canal Rouge
 
         # Transfert Numpy -> Pygame (Très rapide)
@@ -101,7 +102,7 @@ def main():
 
         # Afficher les FPS
         a=clock.get_fps()
-        pygame.display.set_caption(f"FEM Explicite - FPS: {clock.get_fps():.1f}")
+        pygame.display.set_caption(f"FEM Explicite - FPS: {a:.1f}")
         pygame.display.flip()
 
     pygame.quit()
