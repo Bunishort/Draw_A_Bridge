@@ -102,8 +102,10 @@ def main():
 
         # Afficher les FPS
         a=clock.get_fps()
+        clock.tick(60)
         pygame.display.set_caption(f"FEM Explicite - FPS: {a:.1f}")
         pygame.display.flip()
+
 
     pygame.quit()
 
