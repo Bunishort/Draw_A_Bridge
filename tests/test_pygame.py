@@ -16,7 +16,8 @@ tau = 3
 
 nbstep = 10 # nb of steps per frame
 
-fx = 0.01*lm /10000
+fx = 0.0*lm /10000
+fy = 0.01*lm /10000
 
 c_p = np.sqrt(E / ratio * (1 - nu) / (vol_mass * (1 + nu) * (1 - 2 * nu)))
 c_s = np.sqrt(E / ratio /  (2 * (1 + nu)) / vol_mass)
@@ -37,6 +38,7 @@ ux_imp[:,:] = np.nan
 ux_imp[ix:(ix+2),iy:(iy+2)] = 0
 uy_imp = ux_imp.copy()
 fx_imp = np.ones(solid.shape) * fx
+fy_imp = np.ones(solid.shape) * fy
 
 # --- L'INTERFACE PYGAME ---
 def main():
@@ -52,7 +54,7 @@ def main():
 
     solver = sample.core.ElasticProblem(solid, elas_lambda, elas_mu, lm, ux_imp, uy_imp,
                                       is_explicit=True, vol_mass=vol_mass, dt = dt, ratio=ratio, tau=tau,
-                                        fx_imp=fx_imp)
+                                        fx_imp=fx_imp, fy_imp = fy_imp)
 
     running = True
     while running:
