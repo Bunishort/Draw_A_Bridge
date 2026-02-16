@@ -17,7 +17,9 @@ tau = 3
 nbstep = 10 # nb of steps per frame
 
 fx = 0.0*lm /10000
-fy = 0.01*lm /10000
+fy = 0.01*lm /10
+f_attract_const = 1e-6
+
 
 c_p = np.sqrt(E / ratio * (1 - nu) / (vol_mass * (1 + nu) * (1 - 2 * nu)))
 c_s = np.sqrt(E / ratio /  (2 * (1 + nu)) / vol_mass)
@@ -43,62 +45,88 @@ fy_imp = np.ones(solid.shape) * fy
 # --- L'INTERFACE PYGAME ---
 def main():
     # 1. Configuration
-    RES = (100, 100)  # Taille de la grille (et fenêtre)
-    SCALE = 5  # Si votre grille FEM est petite (ex: 100x100), mettez SCALE à 5 ou 10
+    RES = (100, 100)  # Grid size
+    SCALE = 5  # Display scaling factor
 
     pygame.init()
     window = pygame.display.set_mode((RES[0] * SCALE, RES[1] * SCALE))
     clock = pygame.time.Clock()
 
-    # Instanciation de votre solveur
-
+    # Solver init
     solver = sample.core.ElasticProblem(solid, elas_lambda, elas_mu, lm, ux_imp, uy_imp,
                                       is_explicit=True, vol_mass=vol_mass, dt = dt, ratio=ratio, tau=tau,
                                         fx_imp=fx_imp, fy_imp = fy_imp)
 
+    # Plot init
+    anim = sample.interface.ExplicitAnimation_pygame(solver, upscale_factor = SCALE, plot_field = 'solid')
+
+    xtemp= np.arange(nx)
+    ytemp = np.arange(ny)
+    gridy, gridx = np.meshgrid(ytemp, xtemp)
+
     running = True
+    mode_simulation = False
     while running:
-        # A. Gestion des Entrées (Inputs)
+        #  Inputs
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
-        # Interaction Souris (Temps réel)
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    # Switch between draw mode and simulation mode
+                    mode_simulation = not mode_simulation
+                    if not mode_simulation:
+                        print("Mode: Draw")
+                    else:
+                        print("Mode: Simulation")
+
+        # Mouse Interaction Souris
         mouse_buttons = pygame.mouse.get_pressed()
         mx, my = pygame.mouse.get_pos()
-        gx, gy = mx // SCALE, my // SCALE  # Conversion coord écran -> coord grille FEM
+        gx, gy = mx // SCALE, my // SCALE  # Conversion screeen coord-> grid FEM
 
-        if mouse_buttons[0]:  # Clic Gauche : Dessiner matière
-            solver.mod_solid(gx, gy, 1)  # 1 = Solide
+        #Draw mode
+        if not mode_simulation:
+            if mouse_buttons[0]:  # Draw
+                solver.mod_solid(gx, gy, 1)
 
-        if mouse_buttons[2]:  # Clic Droit : Gommer ou autre CL
-            solver.mod_solid(gx, gy, 0)  # 0 = Vide
+            if mouse_buttons[2]:  # Erase
+                solver.mod_solid(gx, gy, 0)
 
-        # B. Étape de Physique (Votre code explicite)
-        # On peut faire plusieurs sous-pas pour la stabilité si nécessaire
-        for i in range(0, nbstep):
-            solver.explicit_step()
+            # Black background
+            render_array = np.zeros((RES[0], RES[1], 3), dtype=np.uint8)
+            mask = solver.solid
+            render_array[mask] = [20, 200, 20]
+            # stress_display = (solver.ux / lm * 255).astype(np.uint8)
+            # render_array[mask, 0] = stress_display[mask]
 
-        # C. Rendu (Visualisation)
-        # Création d'une image RGB à partir des données Numpy
-        # Fond noir
-        render_array = np.zeros((RES[0], RES[1], 3), dtype=np.uint8)
+            surface = pygame.surfarray.make_surface(render_array)
+            if SCALE > 1:
+                surface = pygame.transform.scale(surface, (RES[0] * SCALE, RES[1] * SCALE))
 
-        # Colorier la matière (ex: Blanc pour solide)
-        mask = solver.solid
-        render_array[mask] = [20, 200, 20]
+        else:
+            # B.explicit step
+            for i in range(0, nbstep):
+                solver.explicit_step()
 
-        # Superposer la contrainte (ex: Rouge selon l'intensité)
-        # Astuce : utilisez la map de contrainte pour moduler la couleur rouge
-        # stress_display = (solver.sxy_x_old / E * 255).astype(np.uint8)
-        stress_display = (solver.ux / lm * 255).astype(np.uint8)
-        render_array[mask, 0] = stress_display[mask]  # Canal Rouge
+            if mouse_buttons[0]:  # Attractor
+                dx = gy - (gridx + solver.ux )
+                dy = gx - (gridy + solver.uy )
+                d = dx **2 + dy **2
+                f_attract = f_attract_const / lm / (1 + d)
+                fx_imp_live = fx_imp +  f_attract * dx / ( 1+ d )
+                fy_imp_live = fy_imp + f_attract * dx / (1 + d)
+                solver.update_f_imp(fx_imp_live, fy_imp_live)
 
-        # Transfert Numpy -> Pygame (Très rapide)
-        surface = pygame.surfarray.make_surface(render_array)
+            z = anim.calc_image()
+            render_array = np.zeros((z.shape[0],z.shape[1], 3), dtype=np.uint8)
+            render_array[:,:,1] = z / 6 / lm * 255
+            # stress_display = (solver.ux / lm * 255).astype(np.uint8)
+            # render_array[mask, 0] = stress_display[mask]
 
-        if SCALE > 1:
-            surface = pygame.transform.scale(surface, (RES[0] * SCALE, RES[1] * SCALE))
+            surface = pygame.surfarray.make_surface(render_array)
+
 
         window.blit(surface, (0, 0))
 
