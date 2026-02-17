@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata, interpn
 from line_profiler import profile
+from scipy.ndimage import map_coordinates
 
 class ExplicitAnimation:
     """
@@ -147,6 +148,15 @@ class ExplicitAnimation_pygame:
         self.solidplot_def = self.solidplot.copy()
         self.smooth_filter = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]]) / 8
 
+        #init for map_cordinates
+        x_indices = (self.gridxplot - self.x[0]) / (self.x[1] - self.x[0])
+        y_indices = (self.gridyplot - self.y[0]) / (self.y[1] - self.y[0])
+        self.map_coords = np.array([x_indices.ravel(), y_indices.ravel()])
+
+        x_indices = (self.gridxplot - self.x[0] - self.x_dec) / (self.x[1] - self.x[0])
+        y_indices = (self.gridyplot - self.y[0] - self.y_dec) / (self.y[1] - self.y[0])
+        self.map_coords_dec = np.array([x_indices.ravel(), y_indices.ravel()])
+
     @profile
     def calc_image(self):
 
@@ -156,14 +166,34 @@ class ExplicitAnimation_pygame:
         # starting by setting u only on known points... and not forgetting norm
         z = np.zeros(self.gridxplot.shape)
         # Interpolate u on big grid
-        ux_plot = interpn((self.x, self.y), self.elas.ux, (self.gridxplot, self.gridyplot), method='linear', bounds_error=False,
-                          fill_value=0) / self.solidplot_norm
-        uy_plot = interpn((self.x, self.y), self.elas.uy, (self.gridxplot, self.gridyplot), method='linear', bounds_error=False,
-                          fill_value=0) / self.solidplot_norm
-        out_plot = interpn((self.x + self.x_dec, self.y + self.y_dec), getattr(self.elas, self.plot_field),
-                           (self.gridxplot, self.gridyplot), method='linear',
-                           bounds_error=False, fill_value=0) / self.solidplot_norm
-        # y+0.5 because stress are not computed on the same grid as displacements !
+        # ux_plot = interpn((self.x, self.y), self.elas.ux, (self.gridxplot, self.gridyplot), method='linear', bounds_error=False,
+        #                   fill_value=0) / self.solidplot_norm
+        ux_plot = map_coordinates(
+            self.elas.ux,
+            self.map_coords,
+            order=1,  # linear
+            mode='constant',  # bounds_error False
+            cval=0.0  # fill_value=0
+        )
+        ux_plot = ux_plot.reshape(self.gridxplot.shape) / self.solidplot_norm
+
+        uy_plot = map_coordinates(
+            self.elas.uy,
+            self.map_coords,
+            order=1,  # linear
+            mode='constant',  # bounds_error False
+            cval=0.0  # fill_value=0
+        )
+        uy_plot = uy_plot.reshape(self.gridxplot.shape) / self.solidplot_norm
+
+        out_plot = map_coordinates(
+            getattr(self.elas, self.plot_field),
+            self.map_coords_dec,
+            order=1,  # linear
+            mode='constant',  # bounds_error False
+            cval=0.0  # fill_value=0
+        )
+        out_plot = out_plot.reshape(self.gridxplot.shape) / self.solidplot_norm
 
         # interpolate solid position with displacement
         gridxx = self.gridxplot[self.solidplot] + ux_plot[self.solidplot]
