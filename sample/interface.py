@@ -2,6 +2,7 @@ from sample.core import conv
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata, interpn
+from line_profiler import profile
 
 class ExplicitAnimation:
     """
@@ -134,38 +135,41 @@ class ExplicitAnimation_pygame:
         self.max_scale = kwargs.get("max_scale",1)
         self.plot_field = kwargs.get('plot_field','ux')
 
-    def calc_image(self):
-        #TODO move all this in init
-        xplot = (np.arange(self.upscale_factor * self.nx) - (self.upscale_factor * self.nx - 1) / 2) / self.upscale_factor
-        yplot = (np.arange(self.upscale_factor * self.ny) - (self.upscale_factor * self.ny - 1) / 2) / self.upscale_factor
-        gridyplot, gridxplot = np.meshgrid(yplot, xplot)
-        solidplot = interpn((self.x, self.y), self.elas.solid, (gridxplot, gridyplot), method='nearest', bounds_error=False,
+        self.xplot = (np.arange(self.upscale_factor * self.nx) - (self.upscale_factor * self.nx - 1) / 2) / self.upscale_factor
+        self.yplot = (np.arange(self.upscale_factor * self.ny) - (self.upscale_factor * self.ny - 1) / 2) / self.upscale_factor
+        self.gridyplot, self.gridxplot = np.meshgrid(self.yplot, self.xplot)
+        self.solidplot = interpn((self.x, self.y), self.elas.solid, (self.gridxplot, self.gridyplot), method='nearest', bounds_error=False,
                             fill_value=False)
-        solidplot = solidplot.astype(bool)
-        solidplot_norm = interpn((self.x, self.y), self.elas.solid, (gridxplot, gridyplot), method='linear', bounds_error=False,
+        self.solidplot = self.solidplot.astype(bool)
+        self.solidplot_norm = interpn((self.x, self.y), self.elas.solid, (self.gridxplot, self.gridyplot), method='linear', bounds_error=False,
                                  fill_value=0)
-        solidplot_norm[solidplot_norm == 0] = 0.00001
-        solidplot_def = solidplot.copy()
-        smooth_filter = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]]) / 8
+        self.solidplot_norm[self.solidplot_norm == 0] = 0.00001
+        self.solidplot_def = self.solidplot.copy()
+        self.smooth_filter = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]]) / 8
+
+    @profile
+    def calc_image(self):
+
         # maybe custom made interpn using thiese filters could be faster
         # filter_plot_small = np.ones((int(self.upscale_factor), int(self.upscale_factor)))
         # filter_plot_big = np.ones((int(2*self.upscale_factor -1), int(2*self.upscale_factor -1)))
         # starting by setting u only on known points... and not forgetting norm
-        z = np.zeros(gridxplot.shape)
+        z = np.zeros(self.gridxplot.shape)
         # Interpolate u on big grid
-        ux_plot = interpn((self.x, self.y), self.elas.ux, (gridxplot, gridyplot), method='linear', bounds_error=False,
-                          fill_value=0) / solidplot_norm
-        uy_plot = interpn((self.x, self.y), self.elas.uy, (gridxplot, gridyplot), method='linear', bounds_error=False,
-                          fill_value=0) / solidplot_norm
-        out_plot = interpn((self.x + self.x_dec, self.y + self.y_dec), getattr(self.elas, self.plot_field), (gridxplot, gridyplot), method='linear',
-                           bounds_error=False, fill_value=0) / solidplot_norm
+        ux_plot = interpn((self.x, self.y), self.elas.ux, (self.gridxplot, self.gridyplot), method='linear', bounds_error=False,
+                          fill_value=0) / self.solidplot_norm
+        uy_plot = interpn((self.x, self.y), self.elas.uy, (self.gridxplot, self.gridyplot), method='linear', bounds_error=False,
+                          fill_value=0) / self.solidplot_norm
+        out_plot = interpn((self.x + self.x_dec, self.y + self.y_dec), getattr(self.elas, self.plot_field),
+                           (self.gridxplot, self.gridyplot), method='linear',
+                           bounds_error=False, fill_value=0) / self.solidplot_norm
         # y+0.5 because stress are not computed on the same grid as displacements !
 
         # interpolate solid position with displacement
-        gridxx = gridxplot[solidplot] + ux_plot[solidplot]
-        gridyy = gridyplot[solidplot] + uy_plot[solidplot]
-        xi_solid = interpn((xplot, yplot), gridxplot, (gridxx, gridyy), method='nearest')
-        yi_solid = interpn((xplot, yplot), gridyplot, (gridxx, gridyy), method='nearest')
+        gridxx = self.gridxplot[self.solidplot] + ux_plot[self.solidplot]
+        gridyy = self.gridyplot[self.solidplot] + uy_plot[self.solidplot]
+        xi_solid = interpn((self.xplot, self.yplot), self.gridxplot, (gridxx, gridyy), method='nearest')
+        yi_solid = interpn((self.xplot, self.yplot), self.gridyplot, (gridxx, gridyy), method='nearest')
         xi_solid *= self.upscale_factor
         yi_solid *= self.upscale_factor
         xi_solid += (self.upscale_factor * self.nx - 1) / 2
@@ -173,11 +177,11 @@ class ExplicitAnimation_pygame:
         xi_solid = xi_solid.astype(int)
         yi_solid = yi_solid.astype(int)
 
-        solidplot_def[:] = False
-        solidplot_def[
+        self.solidplot_def[:] = False
+        self.solidplot_def[
             xi_solid, yi_solid] = True  # ! the same value may appear more than once in xi_solid,yi_solid
-        z[xi_solid, yi_solid] = out_plot[solidplot]
-        zsmooth = conv(z, smooth_filter)
-        z[np.bitwise_not(solidplot_def)] = zsmooth[np.bitwise_not(solidplot_def)]
+        z[xi_solid, yi_solid] = out_plot[self.solidplot]
+        zsmooth = conv(z, self.smooth_filter)
+        z[np.bitwise_not(self.solidplot_def)] = zsmooth[np.bitwise_not(self.solidplot_def)]
 
         return z

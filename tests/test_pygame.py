@@ -1,6 +1,7 @@
 import pygame
 import numpy as np
 from context import sample
+from line_profiler import profile
 
 # simulation parameters
 E=1
@@ -57,9 +58,6 @@ def main():
                                       is_explicit=True, vol_mass=vol_mass, dt = dt, ratio=ratio, tau=tau,
                                         fx_imp=fx_imp, fy_imp = fy_imp)
 
-    # Plot init
-    anim = sample.interface.ExplicitAnimation_pygame(solver, upscale_factor = SCALE, plot_field = 'solid')
-
     xtemp= np.arange(nx)
     ytemp = np.arange(ny)
     gridy, gridx = np.meshgrid(ytemp, xtemp)
@@ -80,6 +78,9 @@ def main():
                         print("Mode: Draw")
                     else:
                         print("Mode: Simulation")
+                        # Plot init
+                        anim = sample.interface.ExplicitAnimation_pygame(solver, upscale_factor=SCALE,
+                                                                         plot_field='solid')
 
         # Mouse Interaction Souris
         mouse_buttons = pygame.mouse.get_pressed()
