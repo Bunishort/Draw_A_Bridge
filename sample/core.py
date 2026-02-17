@@ -377,6 +377,7 @@ class ElasticProblem:
         self.fy_imp_old = self.fy_imp.copy()
         self.fx_imp[np.bitwise_not(self.solid)] = 0
         self.fy_imp[np.bitwise_not(self.solid)] = 0
+        self.bx, self.by = self.calc_b()
         return
 
     def def_precond(self):

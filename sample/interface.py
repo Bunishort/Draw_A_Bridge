@@ -175,7 +175,7 @@ class ExplicitAnimation_pygame:
             mode='constant',  # bounds_error False
             cval=0.0  # fill_value=0
         )
-        ux_plot = ux_plot.reshape(self.gridxplot.shape) / self.solidplot_norm
+        ux_plot = ux_plot.reshape(self.gridxplot.shape) #/ self.solidplot_norm
 
         uy_plot = map_coordinates(
             self.elas.uy,
@@ -184,7 +184,7 @@ class ExplicitAnimation_pygame:
             mode='constant',  # bounds_error False
             cval=0.0  # fill_value=0
         )
-        uy_plot = uy_plot.reshape(self.gridxplot.shape) / self.solidplot_norm
+        uy_plot = uy_plot.reshape(self.gridxplot.shape) #/ self.solidplot_norm
 
         out_plot = map_coordinates(
             getattr(self.elas, self.plot_field),
@@ -193,7 +193,7 @@ class ExplicitAnimation_pygame:
             mode='constant',  # bounds_error False
             cval=0.0  # fill_value=0
         )
-        out_plot = out_plot.reshape(self.gridxplot.shape) / self.solidplot_norm
+        out_plot = out_plot.reshape(self.gridxplot.shape) #/ self.solidplot_norm
 
         # interpolate solid position with displacement
         gridxx = self.gridxplot[self.solidplot] + ux_plot[self.solidplot]

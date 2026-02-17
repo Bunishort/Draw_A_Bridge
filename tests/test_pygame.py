@@ -6,8 +6,11 @@ from line_profiler import profile
 # simulation parameters
 E=1
 nu = 0.4
-nx=100
-ny=100
+# nx=100
+# ny=100
+nx = 70
+ny = 70
+
 lm = 4.5 * 7/nx
 
 vol_mass = 0.5
@@ -18,8 +21,8 @@ tau = 3
 nbstep = 10 # nb of steps per frame
 
 fx = 0.0*lm /10000
-fy = 0.01*lm /10
-f_attract_const = 1e-6
+fy = 0.01*lm /100
+f_attract_const = 1e-1
 
 
 c_p = np.sqrt(E / ratio * (1 - nu) / (vol_mass * (1 + nu) * (1 - 2 * nu)))
@@ -46,8 +49,8 @@ fy_imp = np.ones(solid.shape) * fy
 # --- L'INTERFACE PYGAME ---
 def main():
     # 1. Configuration
-    RES = (100, 100)  # Grid size
-    SCALE = 5  # Display scaling factor
+    RES = (nx, ny)  # Grid size
+    SCALE = 4  # Display scaling factor
 
     pygame.init()
     window = pygame.display.set_mode((RES[0] * SCALE, RES[1] * SCALE))
@@ -119,6 +122,9 @@ def main():
                 fx_imp_live = fx_imp +  f_attract * dx / ( 1+ d )
                 fy_imp_live = fy_imp + f_attract * dx / (1 + d)
                 solver.update_f_imp(fx_imp_live, fy_imp_live)
+            else:
+                # solver.update_f_imp(fx_imp, fy_imp)
+                1
 
             z = anim.calc_image()
             render_array = np.zeros((z.shape[0],z.shape[1], 3), dtype=np.uint8)
