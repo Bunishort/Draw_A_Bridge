@@ -22,7 +22,7 @@ nbstep = 10 # nb of steps per frame
 
 fx = 0.0*lm /10000
 fy = 0.01*lm /100
-f_attract_const = 1e-1
+f_attract_const = 1
 
 
 c_p = np.sqrt(E / ratio * (1 - nu) / (vol_mass * (1 + nu) * (1 - 2 * nu)))
@@ -115,16 +115,16 @@ def main():
                 solver.explicit_step()
 
             if mouse_buttons[0]:  # Attractor
-                dx = gy - (gridx + solver.ux )
-                dy = gx - (gridy + solver.uy )
+                dx = gx - (gridx + solver.ux )
+                dy = gy - (gridy + solver.uy )
                 d = dx **2 + dy **2
                 f_attract = f_attract_const / lm / (1 + d)
                 fx_imp_live = fx_imp +  f_attract * dx / ( 1+ d )
                 fy_imp_live = fy_imp + f_attract * dx / (1 + d)
                 solver.update_f_imp(fx_imp_live, fy_imp_live)
             else:
-                # solver.update_f_imp(fx_imp, fy_imp)
-                1
+                solver.update_f_imp(fx_imp, fy_imp)
+
 
             z = anim.calc_image()
             render_array = np.zeros((z.shape[0],z.shape[1], 3), dtype=np.uint8)
