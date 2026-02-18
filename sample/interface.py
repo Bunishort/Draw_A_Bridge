@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import griddata, interpn
 from line_profiler import profile
 from scipy.ndimage import map_coordinates
+import moderngl
+
 
 class ExplicitAnimation:
     """
@@ -215,3 +217,160 @@ class ExplicitAnimation_pygame:
         z[np.bitwise_not(self.solidplot_def)] = zsmooth[np.bitwise_not(self.solidplot_def)]
 
         return z
+
+#Game interface
+import pygame
+import moderngl
+import numpy as np
+
+# --- SHADERS ---
+# On utilise un seul shader capable de gérer les deux modes via une variable 'u_mode'
+VTX_SHADER = """
+#version 330
+in vec2 in_pos;      // Position grille (-1 à 1)
+in vec2 in_disp;     // Déplacement (u) calculé par NumPy
+in float in_stress;  // Intensité (contrainte)
+
+uniform int u_mode;        // 0: Dessin, 1: Visualisation
+uniform float u_amp;       // Amplification de la déformée
+
+out float v_stress;
+flat out int v_mode;
+
+void main() {
+    v_mode = u_mode;
+    v_stress = in_stress;
+
+    vec2 final_pos = in_pos;
+    if (u_mode == 1) {
+        final_pos += in_disp * u_amp; // Applique la déformée
+    }
+    gl_Position = vec4(final_pos, 0.0, 1.0);
+    gl_PointSize = 4.0; 
+}
+"""
+
+FRAG_SHADER = """
+#version 330
+in float v_stress;
+flat in int v_mode;
+out vec4 f_color;
+
+void main() {
+    if (v_mode == 0) {
+        f_color = vec4(0.8, 0.8, 0.8, 1.0); // Mode dessin : Gris clair
+    } else {
+        // Mode Visu : Dégradé Bleu (froid) -> Rouge (chaud)
+        f_color = vec4(v_stress, 0.5 * (1.0 - v_stress), 1.0 - v_stress, 1.0);
+    }
+}
+"""
+
+
+class SimulationApp:
+    def __init__(self, solver, **kwargs):
+        #solver = class initialisée par sample.core.ElasticProblem
+        pygame.init()
+        self.solver = solver
+        self.res = solver.solid.shape
+        self.screen_size = kwargs.get('screen_size', (800, 800))
+        self.nbstep = kwargs.get('nbstep', 10)
+        pygame.display.set_mode(self.screen_size, pygame.OPENGL | pygame.DOUBLEBUF)
+
+        self.ctx = moderngl.create_context()
+        self.prog = self.ctx.program(vertex_shader=VTX_SHADER, fragment_shader=FRAG_SHADER)
+
+        # --- Simulation data init ---
+        self.disp = np.zeros((self.res[1], self.res[0], 2), dtype='f4')  # u
+        self.plot_field = np.zeros((self.res[1], self.res[0]), dtype='f4')  # sigma
+
+        # --- GPU preparation---
+        # coordinates normalized (-1 à 1)
+        x = np.linspace(-0.9, 0.9, self.res[0])
+        y = np.linspace(0.9, -0.9, self.res[1])
+        gx, gy = np.meshgrid(x, y)
+        self.pos_init = np.stack([gx, gy], axis=-1).astype('f4')
+
+        self.vbo_pos = self.ctx.buffer(self.pos_init.tobytes())
+        self.vbo_disp = self.ctx.buffer(reserve=self.pos_init.nbytes)
+        self.vbo_stress = self.ctx.buffer(reserve=self.pos_init.size * 4)
+
+        self.vao = self.ctx.vertex_array(self.prog, [
+            (self.vbo_pos, '2f', 'in_pos'),
+            (self.vbo_disp, '2f', 'in_disp'),
+            (self.vbo_stress, '1f', 'in_stress')
+        ])
+
+        self.mode_simu = False  # False = Draw mode, True = Simulation
+        self.running = True
+
+    def run(self):
+        clock = pygame.time.Clock()
+
+        while self.running:
+            # events
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT: self.running = False
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                    self.mode_simu = not self.mode_simu
+
+            m_left, _, m_right = pygame.mouse.get_pressed()
+            if m_left or m_right:
+                mx, my = pygame.mouse.get_pos()
+                # Mapping coord screen -> index grid
+                gx = int((mx / self.screen_size[0]) * self.res[0])
+                gy = int((my / self.screen_size[1]) * self.res[1])
+
+            # Draw mode
+            if not self.mode_simu:
+                    if m_left:  # Draw
+                        self.solver.mod_solid(gx, gy, 1)
+                    if m_right:  # Erase
+                        self.solver.mod_solid(gx, gy, 0)
+            # Simulation mode
+            else:
+                for i in range(0, self.nbstep):
+                    self.solver.explicit_step()
+
+                #TODO : fix that and update plot_field
+
+                # if m_left:  # Attractor
+                #     dx = gx - (gridx + solver.ux)
+                #     dy = gy - (gridy + solver.uy)
+                #     d = dx ** 2 + dy ** 2
+                #     f_attract = f_attract_const / lm / (1 + d)
+                #     fx_imp_live = fx_imp + f_attract * dx / (1 + d)
+                #     fy_imp_live = fy_imp + f_attract * dx / (1 + d)
+                #     solver.update_f_imp(fx_imp_live, fy_imp_live)
+                # else:
+                #     solver.update_f_imp(fx_imp, fy_imp)
+            #display
+            self.ctx.clear(0.1, 0.1, 0.1)
+
+            # Display only points with matter
+            active_mask = self.solver.solid.flatten() > 0
+            if np.any(active_mask):
+                # Data filtering for GPU
+                idx = np.where(active_mask)[0]
+                d_data = self.disp.reshape(-1, 2)[idx].tobytes()
+                s_data = self.plot_field.flatten()[idx].tobytes()
+                p_data = self.pos_init.reshape(-1, 2)[idx].tobytes()
+
+                # Buffer update
+                self.vbo_pos.write(p_data)
+                self.vbo_disp.write(d_data)
+                self.vbo_stress.write(s_data)
+
+                # Shader variables config
+                self.prog['u_mode'].value = 1 if self.mode_simu else 0
+                self.prog['u_amp'].value = 1.0  # Amplification factor
+
+                # Draw points
+                self.vao.render(moderngl.POINTS, vertices=len(idx))
+
+            pygame.display.flip()
+            clock.tick(60)
+            pygame.display.set_caption(
+                f"Mode: {'SIMULATION' if self.mode_simu else 'DESSIN'} - FPS: {clock.get_fps():.0f}")
+
+
