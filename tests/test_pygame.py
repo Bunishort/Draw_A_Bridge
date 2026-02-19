@@ -55,7 +55,7 @@ def main():
                                       is_explicit=True, vol_mass=vol_mass, dt = dt, ratio=ratio, tau=tau,
                                         fx_imp=fx_imp, fy_imp = fy_imp)
 
-    game = sample.interface.SimulationApp(solver,screen_size=(800,800))
+    game = sample.interface.SimulationApp(solver,screen_size=(800,600))
     game.run()
 
     pygame.quit()

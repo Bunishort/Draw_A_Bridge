@@ -278,16 +278,17 @@ class SimulationApp:
         pygame.display.set_mode(self.screen_size, pygame.OPENGL | pygame.DOUBLEBUF)
 
         self.ctx = moderngl.create_context()
+        self.ctx.enable(moderngl.PROGRAM_POINT_SIZE)
         self.prog = self.ctx.program(vertex_shader=VTX_SHADER, fragment_shader=FRAG_SHADER)
 
         # --- Simulation data init ---
-        self.disp = np.zeros((self.res[1], self.res[0], 2), dtype='f4')  # u
         self.plot_field = np.zeros((self.res[1], self.res[0]), dtype='f4')  # sigma
+        self.disp = np.zeros((self.res[1], self.res[0], 2), dtype='f4')
 
         # --- GPU preparation---
         # coordinates normalized (-1 à 1)
-        x = np.linspace(-0.9, 0.9, self.res[0])
-        y = np.linspace(0.9, -0.9, self.res[1])
+        x = np.linspace(-1, 1, self.res[0])
+        y = np.linspace(1, -1, self.res[1])
         gx, gy = np.meshgrid(x, y)
         self.pos_init = np.stack([gx, gy], axis=-1).astype('f4')
 
@@ -324,14 +325,15 @@ class SimulationApp:
             # Draw mode
             if not self.mode_simu:
                     if m_left:  # Draw
-                        self.solver.mod_solid(gx, gy, 1)
+                        self.solver.mod_solid(gy, gx, 1)
                     if m_right:  # Erase
-                        self.solver.mod_solid(gx, gy, 0)
+                        self.solver.mod_solid(gy, gx, 0)
             # Simulation mode
             else:
                 for i in range(0, self.nbstep):
                     self.solver.explicit_step()
-
+                self.disp[:,:,1] = self.solver.ux * 2 / (self.res[0] * self.solver.lm)
+                self.disp[:, :, 0] = self.solver.uy * 2 / (self.res[1] * self.solver.lm)
                 #TODO : fix that and update plot_field
 
                 # if m_left:  # Attractor
