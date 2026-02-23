@@ -20,7 +20,7 @@ tau = 3
 
 nbstep = 30 # nb of steps per frame
 
-fx = -0.001*lm /10
+fx = -0.001*lm/10
 fy = 0.0*lm /10
 f_attract_const = 1
 
@@ -42,6 +42,11 @@ solid[ix:(ix+2),iy:(iy+2)] = True
 ux_imp=np.zeros(solid.shape)
 ux_imp[:,:] = np.nan
 ux_imp[ix:(ix+2),iy:(iy+2)] = 0
+ix = int(nx/10)
+iy = int(ny/10)
+solid[ix:(ix+2),iy:(iy+2)] = True
+ux_imp[ix:(ix+2),iy:(iy+2)] = 0
+
 uy_imp = ux_imp.copy()
 fx_imp = np.ones(solid.shape) * fx
 fy_imp = np.ones(solid.shape) * fy

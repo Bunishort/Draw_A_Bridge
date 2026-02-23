@@ -275,7 +275,7 @@ class SimulationApp:
         self.res = solver.solid.shape
         self.screen_size = kwargs.get('screen_size', (800, 800))
         self.nbstep = kwargs.get('nbstep', 10)
-        self.f_attract_const = kwargs.get('f_attract_const', 1e-0)
+        self.f_attract_const = kwargs.get('f_attract_const', 1e-2)
         pygame.display.set_mode(self.screen_size, pygame.OPENGL | pygame.DOUBLEBUF)
 
         self.fx_imp_cte = solver.fx_imp_old
@@ -345,13 +345,14 @@ class SimulationApp:
                 #TODO : fix that and update plot_field
 
                 if m_left:  # Attractor
-                    dx = gy - (self.gridx + self.solver.ux) #x/y inversion in gx gy
-                    dy = gx - (self.gridy + self.solver.uy)
-                    d = dx ** 2 + dy ** 2
-                    f_attract = self.f_attract_const / self.solver.lm / (1 + d)
+                    dx = gy - (self.gridx +  self.solver.ux / self.solver.lm) #x/y inversion in gx gy
+                    dy = gx - (self.gridy + self.solver.uy / self.solver.lm)# - sign so it works but I don't understand why
+                    d = np.sqrt(dx ** 2 + dy ** 2)
+                    f_attract = self.f_attract_const / (1 + d)
                     fx_imp_live = self.fx_imp_cte - f_attract * dx / (1 + d)
-                    fy_imp_live = self.fy_imp_cte - f_attract * dy / (1 + d)
+                    fy_imp_live = self.fy_imp_cte + f_attract * dy / (1 + d) # + size but I don't know why
                     self.solver.update_f_imp(fx_imp_live, fy_imp_live)
+                    self.plot_field[:, :] = 100*f_attract#remove, debug only
                 else:
                     self.solver.update_f_imp(self.fx_imp_cte , self.fy_imp_cte )
 
