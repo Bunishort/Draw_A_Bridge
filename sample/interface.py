@@ -275,7 +275,11 @@ class SimulationApp:
         self.res = solver.solid.shape
         self.screen_size = kwargs.get('screen_size', (800, 800))
         self.nbstep = kwargs.get('nbstep', 10)
+        self.f_attract_const = kwargs.get('f_attract_const', 1e-0)
         pygame.display.set_mode(self.screen_size, pygame.OPENGL | pygame.DOUBLEBUF)
+
+        self.fx_imp_cte = solver.fx_imp_old
+        self.fy_imp_cte = solver.fy_imp_old
 
         self.ctx = moderngl.create_context()
         self.ctx.enable(moderngl.PROGRAM_POINT_SIZE)
@@ -304,6 +308,10 @@ class SimulationApp:
 
         self.mode_simu = False  # False = Draw mode, True = Simulation
         self.running = True
+
+        xtemp = np.arange(self.solver.solid.shape[0])
+        ytemp = np.arange(self.solver.solid.shape[1])
+        self.gridy, self.gridx = np.meshgrid(ytemp, xtemp)
 
     def run(self):
         clock = pygame.time.Clock()
@@ -337,15 +345,15 @@ class SimulationApp:
                 #TODO : fix that and update plot_field
 
                 if m_left:  # Attractor
-                    dx = gx - (gridx + self.solver.ux)
-                    dy = gy - (gridy + self.solver.uy)
+                    dx = gy - (self.gridx + self.solver.ux) #x/y inversion in gx gy
+                    dy = gx - (self.gridy + self.solver.uy)
                     d = dx ** 2 + dy ** 2
-                    f_attract = f_attract_const / self.solver.lm / (1 + d)
-                    fx_imp_live = self.solver.fx_imp_old + f_attract * dx / (1 + d)
-                    fy_imp_live = self.solver.fy_imp_old + f_attract * dx / (1 + d)
+                    f_attract = self.f_attract_const / self.solver.lm / (1 + d)
+                    fx_imp_live = self.fx_imp_cte - f_attract * dx / (1 + d)
+                    fy_imp_live = self.fy_imp_cte - f_attract * dy / (1 + d)
                     self.solver.update_f_imp(fx_imp_live, fy_imp_live)
                 else:
-                    self.solver.update_f_imp(self.solver.fx_imp, self.solver.fy_imp)
+                    self.solver.update_f_imp(self.fx_imp_cte , self.fy_imp_cte )
 
             #display
             self.ctx.clear(0.1, 0.1, 0.1)
