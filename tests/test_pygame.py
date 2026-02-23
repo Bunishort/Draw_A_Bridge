@@ -8,8 +8,8 @@ E=1
 nu = 0.4
 # nx=100
 # ny=100
-nx = 100
-ny = 100
+nx = 80
+ny = 80
 
 lm = 4.5 * 7/nx
 
@@ -18,10 +18,10 @@ dt = 0.3 / 7
 ratio = 0.2  # must be between 0 and 1
 tau = 3
 
-nbstep = 10 # nb of steps per frame
+nbstep = 30 # nb of steps per frame
 
-fx = 0.0*lm /10000
-fy = 0.01*lm /10
+fx = -0.001*lm /10
+fy = 0.0*lm /10
 f_attract_const = 1
 
 
@@ -55,7 +55,7 @@ def main():
                                       is_explicit=True, vol_mass=vol_mass, dt = dt, ratio=ratio, tau=tau,
                                         fx_imp=fx_imp, fy_imp = fy_imp)
 
-    game = sample.interface.SimulationApp(solver,screen_size=(800,600))
+    game = sample.interface.SimulationApp(solver,screen_size=(800,600), nbstep=nbstep)
     game.run()
 
     pygame.quit()

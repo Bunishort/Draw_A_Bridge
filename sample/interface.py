@@ -336,16 +336,17 @@ class SimulationApp:
                 self.disp[:, :, 0] = self.solver.uy * 2 / (self.res[1] * self.solver.lm)
                 #TODO : fix that and update plot_field
 
-                # if m_left:  # Attractor
-                #     dx = gx - (gridx + solver.ux)
-                #     dy = gy - (gridy + solver.uy)
-                #     d = dx ** 2 + dy ** 2
-                #     f_attract = f_attract_const / lm / (1 + d)
-                #     fx_imp_live = fx_imp + f_attract * dx / (1 + d)
-                #     fy_imp_live = fy_imp + f_attract * dx / (1 + d)
-                #     solver.update_f_imp(fx_imp_live, fy_imp_live)
-                # else:
-                #     solver.update_f_imp(fx_imp, fy_imp)
+                if m_left:  # Attractor
+                    dx = gx - (gridx + self.solver.ux)
+                    dy = gy - (gridy + self.solver.uy)
+                    d = dx ** 2 + dy ** 2
+                    f_attract = f_attract_const / self.solver.lm / (1 + d)
+                    fx_imp_live = self.solver.fx_imp_old + f_attract * dx / (1 + d)
+                    fy_imp_live = self.solver.fy_imp_old + f_attract * dx / (1 + d)
+                    self.solver.update_f_imp(fx_imp_live, fy_imp_live)
+                else:
+                    self.solver.update_f_imp(self.solver.fx_imp, self.solver.fy_imp)
+
             #display
             self.ctx.clear(0.1, 0.1, 0.1)
 
