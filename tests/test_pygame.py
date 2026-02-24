@@ -20,7 +20,7 @@ tau = 3
 
 nbstep = 30 # nb of steps per frame
 
-fx = -0.001*lm/10
+fx = 0.001*lm/10
 fy = 0.0*lm /10
 f_attract_const = 1
 
@@ -60,7 +60,7 @@ def main():
                                       is_explicit=True, vol_mass=vol_mass, dt = dt, ratio=ratio, tau=tau,
                                         fx_imp=fx_imp, fy_imp = fy_imp)
 
-    game = sample.interface.SimulationApp(solver,screen_size=(800,600), nbstep=nbstep)
+    game = sample.interface.SimulationApp(solver,screen_size=(800,800), nbstep=nbstep)
     game.run()
 
     pygame.quit()

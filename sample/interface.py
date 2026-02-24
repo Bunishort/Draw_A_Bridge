@@ -340,17 +340,17 @@ class SimulationApp:
             else:
                 for i in range(0, self.nbstep):
                     self.solver.explicit_step()
-                self.disp[:,:,1] = self.solver.ux * 2 / (self.res[0] * self.solver.lm)
+                self.disp[:,:,1] = -self.solver.ux * 2 / (self.res[0] * self.solver.lm) # why - sign here ?
                 self.disp[:, :, 0] = self.solver.uy * 2 / (self.res[1] * self.solver.lm)
                 #TODO : fix that and update plot_field
 
                 if m_left:  # Attractor
                     dx = gy - (self.gridx +  self.solver.ux / self.solver.lm) #x/y inversion in gx gy
-                    dy = gx - (self.gridy + self.solver.uy / self.solver.lm)# - sign so it works but I don't understand why
+                    dy = gx - (self.gridy + self.solver.uy / self.solver.lm)#
                     d = np.sqrt(dx ** 2 + dy ** 2)
                     f_attract = self.f_attract_const / (1 + d)
-                    fx_imp_live = self.fx_imp_cte - f_attract * dx / (1 + d)
-                    fy_imp_live = self.fy_imp_cte + f_attract * dy / (1 + d) # + size but I don't know why
+                    fx_imp_live = self.fx_imp_cte + f_attract * dx / (1 + d)
+                    fy_imp_live = self.fy_imp_cte + f_attract * dy / (1 + d) # + sign but I don't know why
                     self.solver.update_f_imp(fx_imp_live, fy_imp_live)
                     self.plot_field[:, :] = 100*f_attract#remove, debug only
                 else:
