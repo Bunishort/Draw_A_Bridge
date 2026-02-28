@@ -371,8 +371,8 @@ class ElasticProblem:
         return
 
     def update_f_imp(self,fx_imp, fy_imp):
-        self.fx_imp = fx_imp
-        self.fy_imp = fy_imp
+        self.fx_imp = fx_imp.copy()
+        self.fy_imp = fy_imp.copy()
         self.fx_imp_old = self.fx_imp.copy()
         self.fy_imp_old = self.fy_imp.copy()
         self.fx_imp[np.bitwise_not(self.solid)] = 0

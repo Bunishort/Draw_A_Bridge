@@ -14,7 +14,7 @@ ny = 80
 lm = 4.5 * 7/nx
 
 vol_mass = 0.5
-dt = 0.3 / 7
+dt = 0.3 / 4
 ratio = 0.2  # must be between 0 and 1
 tau = 3
 
@@ -36,14 +36,14 @@ elas_lambda = E*nu /(1+nu)/(1-2*nu)
 elas_mu = E/2/(1+nu)
 
 solid = np.zeros([nx,ny],dtype = bool)
-ix = int(nx/2)
+ix = int(nx*9/10)
 iy = int(ny/10)
 solid[ix:(ix+2),iy:(iy+2)] = True
 ux_imp=np.zeros(solid.shape)
 ux_imp[:,:] = np.nan
 ux_imp[ix:(ix+2),iy:(iy+2)] = 0
-ix = int(nx/10)
-iy = int(ny/10)
+ix = int(nx*9/10)
+iy = int(ny*9/10)
 solid[ix:(ix+2),iy:(iy+2)] = True
 ux_imp[ix:(ix+2),iy:(iy+2)] = 0
 
