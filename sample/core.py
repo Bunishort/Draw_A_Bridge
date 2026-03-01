@@ -126,10 +126,6 @@ class ElasticProblem:
         for var in ['px_bound','py_bound','fx_imp','fy_imp']:
             setattr(self,var,kwargs.get(var,np.zeros(solid.shape, dtype=np.float32)))
 
-        self.fx_imp_old = self.fx_imp.copy()
-        self.fy_imp_old = self.fy_imp.copy()
-        self.fx_imp[np.bitwise_not(self.solid)] = 0
-        self.fy_imp[np.bitwise_not(self.solid)] = 0
         self.max_iter = np.float32(kwargs.get('max_iter',200))
         self.max_res = np.float32(kwargs.get('max_res', 1e-6))
         for var in  ['ux','uy']:
@@ -308,10 +304,6 @@ class ElasticProblem:
         else:
             self.solid[ix,iy] = False
 
-        self.fx_imp = self.fx_imp_old.copy()
-        self.fy_imp = self.fy_imp_old.copy()
-        self.fx_imp[np.bitwise_not(self.solid)] = 0
-        self.fy_imp[np.bitwise_not(self.solid)] = 0
         self.frontier, self.bulk = get_frontier(self.solid)
 
         self.is_uimp = np.bitwise_and(np.bitwise_not(np.isnan(self.ux_imp)),
@@ -373,10 +365,6 @@ class ElasticProblem:
     def update_f_imp(self,fx_imp, fy_imp):
         self.fx_imp = fx_imp.copy()
         self.fy_imp = fy_imp.copy()
-        self.fx_imp_old = self.fx_imp.copy()
-        self.fy_imp_old = self.fy_imp.copy()
-        self.fx_imp[np.bitwise_not(self.solid)] = 0
-        self.fy_imp[np.bitwise_not(self.solid)] = 0
         self.bx, self.by = self.calc_b()
         return
 
@@ -557,8 +545,8 @@ class ElasticProblem:
         # Where displacement is imposed, b=0
         #Elsewhere, b=0
 
-        bx = -self.fx_imp
-        by = -self.fy_imp
+        bx = -self.fx_imp * self.solid
+        by = -self.fy_imp * self.solid
         bx[self.frontier] -= self.px_bound[self.frontier] / self.lm
         by[self.frontier] -= self.py_bound[self.frontier] / self.lm
 

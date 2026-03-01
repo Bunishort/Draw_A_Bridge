@@ -278,8 +278,8 @@ class SimulationApp:
         self.f_attract_const = kwargs.get('f_attract_const', 1e-2)
         pygame.display.set_mode(self.screen_size, pygame.OPENGL | pygame.DOUBLEBUF)
 
-        self.fx_imp_cte = solver.fx_imp_old.copy()
-        self.fy_imp_cte = solver.fy_imp_old.copy()
+        self.fx_imp_cte = solver.fx_imp.copy()
+        self.fy_imp_cte = solver.fy_imp.copy()
 
         self.ctx = moderngl.create_context()
         self.ctx.enable(moderngl.PROGRAM_POINT_SIZE)
