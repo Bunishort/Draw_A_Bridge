@@ -104,13 +104,29 @@ class ElasticProblem:
     :**kwarg fy_imp : 2d matrix of imposed volumic forces in the y direction (default 0)
     :**kwarg max_iter : maximum number of Conjugate Gradient iterations, default 20
     :**kwarg max_res : maximum (non dimensional) residual convergence tolerance, default 1e-6
-    kernel_type: plane_strain, plane_stress or 2daxi (only plane strain available now)
+    :**kwarg kernel_type: plane_strain, plane_stress or 2daxi (only plane strain available now)
+    :**kwarg ux: Initial guess for x displacements (2d numpy matrix, same size as solid)
+    :**kwarg uy: Initial guess for y displacements (2d numpy matrix, same size as solid)
+    :**kwarg precond : bool : whhether preconditioning should be used (implicit computation only)
+    :**kwarg precond_type =  str : type of preconditioning matrix to be used
+    :**kwarg precond_n = int : size of preconditioning matrix
+    :**kwarg is_explicit = bool : True for Explicit computation, False for implicit computation
+    :**kwarg vol_mass = volumic mass for explicit computation
+    :**kwarg dt = np.float32(kwargs.get('dt', 1))
+    :**kwarg vx :2d matrix of initial x speed
+    :**kwarg vy : 2d matrix of initial y speed
+    :**kwarg sxx_x_old : 2d matrix of initial xx stress on x edges
+    :**kwarg syy_x_old : 2d matrix of initial yy stress on x edges
+    :**kwarg sxy_x_old : 2d matrix of initial xy stress on x edges
+    :**kwarg sxx_y_old : 2d matrix of initial xx stress on y edges
+    :**kwarg syy_y_old : 2d matrix of initial yy stress on y edges
+    :**kwarg sxy_y_old : 2d matrix of initial xy stress on y edges
+    :**kwarg self.ratio : float : ration between low frequency and high frequency viscoelastic modulus.
+         Must be between 0 and 1. 0.999 for pure elasticity with almost no dissipation
+    :**kwarg tau : float : characteristic time of the viscoelastic Zener branch in seconds
     axx: kernel _x_x for div(sigma)
     axy: kernel _x_y for div(sigma)
     ayy: kernel _y_y for div(sigma)
-    ux: Initial guess for x displacements (2d numpy matrix, same size as solid)
-    uy: Initial guess for y displacements (2d numpy matrix, same size as solid)
-    exxx/eyyy/exyx/exyy : kernels for stress computation
     frontier : 2D bool matrix of frontier position
     bulk  :2d bool matrix of bulk position
     nx/ny : normals to the frontier of the solid
