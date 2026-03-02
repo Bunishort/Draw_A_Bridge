@@ -91,7 +91,6 @@ def conv_big(matrix, kernel):
 
 class ElasticProblem:
     """
-    TODO update these comments
     :param solid: Bool 2d matrix containing the position of the solid on the grid (1 if solid, 0 if not)
     :param elas_lambda
     :param elas_mu : Lamé elastic coefficients
