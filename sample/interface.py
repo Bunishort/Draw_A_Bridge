@@ -9,13 +9,23 @@ import moderngl
 
 class ExplicitAnimation:
     """
-    TODO update comments
-    :param test: ElasticProblem class object from sample.core, with is_explicit=True
-    :**kwarg fy_imp : 2d matrix of imposed volumic forces in the y direction (default 0)
-    :**kwarg max_iter : maximum number of Conjugate Gradient iterations, default 20
-    :**kwarg max_res : maximum (non dimensional) residual convergence tolerance, default 1e-6
-    kernel_type: plane_strain, plane_stress or 2daxi (only plane strain available now)
-    axx: kernel _x_x for div(sigma)
+    Animation based on matplotlib. Useful to run and live plot an explicit computation.
+    Not useful for gaming as matplotlib is too slow.
+    :param elas: ElasticProblem class object from sample.core, with is_explicit=True
+    :**kwarg nstep : number of explicit simulation steps
+    :**kwarg plot_interval : update animation plot every plot_interval steps
+    :**kwarg upscale_factor : ratio btw simulation resolution and plot resolution
+    :**kwarg probe_fields : list of str, names of the fiels of "elas" to be stored at each time step
+    : at point probe_ix,probe_iy
+    :**kwarg probe_ix : list of int : x position of points where the fields are stored
+    :**kwarg probe_iy : list of int : y position ...
+    :**kwarg x_dec : float : x position difference btw the simulation grid and the plot grid
+    : (e.g : if the plot field is computed on x_edge, x_dec = 0.5
+    :**kwarg y_dec : float : y position difference...
+    :**kwarg min_scale : minimum value of the color scale in the plot
+    :**kwarg max_scale : maximum value of the color scale in the plot
+    :**kwarg pause : time in seconds of pause after each frame drawing. Useful if simulation is too fast
+    :**kwarg plot_field : name of the field of "elas" to be plotted
     """
     def __init__(self,elas, **kwargs):
 
@@ -111,120 +121,13 @@ class ExplicitAnimation:
             for i in range(0, self.nstep):
                 self.elas.explicit_step()
 
-
-class ExplicitAnimation_pygame:
-    """
-    TODO update comments
-    :param test: ElasticProblem class object from sample.core, with is_explicit=True
-    :**kwarg fy_imp : 2d matrix of imposed volumic forces in the y direction (default 0)
-    :**kwarg max_iter : maximum number of Conjugate Gradient iterations, default 20
-    :**kwarg max_res : maximum (non dimensional) residual convergence tolerance, default 1e-6
-    kernel_type: plane_strain, plane_stress or 2daxi (only plane strain available now)
-    axx: kernel _x_x for div(sigma)
-    """
-    def __init__(self,elas, **kwargs):
-
-        self.upscale_factor = kwargs.get('upscale_factor', 5)
-        self.elas =  elas
-        self.nx = elas.solid.shape[0]
-        self.ny = elas.solid.shape[1]
-
-        self.x = np.arange(self.nx) - (self.nx - 1) / 2
-        self.y = np.arange(self.ny) - (self.ny - 1) / 2
-
-        self.x_dec = kwargs.get("x_dec",0)
-        self.y_dec = kwargs.get("y_dec",0)
-        self.min_scale = kwargs.get("min_scale",0)
-        self.max_scale = kwargs.get("max_scale",1)
-        self.plot_field = kwargs.get('plot_field','ux')
-
-        self.xplot = (np.arange(self.upscale_factor * self.nx) - (self.upscale_factor * self.nx - 1) / 2) / self.upscale_factor
-        self.yplot = (np.arange(self.upscale_factor * self.ny) - (self.upscale_factor * self.ny - 1) / 2) / self.upscale_factor
-        self.gridyplot, self.gridxplot = np.meshgrid(self.yplot, self.xplot)
-        self.solidplot = interpn((self.x, self.y), self.elas.solid, (self.gridxplot, self.gridyplot), method='nearest', bounds_error=False,
-                            fill_value=False)
-        self.solidplot = self.solidplot.astype(bool)
-        self.solidplot_norm = interpn((self.x, self.y), self.elas.solid, (self.gridxplot, self.gridyplot), method='linear', bounds_error=False,
-                                 fill_value=0)
-        self.solidplot_norm[self.solidplot_norm == 0] = 0.00001
-        self.solidplot_def = self.solidplot.copy()
-        self.smooth_filter = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]]) / 8
-
-        #init for map_cordinates
-        x_indices = (self.gridxplot - self.x[0]) / (self.x[1] - self.x[0])
-        y_indices = (self.gridyplot - self.y[0]) / (self.y[1] - self.y[0])
-        self.map_coords = np.array([x_indices.ravel(), y_indices.ravel()])
-
-        x_indices = (self.gridxplot - self.x[0] - self.x_dec) / (self.x[1] - self.x[0])
-        y_indices = (self.gridyplot - self.y[0] - self.y_dec) / (self.y[1] - self.y[0])
-        self.map_coords_dec = np.array([x_indices.ravel(), y_indices.ravel()])
-
-    @profile
-    def calc_image(self):
-
-        # maybe custom made interpn using thiese filters could be faster
-        # filter_plot_small = np.ones((int(self.upscale_factor), int(self.upscale_factor)))
-        # filter_plot_big = np.ones((int(2*self.upscale_factor -1), int(2*self.upscale_factor -1)))
-        # starting by setting u only on known points... and not forgetting norm
-        z = np.zeros(self.gridxplot.shape)
-        # Interpolate u on big grid
-        # ux_plot = interpn((self.x, self.y), self.elas.ux, (self.gridxplot, self.gridyplot), method='linear', bounds_error=False,
-        #                   fill_value=0) / self.solidplot_norm
-        ux_plot = map_coordinates(
-            self.elas.ux,
-            self.map_coords,
-            order=1,  # linear
-            mode='constant',  # bounds_error False
-            cval=0.0  # fill_value=0
-        )
-        ux_plot = ux_plot.reshape(self.gridxplot.shape) #/ self.solidplot_norm
-
-        uy_plot = map_coordinates(
-            self.elas.uy,
-            self.map_coords,
-            order=1,  # linear
-            mode='constant',  # bounds_error False
-            cval=0.0  # fill_value=0
-        )
-        uy_plot = uy_plot.reshape(self.gridxplot.shape) #/ self.solidplot_norm
-
-        out_plot = map_coordinates(
-            getattr(self.elas, self.plot_field),
-            self.map_coords_dec,
-            order=1,  # linear
-            mode='constant',  # bounds_error False
-            cval=0.0  # fill_value=0
-        )
-        out_plot = out_plot.reshape(self.gridxplot.shape) #/ self.solidplot_norm
-
-        # interpolate solid position with displacement
-        gridxx = self.gridxplot[self.solidplot] + ux_plot[self.solidplot]
-        gridyy = self.gridyplot[self.solidplot] + uy_plot[self.solidplot]
-        xi_solid = interpn((self.xplot, self.yplot), self.gridxplot, (gridxx, gridyy), method='nearest')
-        yi_solid = interpn((self.xplot, self.yplot), self.gridyplot, (gridxx, gridyy), method='nearest')
-        xi_solid *= self.upscale_factor
-        yi_solid *= self.upscale_factor
-        xi_solid += (self.upscale_factor * self.nx - 1) / 2
-        yi_solid += (self.upscale_factor * self.ny - 1) / 2
-        xi_solid = xi_solid.astype(int)
-        yi_solid = yi_solid.astype(int)
-
-        self.solidplot_def[:] = False
-        self.solidplot_def[
-            xi_solid, yi_solid] = True  # ! the same value may appear more than once in xi_solid,yi_solid
-        z[xi_solid, yi_solid] = out_plot[self.solidplot]
-        zsmooth = conv(z, self.smooth_filter)
-        z[np.bitwise_not(self.solidplot_def)] = zsmooth[np.bitwise_not(self.solidplot_def)]
-
-        return z
-
-#Game interface
+######################--------------------Game interface---------------################
 import pygame
 import moderngl
 import numpy as np
 
+#Modern GL functions
 # --- SHADERS ---
-# On utilise un seul shader capable de gérer les deux modes via une variable 'u_mode'
 VTX_SHADER = """
 #version 330
 in vec2 in_pos;      // Position grille (-1 à 1)
@@ -268,6 +171,16 @@ void main() {
 
 
 class SimulationApp:
+    """
+    Interactive simulation class.
+    So the actual game. All interactions and plotting are done here with pygame and moderngl
+    The simulation object should be initialized outside of this class. It's easier.
+    :param solver: ElasticProblem class object from sample.core, with is_explicit=True
+    :**kwarg screen_size : tuple (x,y) : size of the game screen in pixels
+    :**kwarg nbstep : number of simulation steps between each game frame
+    :**kwarg f_attract_const : float : attraction force constant for the 'attractor' interactive tool
+    """
+
     def __init__(self, solver, **kwargs):
         #solver = class initialisée par sample.core.ElasticProblem
         pygame.init()
