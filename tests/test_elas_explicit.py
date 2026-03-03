@@ -47,7 +47,7 @@ print( 'Compression : ' + str(c_p * dt / lm))
 print( 'Shear: ' + str(c_s * dt / lm))
 
 nstep = 1000
-iplot = 100
+iplot = 1
 kplot=1
 
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
@@ -70,9 +70,9 @@ test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
 
 
 anim = sample.interface.ExplicitAnimation(test, nstep = nstep, plot_interval = iplot, upscale_factor = kplot,
-                                          probe_fields = ['ux',], plot_field = 'sxy_y_old',
-                                          probe_ix = [ixmax,], probe_iy = [int(nx/2),], y_dec = 0.5, min_scale = -0.003,
-                                            max_scale = 0.003)
+                                          probe_fields = ['ux',], plot_field = 'VM_stress',
+                                          probe_ix = [ixmax,], probe_iy = [int(nx/2),], y_dec = 0., min_scale = -0.00,
+                                            max_scale = 0.02)
 anim.animate()
 
 stop = timeit.default_timer()
