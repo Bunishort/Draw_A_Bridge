@@ -162,12 +162,7 @@ flat in int v_mode;
 out vec4 f_color;
 
 void main() {
-    if (v_mode == 0) {
-        f_color = vec4(0.8, 0.8, 0.8, 1.0); // Mode dessin : Gris clair
-    } else {
-        // Mode Visu : Dégradé Bleu (froid) -> Rouge (chaud)
         f_color = vec4(v_stress, 0.5 * (1.0 - v_stress), 1.0 - v_stress, 1.0);
-    }
 }
 """
 
