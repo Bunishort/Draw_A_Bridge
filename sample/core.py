@@ -700,3 +700,32 @@ class ElasticProblem:
 
         self.ux += self.vx * self.dt
         self.uy += self.vy * self.dt
+
+    def calc_VM_stress(self):
+        # Calculate the second invariant of the deviatoric stress tensor
+        # and deduce the "Von Mises Stress" for Von mises yield stress criterion
+        # For post processing only
+
+        # Average edge stress on cell centre
+        sxx = conv(self.sxx_x_old, np.abs(self.ddxx) / 2)
+        syy = conv(self.syy_y_old, np.abs(self.ddyy) / 2)
+        sxy = (conv(self.sxy_x_old, np.abs(self.ddxx) / 4) +
+                   conv(self.sxy_y_old, np.abs(self.ddyy) / 4))
+        sxx *= self.solid_not_uimp
+        syy *= self.solid_not_uimp
+        sxy *= self.solid_not_uimp
+
+        # Calculate szz (plane def) and pressure
+        nu = self.elas_lambda / 2 / (self.elas_lambda + self.elas_mu)
+        szz = nu * (sxx + syy)
+        p = 1/3 * (sxx + syy + sxy)
+        #
+        # Deviatoric stress tensor
+        sxx -= p
+        syy -= p
+        szz -= p
+
+        # Deduce J2 invariant
+        J2 = 1/2 * (sxx**2 + syy**2 + szz**2) + sxy**2
+
+        return np.sqrt(3*J2)

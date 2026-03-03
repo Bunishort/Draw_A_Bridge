@@ -56,6 +56,12 @@ plt.figure()
 ux_ref = lm*(x - np.min(gridx[solid])) * (1 - nu **2 ) / E * px
 plt.plot(lm*x, ux_ref,'k')
 plt.plot(lm*x, test.ux[:,int(nx/2)])
+
+plt.figure()
+test.sxx_x_old, test.sxy_x_old, test.syy_y_old, test.sxy_y_old = test.calc_stress(test.ux, test.uy)
+plt.imshow(test.calc_VM_stress())
+plt.title('VM stress')
+
 plt.show()
 
 
