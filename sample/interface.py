@@ -80,6 +80,8 @@ class ExplicitAnimation:
                 self.elas.explicit_step()
                 if np.mod(i, self.plot_interval) == 0:
                     z = np.zeros(gridxplot.shape)
+                    if self.plot_field == 'VM_stress':
+                        self.elas.VM_stress = self.elas.calc_VM_stress()
 
                     # Interpolate u on big grid
                     ux_plot = interpn((self.x, self.y), self.elas.ux, (gridxplot, gridyplot), method='linear', bounds_error=False,
