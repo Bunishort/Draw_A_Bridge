@@ -191,6 +191,7 @@ class SimulationApp:
         self.screen_size = kwargs.get('screen_size', (800, 800))
         self.nbstep = kwargs.get('nbstep', 10)
         self.f_attract_const = kwargs.get('f_attract_const', 1e-2)
+        self.max_stress = kwargs.get('max_stress', 1.0)
         pygame.display.set_mode(self.screen_size, pygame.OPENGL | pygame.DOUBLEBUF)
 
         self.fx_imp_cte = solver.fx_imp.copy()
@@ -266,10 +267,13 @@ class SimulationApp:
                     fx_imp_live = self.fx_imp_cte + f_attract * dx / (1 + d)
                     fy_imp_live = self.fy_imp_cte + f_attract * dy / (1 + d)
                     self.solver.update_f_imp(fx_imp_live, fy_imp_live)
-                    self.plot_field[:, :] = 100*f_attract#remove, debug only
                 else:
                     self.solver.update_f_imp(self.fx_imp_cte , self.fy_imp_cte )
 
+            plot_field = self.solver.calc_VM_stress() / self.max_stress
+            plot_field[self.solver.is_uimp] = 1
+            plot_field[plot_field > 1] = 1
+            self.plot_field[:, :] = plot_field
             #display
             self.ctx.clear(0.1, 0.1, 0.1)
 

@@ -23,7 +23,7 @@ nbstep = 30 # nb of steps per frame
 fx = 0.001*lm/10
 fy = 0.0*lm /10
 f_attract_const = 1
-
+max_stress = 0.02
 
 c_p = np.sqrt(E / ratio * (1 - nu) / (vol_mass * (1 + nu) * (1 - 2 * nu)))
 c_s = np.sqrt(E / ratio /  (2 * (1 + nu)) / vol_mass)
@@ -60,7 +60,7 @@ def main():
                                       is_explicit=True, vol_mass=vol_mass, dt = dt, ratio=ratio, tau=tau,
                                         fx_imp=fx_imp, fy_imp = fy_imp)
 
-    game = sample.interface.SimulationApp(solver,screen_size=(800,800), nbstep=nbstep)
+    game = sample.interface.SimulationApp(solver,screen_size=(800,800), nbstep=nbstep, max_stress=max_stress)
     game.run()
 
     pygame.quit()
