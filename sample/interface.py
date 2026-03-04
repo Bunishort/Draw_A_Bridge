@@ -138,6 +138,7 @@ in float in_stress;  // Intensité (contrainte)
 
 uniform int u_mode;        // 0: Dessin, 1: Visualisation
 uniform float u_amp;       // Amplification de la déformée
+uniform float point_size;
 
 out float v_stress;
 flat out int v_mode;
@@ -151,7 +152,7 @@ void main() {
         final_pos += in_disp * u_amp; // Applique la déformée
     }
     gl_Position = vec4(final_pos, 0.0, 1.0);
-    gl_PointSize = 4.0; 
+    gl_PointSize = point_size; 
 }
 """
 
@@ -188,6 +189,8 @@ class SimulationApp:
         self.f_attract_const = kwargs.get('f_attract_const', 1e-2)
         self.max_stress = kwargs.get('max_stress', 1.0)
         pygame.display.set_mode(self.screen_size, pygame.OPENGL | pygame.DOUBLEBUF)
+
+        self.point_size = self.screen_size[0] / self.res[0] +0.5
 
         self.fx_imp_cte = solver.fx_imp.copy()
         self.fy_imp_cte = solver.fy_imp.copy()
@@ -289,7 +292,7 @@ class SimulationApp:
                 # Shader variables config
                 self.prog['u_mode'].value = 1 if self.mode_simu else 0
                 self.prog['u_amp'].value = 1.0  # Amplification factor
-
+                self.prog['point_size'].value = self.point_size  # Amplification factor
                 # Draw points
                 self.vao.render(moderngl.POINTS, vertices=len(idx))
 
