@@ -299,25 +299,45 @@ class ElasticProblem:
         iy = min(iy,ny-2)
 
         if state > 0:
-            self.solid[ix:(ix+2),iy:(iy+2)] = True
-            ixm = max(ix-1,0)
-            ixp = min(ix+2,nx-3)
-            iym = max(iy - 1, 0)
-            iyp = min(iy + 2, ny - 3)
-            tour = np.zeros(self.solid.shape, dtype=np.bool)
-            tour[ixm, iy:(iy+2)] = True
-            tour[ixp, iy:(iy+2)] = True
-            tour[ix:(ix+2), iym] = True
-            tour[ix:(ix+2), iyp] = True
-            tour = np.where(tour) #TODO optimize !!
-            nsolid = np.sum(self.solid[tour].astype(np.float32))
-            if nsolid>0:
-                self.ux[ix:(ix + 2), iy:(iy + 2)] = np.sum(self.ux[tour]) / nsolid
-                self.uy[ix:(ix + 2), iy:(iy + 2)] = np.sum(self.uy[tour]) / nsolid
-                self.vx[ix:(ix + 2), iy:(iy + 2)] = np.sum(self.vx[tour]) / nsolid
-                self.vy[ix:(ix + 2), iy:(iy + 2)] = np.sum(self.vy[tour]) / nsolid
+            sol = self.solid[ix:(ix+2),iy:(iy+2)]
+            # if any of the 4 points is already solid, init speed and position of the other points
+            # with the average values from the already solid part
+            # Else, take the average values of the surrounding points if there are any
+            if np.sum(sol)>0:
+                sol_solid =  np.where(sol)
+                sol_mod = np.where(np.bitwise_not(sol))
+                ux = self.ux[ix:(ix+2),iy:(iy+2)]
+                uy = self.uy[ix:(ix+2),iy:(iy+2)]
+                vx = self.ux[ix:(ix+2),iy:(iy+2)]
+                vy = self.uy[ix:(ix+2),iy:(iy+2)]
+                ux[sol_mod] = np.mean(ux[sol_solid])
+                uy[sol_mod] = np.mean(uy[sol_solid])
+                vx[sol_mod] = np.mean(vx[sol_solid])
+                vy[sol_mod] = np.mean(vy[sol_solid])
+                self.ux[ix:(ix + 2), iy:(iy + 2)] = ux
+                self.uy[ix:(ix + 2), iy:(iy + 2)] = uy
+                self.ux[ix:(ix + 2), iy:(iy + 2)] = vx
+                self.uy[ix:(ix + 2), iy:(iy + 2)] = vy
+            else:
+                ixm = max(ix-1,0)
+                ixp = min(ix+2,nx-3)
+                iym = max(iy - 1, 0)
+                iyp = min(iy + 2, ny - 3)
+                tour = np.zeros(self.solid.shape, dtype=np.bool)
+                tour[ixm, iy:(iy+2)] = True
+                tour[ixp, iy:(iy+2)] = True
+                tour[ix:(ix+2), iym] = True
+                tour[ix:(ix+2), iyp] = True
+                tour = np.where(tour) #TODO optimize !!
+                nsolid = np.sum(self.solid[tour].astype(np.float32))
+                if nsolid>0:
+                    self.ux[ix:(ix + 2), iy:(iy + 2)] = np.sum(self.ux[tour]) / nsolid
+                    self.uy[ix:(ix + 2), iy:(iy + 2)] = np.sum(self.uy[tour]) / nsolid
+                    self.vx[ix:(ix + 2), iy:(iy + 2)] = np.sum(self.vx[tour]) / nsolid
+                    self.vy[ix:(ix + 2), iy:(iy + 2)] = np.sum(self.vy[tour]) / nsolid
+            self.solid[ix:(ix + 2), iy:(iy + 2)] = True
         else:
-            self.solid[ix,iy] = False
+            self.solid[ix:(ix + 2), iy:(iy + 2)] = False
 
         self.frontier, self.bulk = get_frontier(self.solid)
 
