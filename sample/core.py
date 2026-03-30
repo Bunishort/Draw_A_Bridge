@@ -226,10 +226,15 @@ class ElasticProblem:
         if self.is_explicit:
             self.vol_mass = np.float32(kwargs.get('vol_mass', 1))
             self.dt = np.float32(kwargs.get('dt', 1))
+            self.damping = np.float32(kwargs.get('damping', 0))
             self.bx, self.by = self.calc_b()
             for var in ['vx', 'vy', 'sxx_x_old', 'syy_x_old', 'sxy_x_old',
                  'sxx_y_old', 'syy_y_old', 'sxy_y_old']:
                 setattr(self, var, kwargs.get(var, np.zeros(self.solid.shape, dtype = np.float32)))
+
+            self.damping_eff = self.damping * self.lm * self.lm # Effective damping for volumetric force computation
+            self.fx_imp -= self.damping_eff * self.vx
+            self.fy_imp -= self.damping_eff * self.vy
 
             self.ratio = np.float32(kwargs.get('ratio', 0.99) ) # must be between 0 and 1
             if (self.ratio >= 1) or (self.ratio <= 0):
@@ -715,8 +720,14 @@ class ElasticProblem:
         #     acc_x[np.bitwise_not(self.movable)] = 0
         #     acc_y[np.bitwise_not(self.movable)] = 0
 
-        self.vx += acc_x * ( self.dt/ self.vol_mass )
-        self.vy += acc_y * ( self.dt/ self.vol_mass )
+        dvx = acc_x * ( self.dt/ self.vol_mass )
+        dvy = acc_y * ( self.dt/ self.vol_mass )
+
+        self.vx += dvx
+        self.vy += dvy
+
+        self.fx_imp -= self.damping_eff * dvx
+        self.fy_imp -= self.damping_eff * dvy
 
         self.ux += self.vx * self.dt
         self.uy += self.vy * self.dt

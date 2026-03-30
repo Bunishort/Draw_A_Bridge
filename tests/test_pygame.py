@@ -14,9 +14,10 @@ ny = 80
 lm = 4.5 * 7/nx
 
 vol_mass = 0.5
-dt = 0.3 / 4 /2
-ratio = 0.1  # must be between 0 and 1
+dt = 0.3 /2
+ratio = 0.9  # must be between 0 and 1
 tau = 20
+damping = 0.0
 
 nbstep = 30 # nb of steps per frame
 
@@ -58,7 +59,7 @@ def main():
     # Solver init
     solver = sample.core.ElasticProblem(solid, elas_lambda, elas_mu, lm, ux_imp, uy_imp,
                                       is_explicit=True, vol_mass=vol_mass, dt = dt, ratio=ratio, tau=tau,
-                                        fx_imp=fx_imp, fy_imp = fy_imp)
+                                        fx_imp=fx_imp, fy_imp = fy_imp, damping = damping)
 
     game = sample.interface.SimulationApp(solver,screen_size=(800,800), nbstep=nbstep, max_stress=max_stress)
     game.run()
