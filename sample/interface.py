@@ -271,7 +271,7 @@ class SimulationApp:
                     self.fx_imp_live *= 0
                     self.fy_imp_live *= 0
                 self.solver.fx_imp += self.fx_imp_live
-                self.solver.fx_imp += self.fy_imp_live
+                self.solver.fy_imp += self.fy_imp_live
                 self.solver.update_f_imp(self.solver.fx_imp , self.solver.fy_imp)
 
 

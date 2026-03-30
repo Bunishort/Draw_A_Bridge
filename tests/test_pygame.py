@@ -17,7 +17,7 @@ vol_mass = 0.5
 dt = 0.3 /2
 ratio = 0.9  # must be between 0 and 1
 tau = 20
-damping = 0.0
+damping = 0.05
 
 nbstep = 30 # nb of steps per frame
 
