@@ -14,9 +14,9 @@ ny = 80
 lm = 4.5 * 7/nx
 
 vol_mass = 0.5
-dt = 0.3 / 4
-ratio = 0.2  # must be between 0 and 1
-tau = 3
+dt = 0.3 / 4 /2
+ratio = 0.1  # must be between 0 and 1
+tau = 20
 
 nbstep = 30 # nb of steps per frame
 

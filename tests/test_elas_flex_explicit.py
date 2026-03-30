@@ -34,8 +34,8 @@ lm = 4.5/k
 
 vol_mass = 0.5
 dt = 1 / 5
-ratio = 0.2  # must be between 0 and 1
-tau = 3 *3
+ratio = 0.9  # must be between 0 and 1
+tau = 3 *10
 
 precond = False
 precond_type = 'robust'
@@ -47,9 +47,9 @@ c_s = np.sqrt(E / ratio /  (2 * (1 + nu)) / vol_mass)
 print( 'Max Sound speed * dt / lm ')
 print( 'Compression : ' + str(c_p * dt / lm))
 print( 'Shear: ' + str(c_s * dt / lm))
-
+print( 'tau / dt = ' + str(tau/dt))
 nstep = 4000
-iplot = 50
+iplot = 100
 kplot = 3
 
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
