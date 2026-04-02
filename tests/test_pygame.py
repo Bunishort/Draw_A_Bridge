@@ -6,20 +6,20 @@ from line_profiler import profile
 # simulation parameters
 E=1
 nu = 0.4
-# nx=100
-# ny=100
-nx = 80
-ny = 80
+nx=120
+ny=120
+# nx = 80
+# ny = 80
 
 lm = 4.5 * 7/nx
 
 vol_mass = 0.5
-dt = 0.3 /2
+dt = 0.3 /2/1.7
 ratio = 0.9  # must be between 0 and 1
 tau = 20
-damping = 0.05
+damping = 0.05*0.1
 
-nbstep = 30 # nb of steps per frame
+nbstep = int(30 /2) # nb of steps per frame
 
 fx = 0.001*lm/10
 fy = 0.0*lm /10
@@ -38,7 +38,7 @@ elas_mu = E/2/(1+nu)
 
 solid = np.zeros([nx,ny],dtype = bool)
 ix = int(nx*9/10)
-iy = int(ny/10)
+iy = int(ny*5/10)
 solid[ix:(ix+2),iy:(iy+2)] = True
 ux_imp=np.zeros(solid.shape)
 ux_imp[:,:] = np.nan
