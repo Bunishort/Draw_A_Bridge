@@ -21,6 +21,7 @@ damping = 0.05*0.1
 
 nbstep = int(30 /2) # nb of steps per frame
 
+
 fx = 0.001*lm/10
 fy = 0.0*lm /10
 f_attract_const = 1
