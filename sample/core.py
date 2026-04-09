@@ -5,7 +5,8 @@ import numpy as np
 from cv2 import filter2D
 # from torchgen.native_function_generation import self_to_out_signature
 from line_profiler import profile
-import numba
+from numba import njit, prange
+
 ###Remark : pyqt6 needed only for matplotlib show, maybe not necessary for pygame !
 
 def get_frontier(solid):
@@ -88,6 +89,115 @@ def conv_big(matrix, kernel):
     else:
         anch = (-1,-1)
     return filter2D(matrix,-1,kernel,anchor=anch)
+@profile
+@njit(parallel=True, fastmath=True)
+def nfi_calc_stress(
+        uxt, uyt, lm ,
+    isddx1,
+    isddx2,
+    isddy1,
+    isddy2,
+    coef,
+    elas_lambda_ratio,
+    y_frontier_def,
+    x_frontier_def,
+    x_frontier_def_s,
+    y_frontier_def_s,
+    isstress_x_edge_l2m,
+    isstress_y_edge_l2m,
+    isstress_x_edge_2m,
+    isstress_y_edge_2m
+):
+
+    h, w = uxt.shape
+    # Pre-allocation des matrices de déformation
+    exx = np.zeros((h, w), dtype=np.float32)
+    eyy = np.zeros((h, w), dtype=np.float32)
+    exy = np.zeros((h, w), dtype=np.float32)
+    eyx = np.zeros((h, w), dtype=np.float32)
+
+    # Sorties
+    exx_x = np.zeros((h, w), dtype=np.float32)
+    exy_x = np.zeros((h, w), dtype=np.float32)
+    eyy_y = np.zeros((h, w), dtype=np.float32)
+    exy_y = np.zeros((h, w), dtype=np.float32)
+
+    # --- PASSE 1 : DÉFORMATIONS ET FRONTIÈRES ---
+    for i in prange(h - 1):
+        for j in range(w - 1):
+            # Implémentation directe des noyaux avec anchor (0,0)
+            # ddx1: [[-1], [1]] -> m[i+1, j] - m[i, j]
+            # ddx2: [[0, -1], [0, 1]] -> m[i+1, j+1] - m[i, j+1]
+            # ddy1: [[-1, 1]] -> m[i, j+1] - m[i, j]
+            # ddy2: [[0, 0], [-1, 1]] -> m[i+1, j+1] - m[i+1, j]
+
+            _duxdx2 = (uxt[i + 1, j + 1] - uxt[i, j + 1]) * isddx2[i, j] / 2
+            _duxdy2 = (uxt[i + 1, j + 1] - uxt[i + 1, j]) * isddy2[i, j] / 4
+            _duydx2 = (uyt[i + 1, j + 1] - uyt[i, j + 1]) * isddx2[i, j] / 4
+            _duydy2 = (uyt[i + 1, j + 1] - uyt[i + 1, j]) * isddy2[i, j] / 2
+
+            _exx = (uxt[i + 1, j] - uxt[i, j]) * isddx1[i, j] / 2 + _duxdx2
+            _eyy = (uyt[i, j + 1] - uyt[i, j]) * isddy1[i, j] / 2 + _duydy2
+            _exy = (uxt[i, j + 1] - uxt[i, j]) * isddy1[i, j] / 4 + _duxdy2
+            _eyx = (uyt[i + 1, j] - uyt[i, j]) * isddx1[i, j] / 2 + _duydx2
+
+            _exx /= lm
+            _eyy /= lm
+            _exy /= lm
+            _eyx /= lm
+
+            # Application des masques de frontière --> TODO try without if
+            _exx += _exx * y_frontier_def[i, j]
+            _eyx += _eyx * y_frontier_def[i, j]
+
+            _eyy += _eyy * x_frontier_def[i, j]
+            _exy += _exy * x_frontier_def[i, j]
+
+            exx[i, j], eyy[i, j] = _exx, _eyy
+            exy[i, j], eyx[i, j] = _exy, _eyx
+
+            if x_frontier_def_s[i, j]:
+                exx[i, j] = coef * eyy[i, j]
+                eyx[i, j] = -exy[i, j]
+            if y_frontier_def_s[i, j]:
+                eyy[i, j] = coef * exx[i, j]
+                exy[i, j] = -eyx[i, j]
+
+    # --- PASSE 2 : MOYENNAGE ET CONTRAINTES ---
+    #TODO try en 1 passe
+    for i in prange(h - 1):
+        for j in range(w - 1):
+            # Noyaux de moyenne : meanx = [[1],[1]] / meany = [[1,1]]
+            # conv(m, meany) -> m[i, j] + m[i, j+1]
+            # conv(m, meanx) -> m[i, j] + m[i+1, j]
+
+            # Recalcul des du (pour éviter de stocker 4 matrices de plus)
+            _duxdx2 = (uxt[i + 1, j + 1] - uxt[i, j + 1]) * isddx2[i, j]
+            _duydx2 = (uyt[i + 1, j + 1] - uyt[i, j + 1]) * isddx2[i, j]
+            _duydy2 = (uyt[i + 1, j + 1] - uyt[i + 1, j]) * isddy2[i, j]
+            _duxdy2 = (uxt[i + 1, j + 1] - uxt[i + 1, j]) * isddy2[i, j]
+
+            # exx_x = conv(exx + (2*ratio)*eyy, meany/4) + duxdx2
+            val_exx_eyy_0 = exx[i, j] + (2.0 * elas_lambda_ratio) * eyy[i, j]
+            val_exx_eyy_1 = exx[i, j + 1] + (2.0 * elas_lambda_ratio) * eyy[i, j + 1]
+            exx_x[i, j] = (val_exx_eyy_0 / 4 + val_exx_eyy_1 / 4 + _duxdx2) * isstress_x_edge_l2m[i, j]
+
+            # exy_x = conv(2*exy + eyx, meany/4) + duydx2
+            val_exy_eyx_0 = 2.0 * exy[i, j] + eyx[i, j]
+            val_exy_eyx_1 = 2.0 * exy[i, j + 1] + eyx[i, j + 1]
+            exy_x[i, j] = (val_exy_eyx_0 / 4 + val_exy_eyx_1 / 4 + _duydx2) * isstress_x_edge_2m[i, j]
+
+            # eyy_y = conv(eyy + (2*ratio)*exx, meanx/4) + duydy2
+            val_eyy_exx_0 = eyy[i, j] + (2.0 * elas_lambda_ratio) * exx[i, j]
+            val_eyy_exx_1 = eyy[i + 1, j] + (2.0 * elas_lambda_ratio) * exx[i + 1, j]
+            eyy_y[i, j] = (val_eyy_exx_0 / 4 + val_eyy_exx_1 / 4 + _duydy2) * isstress_y_edge_l2m[i, j]
+
+            # exy_y = conv(exy + 2*eyx, meanx/4) + duxdy2
+            val_exy_eyx2_0 = exy[i, j] + 2.0 * eyx[i, j]
+            val_exy_eyx2_1 = exy[i + 1, j] + 2.0 * eyx[i + 1, j]
+            exy_y[i, j] = (val_exy_eyx2_0 / 4 + val_exy_eyx2_1 / 4 + _duxdy2) * isstress_y_edge_2m[i, j]
+
+    return exx_x, exy_x, eyy_y, exy_y
 
 class ElasticProblem:
     """
@@ -193,18 +303,20 @@ class ElasticProblem:
 
         self.coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu) #Correction coef for plane strain
         # frontiers without corners :
-        self.x_frontier_def_s = np.bitwise_and(self.x_frontier_def, np.bitwise_not(self.corner_def))
-        self.y_frontier_def_s = np.bitwise_and(self.y_frontier_def, np.bitwise_not(self.corner_def))
+        self.x_frontier_def_sb = np.bitwise_and(self.x_frontier_def, np.bitwise_not(self.corner_def))
+        self.y_frontier_def_sb = np.bitwise_and(self.y_frontier_def, np.bitwise_not(self.corner_def))
         #Preconditioning options
         self.precond = kwargs.get('precond',False)
         self.precond_type = kwargs.get('precond_type','formula')
         self.precond_n = np.float32(kwargs.get('precond_n',15))
         self.precond_xx, self.precond_xy, self.precond_yy, self.precond_yx = self.def_precond()
 
+        self.x_frontier_defb = self.x_frontier_def.copy()#TODO clean
+        self.y_frontier_defb = self.y_frontier_def.copy()
         self.x_frontier_def = np.where(self.x_frontier_def)
         self.y_frontier_def = np.where(self.y_frontier_def)
-        self.x_frontier_def_s = np.where(self.x_frontier_def_s)
-        self.y_frontier_def_s = np.where(self.y_frontier_def_s)
+        self.x_frontier_def_s = np.where(self.x_frontier_def_sb)#todo clean
+        self.y_frontier_def_s = np.where(self.y_frontier_def_sb)
 
         self.isstress_x_edge_lambda_2mu = self.isstress_x_edge * (self.elas_lambda + 2 * self.elas_mu)
         self.isstress_y_edge_lambda_2mu = self.isstress_y_edge * (self.elas_lambda + 2 * self.elas_mu)
@@ -385,13 +497,15 @@ class ElasticProblem:
         self.isddy1 = np.float32(self.isddy1)
         self.isddy2 = np.float32(self.isddy2)
 
-        self.x_frontier_def_s = np.bitwise_and(self.x_frontier_def, np.bitwise_not(self.corner_def))
-        self.y_frontier_def_s = np.bitwise_and(self.y_frontier_def, np.bitwise_not(self.corner_def))
+        self.x_frontier_def_sb = np.bitwise_and(self.x_frontier_def, np.bitwise_not(self.corner_def))
+        self.y_frontier_def_sb = np.bitwise_and(self.y_frontier_def, np.bitwise_not(self.corner_def))
 
+        self.x_frontier_defb = self.x_frontier_def.copy()  # TODO clean
+        self.y_frontier_defb = self.y_frontier_def.copy()
         self.x_frontier_def = np.where(self.x_frontier_def)
         self.y_frontier_def = np.where(self.y_frontier_def)
-        self.x_frontier_def_s = np.where(self.x_frontier_def_s)
-        self.y_frontier_def_s = np.where(self.y_frontier_def_s)
+        self.x_frontier_def_s = np.where(self.x_frontier_def_sb)#todo clean
+        self.y_frontier_def_s = np.where(self.y_frontier_def_sb)
 
         self.isstress_x_edge_lambda_2mu = self.isstress_x_edge * (self.elas_lambda + 2 * self.elas_mu)
         self.isstress_y_edge_lambda_2mu = self.isstress_y_edge * (self.elas_lambda + 2 * self.elas_mu)
@@ -676,11 +790,31 @@ class ElasticProblem:
         # Viscoelastic parameters G0/G1/Eta1 normalized so that the long term response
         # is the same as the elastic response
 
+        #NUmpy+OpenCV version
+        # sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress(
+        #     self.explicit_b * self.ux + self.G0 * self.vx,
+        #     self.explicit_b * self.uy + self.G0 * self.vy)
 
-        sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress(
+        #Numba version
+        sxx_x, sxy_x, syy_y, sxy_y = nfi_calc_stress(
             self.explicit_b * self.ux + self.G0 * self.vx,
-            self.explicit_b * self.uy + self.G0 * self.vy)
-
+            self.explicit_b * self.uy + self.G0 * self.vy,
+            self.lm,
+            self.isddx1,
+            self.isddx2,
+            self.isddy1,
+            self.isddy2,
+            self.coef,
+            self.elas_lambda_ratio,
+            self.y_frontier_defb,
+            self.x_frontier_defb,
+            self.x_frontier_def_sb,
+            self.y_frontier_def_sb,
+            self.isstress_x_edge_lambda_2mu,
+            self.isstress_y_edge_lambda_2mu,
+            self.isstress_x_edge_2mu,
+            self.isstress_y_edge_2mu
+        )
 
         temp = (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
         sxx_x *= temp
