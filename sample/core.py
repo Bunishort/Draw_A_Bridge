@@ -89,7 +89,7 @@ def conv_big(matrix, kernel):
     else:
         anch = (-1,-1)
     return filter2D(matrix,-1,kernel,anchor=anch)
-@profile
+
 @njit(parallel=True, fastmath=True)
 def nfi_calc_stress(
         uxt, uyt, lm ,
@@ -139,7 +139,7 @@ def nfi_calc_stress(
             _exx = (uxt[i + 1, j] - uxt[i, j]) * isddx1[i, j] / 2 + _duxdx2
             _eyy = (uyt[i, j + 1] - uyt[i, j]) * isddy1[i, j] / 2 + _duydy2
             _exy = (uxt[i, j + 1] - uxt[i, j]) * isddy1[i, j] / 4 + _duxdy2
-            _eyx = (uyt[i + 1, j] - uyt[i, j]) * isddx1[i, j] / 2 + _duydx2
+            _eyx = (uyt[i + 1, j] - uyt[i, j]) * isddx1[i, j] / 4 + _duydx2
 
             _exx /= lm
             _eyy /= lm
@@ -172,10 +172,10 @@ def nfi_calc_stress(
             # conv(m, meanx) -> m[i, j] + m[i+1, j]
 
             # Recalcul des du (pour éviter de stocker 4 matrices de plus)
-            _duxdx2 = (uxt[i + 1, j + 1] - uxt[i, j + 1]) * isddx2[i, j]
-            _duydx2 = (uyt[i + 1, j + 1] - uyt[i, j + 1]) * isddx2[i, j]
-            _duydy2 = (uyt[i + 1, j + 1] - uyt[i + 1, j]) * isddy2[i, j]
-            _duxdy2 = (uxt[i + 1, j + 1] - uxt[i + 1, j]) * isddy2[i, j]
+            _duxdx2 = (uxt[i + 1, j + 1] - uxt[i, j + 1]) * isddx2[i, j] / 2 / lm
+            _duydx2 = (uyt[i + 1, j + 1] - uyt[i, j + 1]) * isddx2[i, j] / 4 / lm
+            _duydy2 = (uyt[i + 1, j + 1] - uyt[i + 1, j]) * isddy2[i, j] / 4 / lm
+            _duxdy2 = (uxt[i + 1, j + 1] - uxt[i + 1, j]) * isddy2[i, j] / 2 / lm
 
             # exx_x = conv(exx + (2*ratio)*eyy, meany/4) + duxdx2
             val_exx_eyy_0 = exx[i, j] + (2.0 * elas_lambda_ratio) * eyy[i, j]
@@ -195,7 +195,7 @@ def nfi_calc_stress(
             # exy_y = conv(exy + 2*eyx, meanx/4) + duxdy2
             val_exy_eyx2_0 = exy[i, j] + 2.0 * eyx[i, j]
             val_exy_eyx2_1 = exy[i + 1, j] + 2.0 * eyx[i + 1, j]
-            exy_y[i, j] = (val_exy_eyx2_0 / 4 + val_exy_eyx2_1 / 4 + _duxdy2) * isstress_y_edge_2m[i, j]
+            exy_y[i, j] = (val_exy_eyx2_0 / 4.0 + val_exy_eyx2_1 / 4 + _duxdy2) * isstress_y_edge_2m[i, j]
 
     return exx_x, exy_x, eyy_y, exy_y
 
