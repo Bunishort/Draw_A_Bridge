@@ -161,15 +161,15 @@ def nfi_calc_stress(
             _eyy += _eyy * x_frontier_def[i, j]
             _exy += _exy * x_frontier_def[i, j]
 
+            if x_frontier_def_s[i, j]:
+                _exx = coef * _eyy
+                _eyx = -_exy
+            if y_frontier_def_s[i, j]:
+                _eyy = coef * _exx
+                _exy = -_eyx
+
             exx[i, j], eyy[i, j] = _exx, _eyy
             exy[i, j], eyx[i, j] = _exy, _eyx
-
-            if x_frontier_def_s[i, j]:
-                exx[i, j] = coef * eyy[i, j]
-                eyx[i, j] = -exy[i, j]
-            if y_frontier_def_s[i, j]:
-                eyy[i, j] = coef * exx[i, j]
-                exy[i, j] = -eyx[i, j]
 
     # --- PASSE 2 : MOYENNAGE ET CONTRAINTES ---
     #TODO try en 1 passe
