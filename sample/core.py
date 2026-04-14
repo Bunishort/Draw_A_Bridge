@@ -154,12 +154,13 @@ def nfi_calc_stress(
             _exy /= lm
             _eyx /= lm
 
-            # Application des masques de frontière --> TODO try without if
-            _exx += _exx * y_frontier_def[i, j]
-            _eyx += _eyx * y_frontier_def[i, j]
-
-            _eyy += _eyy * x_frontier_def[i, j]
-            _exy += _exy * x_frontier_def[i, j]
+            # Application des masques de frontière --> TODO try with if
+            if y_frontier_def[i, j]:
+                _exx += _exx
+                _eyx += _eyx
+            if x_frontier_def[i, j]:
+                _eyy += _eyy
+                _exy += _exy
 
             if x_frontier_def_s[i, j]:
                 _exx = coef * _eyy
@@ -179,11 +180,18 @@ def nfi_calc_stress(
             # conv(m, meany) -> m[i, j] + m[i, j+1]
             # conv(m, meanx) -> m[i, j] + m[i+1, j]
 
+            _duxdx2 = 0
+            _duxdy2 = 0
+            _duydx2 = 0
+            _duydy2 = 0
+
             # Recalcul des du (pour éviter de stocker 4 matrices de plus)
-            _duxdx2 = (uxt[i + 1, j + 1] - uxt[i, j + 1]) * isddx2[i, j] / 2 / lm
-            _duxdy2 = (uxt[i + 1, j + 1] - uxt[i + 1, j]) * isddy2[i, j] / 4 / lm
-            _duydx2 = (uyt[i + 1, j + 1] - uyt[i, j + 1]) * isddx2[i, j] / 4 / lm
-            _duydy2 = (uyt[i + 1, j + 1] - uyt[i + 1, j]) * isddy2[i, j] / 2 / lm
+            if isddx2[i,j]:
+                _duxdx2 += (uxt[i + 1, j + 1] - uxt[i, j + 1]) / 2 / lm
+                _duydx2 += (uyt[i + 1, j + 1] - uyt[i, j + 1]) / 4 / lm
+            if isddy2[i,j]:
+                _duxdy2 += (uxt[i + 1, j + 1] - uxt[i + 1, j]) / 4 / lm
+                _duydy2 += (uyt[i + 1, j + 1] - uyt[i + 1, j]) / 2 / lm
 
             # exx_x = conv(exx + (2*ratio)*eyy, meany/4) + duxdx2
             val_exx_eyy_0 = exx[i, j] + (2.0 * elas_lambda_ratio) * eyy[i, j]
