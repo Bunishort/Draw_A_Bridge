@@ -131,15 +131,23 @@ def nfi_calc_stress(
             # ddy1: [[-1, 1]] -> m[i, j+1] - m[i, j]
             # ddy2: [[0, 0], [-1, 1]] -> m[i+1, j+1] - m[i+1, j]
 
-            _duxdx2 = (uxt[i + 1, j + 1] - uxt[i, j + 1]) * isddx2[i, j] / 2
-            _duxdy2 = (uxt[i + 1, j + 1] - uxt[i + 1, j]) * isddy2[i, j] / 4
-            _duydx2 = (uyt[i + 1, j + 1] - uyt[i, j + 1]) * isddx2[i, j] / 4
-            _duydy2 = (uyt[i + 1, j + 1] - uyt[i + 1, j]) * isddy2[i, j] / 2
+            _exx = 0.0
+            _eyy = 0.0
+            _exy = 0.0
+            _eyx = 0.0
 
-            _exx = (uxt[i + 1, j] - uxt[i, j]) * isddx1[i, j] / 2 + _duxdx2
-            _eyy = (uyt[i, j + 1] - uyt[i, j]) * isddy1[i, j] / 2 + _duydy2
-            _exy = (uxt[i, j + 1] - uxt[i, j]) * isddy1[i, j] / 4 + _duxdy2
-            _eyx = (uyt[i + 1, j] - uyt[i, j]) * isddx1[i, j] / 4 + _duydx2
+            if isddx1[i, j]:
+                _exx += (uxt[i + 1, j] - uxt[i, j]) / 2
+                _eyx += (uyt[i + 1, j] - uyt[i, j]) / 4
+            if isddx2[i, j]:
+                _exx += (uxt[i + 1, j + 1] - uxt[i, j + 1]) / 2
+                _eyx += (uyt[i + 1, j + 1] - uyt[i, j + 1]) / 4
+            if isddy1[i, j]:
+                _eyy += (uyt[i, j + 1] - uyt[i, j]) / 2
+                _exy += (uxt[i, j + 1] - uxt[i, j]) / 4
+            if isddy2[i, j]:
+                _exy += (uxt[i + 1, j + 1] - uxt[i + 1, j]) / 4
+                _eyy += (uyt[i + 1, j + 1] - uyt[i + 1, j]) / 2
 
             _exx /= lm
             _eyy /= lm
