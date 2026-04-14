@@ -173,9 +173,9 @@ def nfi_calc_stress(
 
             # Recalcul des du (pour éviter de stocker 4 matrices de plus)
             _duxdx2 = (uxt[i + 1, j + 1] - uxt[i, j + 1]) * isddx2[i, j] / 2 / lm
+            _duxdy2 = (uxt[i + 1, j + 1] - uxt[i + 1, j]) * isddy2[i, j] / 4 / lm
             _duydx2 = (uyt[i + 1, j + 1] - uyt[i, j + 1]) * isddx2[i, j] / 4 / lm
-            _duydy2 = (uyt[i + 1, j + 1] - uyt[i + 1, j]) * isddy2[i, j] / 4 / lm
-            _duxdy2 = (uxt[i + 1, j + 1] - uxt[i + 1, j]) * isddy2[i, j] / 2 / lm
+            _duydy2 = (uyt[i + 1, j + 1] - uyt[i + 1, j]) * isddy2[i, j] / 2 / lm
 
             # exx_x = conv(exx + (2*ratio)*eyy, meany/4) + duxdx2
             val_exx_eyy_0 = exx[i, j] + (2.0 * elas_lambda_ratio) * eyy[i, j]

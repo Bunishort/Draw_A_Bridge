@@ -46,7 +46,7 @@ print( 'Max Sound speed * dt / lm ')
 print( 'Compression : ' + str(c_p * dt / lm))
 print( 'Shear: ' + str(c_s * dt / lm))
 
-nstep = 10000
+nstep = 1000
 iplot = 100
 kplot=1
 
