@@ -295,6 +295,10 @@ class ElasticProblem:
 
         self.frontier_def = np.bitwise_or(np.bitwise_not(self.isddx1),
                                              np.bitwise_not(self.isddx2))
+        self.isddx1b = self.isddx1.copy()
+        self.isddx2b = self.isddx2.copy()
+        self.isddy1b = self.isddy1.copy()
+        self.isddy2b = self.isddy2.copy()#todo clean
 
         self.isddx1 = np.float32(self.isddx1)
         self.isddx2 = np.float32(self.isddx2)
@@ -491,6 +495,10 @@ class ElasticProblem:
 
         self.frontier_def = np.bitwise_or(np.bitwise_not(self.isddx1),
                                              np.bitwise_not(self.isddx2))
+        self.isddx1b = self.isddx1.copy()
+        self.isddx2b = self.isddx2.copy()
+        self.isddy1b = self.isddy1.copy()
+        self.isddy2b = self.isddy2.copy()#todo clean
 
         self.isddx1 = np.float32(self.isddx1)
         self.isddx2 = np.float32(self.isddx2)
@@ -800,10 +808,10 @@ class ElasticProblem:
             self.explicit_b * self.ux + self.G0 * self.vx,
             self.explicit_b * self.uy + self.G0 * self.vy,
             self.lm,
-            self.isddx1,
-            self.isddx2,
-            self.isddy1,
-            self.isddy2,
+            self.isddx1b,
+            self.isddx2b,
+            self.isddy1b,
+            self.isddy2b,
             self.coef,
             self.elas_lambda_ratio,
             self.y_frontier_defb,
