@@ -137,22 +137,22 @@ def nfi_calc_stress(
             _eyx = 0.0
 
             if isddx1[i, j]:
-                _exx += (uxt[i + 1, j] - uxt[i, j]) / 2
-                _eyx += (uyt[i + 1, j] - uyt[i, j]) / 4
+                _exx += (uxt[i + 1, j] - uxt[i, j])
+                _eyx += (uyt[i + 1, j] - uyt[i, j])
             if isddx2[i, j]:
-                _exx += (uxt[i + 1, j + 1] - uxt[i, j + 1]) / 2
-                _eyx += (uyt[i + 1, j + 1] - uyt[i, j + 1]) / 4
+                _exx += (uxt[i + 1, j + 1] - uxt[i, j + 1])
+                _eyx += (uyt[i + 1, j + 1] - uyt[i, j + 1])
             if isddy1[i, j]:
-                _eyy += (uyt[i, j + 1] - uyt[i, j]) / 2
-                _exy += (uxt[i, j + 1] - uxt[i, j]) / 4
+                _eyy += (uyt[i, j + 1] - uyt[i, j])
+                _exy += (uxt[i, j + 1] - uxt[i, j])
             if isddy2[i, j]:
-                _exy += (uxt[i + 1, j + 1] - uxt[i + 1, j]) / 4
-                _eyy += (uyt[i + 1, j + 1] - uyt[i + 1, j]) / 2
+                _exy += (uxt[i + 1, j + 1] - uxt[i + 1, j])
+                _eyy += (uyt[i + 1, j + 1] - uyt[i + 1, j])
 
-            _exx /= lm
-            _eyy /= lm
-            _exy /= lm
-            _eyx /= lm
+            _exx /= 2 * lm
+            _eyy /= 2 * lm
+            _exy /= 4 * lm
+            _eyx /= 4 * lm
 
             # Application des masques de frontière --> TODO try with if
             if y_frontier_def[i, j]:
