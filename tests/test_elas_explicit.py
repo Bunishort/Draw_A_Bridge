@@ -67,11 +67,7 @@ test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
                                   is_explicit = True, vol_mass=vol_mass, dt = dt, ratio = ratio, tau = tau,
                                   precond_type = precond_type, precond_n = precond_n, precond = precond)
 
-temp = sample.interface.ExplicitAnimation(test, nstep = 1, plot_interval = iplot, upscale_factor = kplot,
-                                          probe_fields = ['ux',], plot_field = 'VM_stress',
-                                          probe_ix = [ixmax,], probe_iy = [int(nx/2),], y_dec = 0., min_scale = -0.00,
-                                            max_scale = 0.02)
-temp.animate() #for numba compilation
+test.calc_stress_explicit()
 
 start = timeit.default_timer()
 
