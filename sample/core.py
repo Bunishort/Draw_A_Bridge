@@ -196,26 +196,22 @@ def nfi_calc_stress(
             exx01, eyy01, exy01, eyx01 = calc_def(i, j+1)
 
             # exx_x = conv(exx + (2*ratio)*eyy, meany/4) + duxdx2
-            val_exx_eyy_0 = exx00 + (2.0 * elas_lambda_ratio) * eyy00
-            val_exx_eyy_1 = exx01 + (2.0 * elas_lambda_ratio) * eyy01
-            exx_x[i, j] = (val_exx_eyy_0 / 4 + val_exx_eyy_1 / 4 + _duxdx2) * isstress_x_edge_l2m[i, j]
+            temp = exx00 + exx01 + (2.0 * elas_lambda_ratio) * (eyy00 + eyy01)
+            exx_x[i, j] = (temp / 4.0 + _duxdx2) * isstress_x_edge_l2m[i, j]
 
             # exy_x = conv(2*exy + eyx, meany/4) + duydx2
-            val_exy_eyx_0 = 2.0 * exy00 + eyx00
-            val_exy_eyx_1 = 2.0 * exy01 + eyx01
-            exy_x[i, j] = (val_exy_eyx_0 / 4 + val_exy_eyx_1 / 4 + _duydx2) * isstress_x_edge_2m[i, j]
+            temp = 2.0 * ( exy00 + exy01 ) + eyx00 + eyx01
+            exy_x[i, j] = (temp / 4.0 + _duydx2) * isstress_x_edge_2m[i, j]
 
             exx10, eyy10, exy10, eyx10 = calc_def(i+1, j)
 
             # eyy_y = conv(eyy + (2*ratio)*exx, meanx/4) + duydy2
-            val_eyy_exx_0 = eyy00 + (2.0 * elas_lambda_ratio) * exx00
-            val_eyy_exx_1 = eyy10 + (2.0 * elas_lambda_ratio) * exx10
-            eyy_y[i, j] = (val_eyy_exx_0 / 4 + val_eyy_exx_1 / 4 + _duydy2) * isstress_y_edge_l2m[i, j]
+            temp = eyy00 + eyy10 + (2.0 * elas_lambda_ratio) * (exx00 + exx10)
+            eyy_y[i, j] = (temp / 4.0 + _duydy2) * isstress_y_edge_l2m[i, j]
 
             # exy_y = conv(exy + 2*eyx, meanx/4) + duxdy2
-            val_exy_eyx2_0 = exy00 + 2.0 * eyx00
-            val_exy_eyx2_1 = exy10 + 2.0 * eyx10
-            exy_y[i, j] = (val_exy_eyx2_0 / 4.0 + val_exy_eyx2_1 / 4 + _duxdy2) * isstress_y_edge_2m[i, j]
+            temp = exy00 + exy10 + 2.0 * (eyx00 + eyx10)
+            exy_y[i, j] = (temp / 4.0 + _duxdy2) * isstress_y_edge_2m[i, j]
 
     return exx_x, exy_x, eyy_y, exy_y
 
