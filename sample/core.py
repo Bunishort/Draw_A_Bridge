@@ -154,7 +154,7 @@ def nfi_calc_stress(
         _exy /= 4 * lm
         _eyx /= 4 * lm
 
-        # Application des masques de frontière --> TODO try with if
+        # Application des masques de frontière
         if y_frontier_def[i, j]:
             _exx += _exx
             _eyx += _eyx
@@ -171,8 +171,7 @@ def nfi_calc_stress(
 
         return _exx, _eyy, _exy, _eyx
 
-    # --- PASSE 2 : MOYENNAGE ET CONTRAINTES ---
-    #TODO try en 1 passe
+    # --- stress loop---
     for i in prange(h - 2):
         for j in range(w - 2):
             # Noyaux de moyenne : meanx = [[1],[1]] / meany = [[1,1]]
