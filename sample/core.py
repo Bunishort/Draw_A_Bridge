@@ -122,60 +122,59 @@ def nfi_calc_stress(
     eyy_y = np.zeros((h, w), dtype=np.float32)
     exy_y = np.zeros((h, w), dtype=np.float32)
 
-    # --- PASSE 1 : DÉFORMATIONS ET FRONTIÈRES ---
-    for i in prange(h - 1):
-        for j in range(w - 1):
-            # Implémentation directe des noyaux avec anchor (0,0)
-            # ddx1: [[-1], [1]] -> m[i+1, j] - m[i, j]
-            # ddx2: [[0, -1], [0, 1]] -> m[i+1, j+1] - m[i, j+1]
-            # ddy1: [[-1, 1]] -> m[i, j+1] - m[i, j]
-            # ddy2: [[0, 0], [-1, 1]] -> m[i+1, j+1] - m[i+1, j]
 
-            _exx = 0.0
-            _eyy = 0.0
-            _exy = 0.0
-            _eyx = 0.0
+    # ---  DEFORMATIONS---
+    def calc_def(i,j):
+        # Implémentation directe des noyaux avec anchor (0,0)
+        # ddx1: [[-1], [1]] -> m[i+1, j] - m[i, j]
+        # ddx2: [[0, -1], [0, 1]] -> m[i+1, j+1] - m[i, j+1]
+        # ddy1: [[-1, 1]] -> m[i, j+1] - m[i, j]
+        # ddy2: [[0, 0], [-1, 1]] -> m[i+1, j+1] - m[i+1, j]
 
-            if isddx1[i, j]:
-                _exx += (uxt[i + 1, j] - uxt[i, j])
-                _eyx += (uyt[i + 1, j] - uyt[i, j])
-            if isddx2[i, j]:
-                _exx += (uxt[i + 1, j + 1] - uxt[i, j + 1])
-                _eyx += (uyt[i + 1, j + 1] - uyt[i, j + 1])
-            if isddy1[i, j]:
-                _eyy += (uyt[i, j + 1] - uyt[i, j])
-                _exy += (uxt[i, j + 1] - uxt[i, j])
-            if isddy2[i, j]:
-                _exy += (uxt[i + 1, j + 1] - uxt[i + 1, j])
-                _eyy += (uyt[i + 1, j + 1] - uyt[i + 1, j])
+        _exx = 0.0
+        _eyy = 0.0
+        _exy = 0.0
+        _eyx = 0.0
 
-            _exx /= 2 * lm
-            _eyy /= 2 * lm
-            _exy /= 4 * lm
-            _eyx /= 4 * lm
+        if isddx1[i, j]:
+            _exx += (uxt[i + 1, j] - uxt[i, j])
+            _eyx += (uyt[i + 1, j] - uyt[i, j])
+        if isddx2[i, j]:
+            _exx += (uxt[i + 1, j + 1] - uxt[i, j + 1])
+            _eyx += (uyt[i + 1, j + 1] - uyt[i, j + 1])
+        if isddy1[i, j]:
+            _eyy += (uyt[i, j + 1] - uyt[i, j])
+            _exy += (uxt[i, j + 1] - uxt[i, j])
+        if isddy2[i, j]:
+            _exy += (uxt[i + 1, j + 1] - uxt[i + 1, j])
+            _eyy += (uyt[i + 1, j + 1] - uyt[i + 1, j])
 
-            # Application des masques de frontière --> TODO try with if
-            if y_frontier_def[i, j]:
-                _exx += _exx
-                _eyx += _eyx
-            if x_frontier_def[i, j]:
-                _eyy += _eyy
-                _exy += _exy
+        _exx /= 2 * lm
+        _eyy /= 2 * lm
+        _exy /= 4 * lm
+        _eyx /= 4 * lm
 
-            if x_frontier_def_s[i, j]:
-                _exx = coef * _eyy
-                _eyx = -_exy
-            if y_frontier_def_s[i, j]:
-                _eyy = coef * _exx
-                _exy = -_eyx
+        # Application des masques de frontière --> TODO try with if
+        if y_frontier_def[i, j]:
+            _exx += _exx
+            _eyx += _eyx
+        if x_frontier_def[i, j]:
+            _eyy += _eyy
+            _exy += _exy
 
-            exx[i, j], eyy[i, j] = _exx, _eyy
-            exy[i, j], eyx[i, j] = _exy, _eyx
+        if x_frontier_def_s[i, j]:
+            _exx = coef * _eyy
+            _eyx = -_exy
+        if y_frontier_def_s[i, j]:
+            _eyy = coef * _exx
+            _exy = -_eyx
+
+        return _exx, _eyy, _exy, _eyx
 
     # --- PASSE 2 : MOYENNAGE ET CONTRAINTES ---
     #TODO try en 1 passe
-    for i in prange(h - 1):
-        for j in range(w - 1):
+    for i in prange(h - 2):
+        for j in range(w - 2):
             # Noyaux de moyenne : meanx = [[1],[1]] / meany = [[1,1]]
             # conv(m, meany) -> m[i, j] + m[i, j+1]
             # conv(m, meanx) -> m[i, j] + m[i+1, j]
@@ -193,24 +192,29 @@ def nfi_calc_stress(
                 _duxdy2 += (uxt[i + 1, j + 1] - uxt[i + 1, j]) / 4 / lm
                 _duydy2 += (uyt[i + 1, j + 1] - uyt[i + 1, j]) / 2 / lm
 
+            exx00, eyy00, exy00, eyx00 = calc_def(i,j)
+            exx01, eyy01, exy01, eyx01 = calc_def(i, j+1)
+
             # exx_x = conv(exx + (2*ratio)*eyy, meany/4) + duxdx2
-            val_exx_eyy_0 = exx[i, j] + (2.0 * elas_lambda_ratio) * eyy[i, j]
-            val_exx_eyy_1 = exx[i, j + 1] + (2.0 * elas_lambda_ratio) * eyy[i, j + 1]
+            val_exx_eyy_0 = exx00 + (2.0 * elas_lambda_ratio) * eyy00
+            val_exx_eyy_1 = exx01 + (2.0 * elas_lambda_ratio) * eyy01
             exx_x[i, j] = (val_exx_eyy_0 / 4 + val_exx_eyy_1 / 4 + _duxdx2) * isstress_x_edge_l2m[i, j]
 
             # exy_x = conv(2*exy + eyx, meany/4) + duydx2
-            val_exy_eyx_0 = 2.0 * exy[i, j] + eyx[i, j]
-            val_exy_eyx_1 = 2.0 * exy[i, j + 1] + eyx[i, j + 1]
+            val_exy_eyx_0 = 2.0 * exy00 + eyx00
+            val_exy_eyx_1 = 2.0 * exy01 + eyx01
             exy_x[i, j] = (val_exy_eyx_0 / 4 + val_exy_eyx_1 / 4 + _duydx2) * isstress_x_edge_2m[i, j]
 
+            exx10, eyy10, exy10, eyx10 = calc_def(i+1, j)
+
             # eyy_y = conv(eyy + (2*ratio)*exx, meanx/4) + duydy2
-            val_eyy_exx_0 = eyy[i, j] + (2.0 * elas_lambda_ratio) * exx[i, j]
-            val_eyy_exx_1 = eyy[i + 1, j] + (2.0 * elas_lambda_ratio) * exx[i + 1, j]
+            val_eyy_exx_0 = eyy00 + (2.0 * elas_lambda_ratio) * exx00
+            val_eyy_exx_1 = eyy10 + (2.0 * elas_lambda_ratio) * exx10
             eyy_y[i, j] = (val_eyy_exx_0 / 4 + val_eyy_exx_1 / 4 + _duydy2) * isstress_y_edge_l2m[i, j]
 
             # exy_y = conv(exy + 2*eyx, meanx/4) + duxdy2
-            val_exy_eyx2_0 = exy[i, j] + 2.0 * eyx[i, j]
-            val_exy_eyx2_1 = exy[i + 1, j] + 2.0 * eyx[i + 1, j]
+            val_exy_eyx2_0 = exy00 + 2.0 * eyx00
+            val_exy_eyx2_1 = exy10 + 2.0 * eyx10
             exy_y[i, j] = (val_exy_eyx2_0 / 4.0 + val_exy_eyx2_1 / 4 + _duxdy2) * isstress_y_edge_2m[i, j]
 
     return exx_x, exy_x, eyy_y, exy_y
