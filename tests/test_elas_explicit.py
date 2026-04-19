@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import timeit
 
-k = 21
+k = 36
 nx=k*7
 ny=k*7
 
@@ -31,7 +31,7 @@ px = 0.01
 lm = 4.5/k
 
 vol_mass = 0.5
-dt = 0.3 / 7
+dt = 0.02
 ratio = 0.2  # must be between 0 and 1
 tau = 3
 
@@ -46,7 +46,7 @@ print( 'Max Sound speed * dt / lm ')
 print( 'Compression : ' + str(c_p * dt / lm))
 print( 'Shear: ' + str(c_s * dt / lm))
 
-nstep = 10000
+nstep = 3000
 iplot = 100000
 kplot=1
 
@@ -61,13 +61,19 @@ px_bound = np.zeros(solid.shape)
 px_bound[gridx == np.max(gridx[solid])] = px
 py_bound = np.zeros(solid.shape)
 
-start = timeit.default_timer()
 
 test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
                                   px_bound=px_bound,py_bound=py_bound,max_iter=max_iter,max_res = max_res,
                                   is_explicit = True, vol_mass=vol_mass, dt = dt, ratio = ratio, tau = tau,
                                   precond_type = precond_type, precond_n = precond_n, precond = precond)
 
+temp = sample.interface.ExplicitAnimation(test, nstep = 1, plot_interval = iplot, upscale_factor = kplot,
+                                          probe_fields = ['ux',], plot_field = 'VM_stress',
+                                          probe_ix = [ixmax,], probe_iy = [int(nx/2),], y_dec = 0., min_scale = -0.00,
+                                            max_scale = 0.02)
+temp.animate() #for numba compilation
+
+start = timeit.default_timer()
 
 anim = sample.interface.ExplicitAnimation(test, nstep = nstep, plot_interval = iplot, upscale_factor = kplot,
                                           probe_fields = ['ux',], plot_field = 'VM_stress',
