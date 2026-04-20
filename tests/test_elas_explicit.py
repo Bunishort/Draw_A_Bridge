@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import timeit
 
-k = 36
+k = 36 #36*7 = 252
 nx=k*7
 ny=k*7
 
