@@ -214,6 +214,119 @@ def nfi_calc_stress(
 
     return exx_x, exy_x, eyy_y, exy_y
 
+def explicit_step(
+    ux,
+    uy,
+    vx,
+    vy,
+    sxx_x_old, sxy_x_old, syy_y_old, sxy_y_old,
+    fx_imp, fy_imp,
+    lm ,
+    isddx1,
+    isddx2,
+    isddy1,
+    isddy2,
+    coef,
+    elas_lambda_ratio,
+    y_frontier_def,
+    x_frontier_def,
+    x_frontier_def_s,
+    y_frontier_def_s,
+    isstress_x_edge_l2m,
+    isstress_y_edge_l2m,
+    isstress_x_edge_2m,
+    isstress_y_edge_2m,
+    explicit_b,
+    G0,
+    visco_fact_1,#(1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
+    visco_fact_2,#exp(-explicit_a *a_dt)
+    bx,by,
+    dt_by_vol_mass,
+    damping_eff,dt,
+    ):
+
+
+    # calc_stress_explicit(self):
+    #######
+    # Calculating stress for a Standard Linear Solid (Zener)
+    # Viscoelastic parameters G0/G1/Eta1 normalized so that the long term response
+    # is the same as the elastic response
+
+    # Numba version
+    sxx_x, sxy_x, syy_y, sxy_y = nfi_calc_stress(
+        explicit_b * ux + G0 * vx,
+        explicit_b * uy + G0 * vy,
+        lm,
+        isddx1,
+        isddx2,
+        isddy1,
+        isddy2,
+        coef,
+        elas_lambda_ratio,
+        y_frontier_def,
+        x_frontier_def,
+        x_frontier_def_s,
+        y_frontier_def_s,
+        isstress_x_edge_l2m,
+        isstress_y_edge_l2m,
+        isstress_x_edge_2m,
+        isstress_y_edge_2m
+    )
+
+
+    sxx_x *= visco_fact_1
+    sxy_x *= visco_fact_1
+    syy_y *= visco_fact_1
+    sxy_y *= visco_fact_1
+
+    sxx_x += sxx_x_old * visco_fact_2
+    sxy_x += sxy_x_old * visco_fact_2
+    syy_y += syy_y_old * visco_fact_2
+    sxy_y += sxy_y_old * visco_fact_2
+
+    sxx_x_old[:] = sxx_x
+    sxy_x_old[:] = sxy_x
+    syy_y_old[:] = syy_y
+    sxy_y_old[:] = sxy_y
+
+    ###########################
+    #Calculate stress divergence from stress values on edges
+    ###########################
+    h, w = ux.shape
+
+    # On commence à 1 pour éviter les débordements d'index (i-1, j-1)
+    for i in prange(1, h):
+        for j in range(1, w):
+            c_sxx_dx = - sxx_x[i - 1, j - 1] + sxx_x[i, j - 1]
+            c_sxy_dx = - sxy_y[i - 1, j - 1] +  sxy_y[i, j - 1]
+            c_sxy_dy = -sxy_x[i - 1, j - 1] + sxy_x[i - 1, j]
+            c_syy_dy = -syy_y[i - 1, j - 1] + syy_y[i - 1, j]
+
+            # --- Calcul final avec le masque ---
+            m = solid_not_uimp[i, j] / lm
+            a_u_x[i, j] = (c_sxx_dx + c_sxy_dy) * m
+            a_u_y[i, j] = (c_syy_dy + c_sxy_dx) * m
+
+    acc_x = ( a_u_x - bx ) #division by vol_mass on next line for speed
+    acc_y = ( a_u_y - by )
+
+    dvx = acc_x * dt_by_vol_mass
+    dvy = acc_y * dt_by_vol_mass
+
+    vx += dvx
+    vy += dvy
+
+    fx_imp -= damping_eff * dvx
+    fy_imp -= damping_eff * dvy
+
+    ux += vx * dt
+    uy += vy * dt
+
+    return ux
+
+
+
+
 class ElasticProblem:
     """
     :param solid: Bool 2d matrix containing the position of the solid on the grid (1 if solid, 0 if not)
