@@ -303,8 +303,8 @@ def explicit_step(
 
             #stress divergence calculation
             c_sxx_dx = - sxx_x[i - 1, j - 1] + sxx_x[i, j - 1]
-            c_sxy_dx = - sxy_y[i - 1, j - 1] +  sxy_y[i, j - 1]
-            c_sxy_dy = -sxy_x[i - 1, j - 1] + sxy_x[i - 1, j]
+            c_sxy_dx = - sxy_x[i - 1, j - 1] +  sxy_x[i, j - 1]
+            c_sxy_dy = -sxy_y[i - 1, j - 1] + sxy_y[i - 1, j]
             c_syy_dy = -syy_y[i - 1, j - 1] + syy_y[i - 1, j]
 
             m = solid_not_uimp[i, j] / lm
