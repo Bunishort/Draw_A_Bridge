@@ -326,7 +326,8 @@ def explicit_step(
             ux[i, j] += vx[i, j] * dt
             uy[i, j] += vy[i, j] * dt
 
-    return ux, uy, vx, vy
+    return (ux, uy, vx, vy, sxx_x_old,
+            sxy_x_old, syy_y_old, sxy_y_old, fx_imp, fy_imp)
 
 
 
@@ -997,7 +998,9 @@ class ElasticProblem:
         self.uy += self.vy * self.dt
 
     def explicit_step(self):
-        explicit_step(
+        (self.ux, self.uy, self.vx, self.vy,
+         self.sxx_x_old, self.sxy_x_old, self.syy_y_old,
+         self.sxy_y_old, self.fx_imp, self.fy_imp) = explicit_step(
             self.ux,
             self.uy,
             self.vx,
