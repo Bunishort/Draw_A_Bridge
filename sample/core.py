@@ -311,6 +311,8 @@ def explicit_step(
             a_u_x = (c_sxx_dx + c_sxy_dy) * m
             a_u_y = (c_syy_dy + c_sxy_dx) * m
 
+            #Update speed and position from acceleration
+
             dvx = ( a_u_x - bx[i, j] ) #dvx = acc_x * dt
             dvy = ( a_u_y - by[i, j] )
 
