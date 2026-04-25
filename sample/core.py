@@ -214,6 +214,7 @@ def nfi_calc_stress(
 
     return exx_x, exy_x, eyy_y, exy_y
 
+@njit(parallel=True, fastmath=True)
 def explicit_step(
     ux,
     uy,
@@ -236,6 +237,7 @@ def explicit_step(
     isstress_y_edge_l2m,
     isstress_x_edge_2m,
     isstress_y_edge_2m,
+    solid_not_uimp,
     explicit_b,
     G0,
     visco_fact_1,#(1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
@@ -274,22 +276,8 @@ def explicit_step(
     )
 
 
-    sxx_x *= visco_fact_1
-    sxy_x *= visco_fact_1
-    syy_y *= visco_fact_1
-    sxy_y *= visco_fact_1
-
-    sxx_x += sxx_x_old * visco_fact_2
-    sxy_x += sxy_x_old * visco_fact_2
-    syy_y += syy_y_old * visco_fact_2
-    sxy_y += sxy_y_old * visco_fact_2
-
-    sxx_x_old[:] = sxx_x
-    sxy_x_old[:] = sxy_x
-    syy_y_old[:] = syy_y
-    sxy_y_old[:] = sxy_y
-
     ###########################
+    # Update stress with viscoelastic explicit behaviour and
     #Calculate stress divergence from stress values on edges
     ###########################
     h, w = ux.shape
@@ -297,32 +285,48 @@ def explicit_step(
     # On commence à 1 pour éviter les débordements d'index (i-1, j-1)
     for i in prange(1, h):
         for j in range(1, w):
+            #Stress update for viscoelasticity
+            sxx_x[i, j] *= visco_fact_1
+            sxy_x[i, j] *= visco_fact_1
+            syy_y[i, j] *= visco_fact_1
+            sxy_y[i, j] *= visco_fact_1
+
+            sxx_x[i, j] += sxx_x_old[i, j] * visco_fact_2
+            sxy_x[i, j] += sxy_x_old[i, j] * visco_fact_2
+            syy_y[i, j] += syy_y_old[i, j] * visco_fact_2
+            sxy_y[i, j] += sxy_y_old[i, j] * visco_fact_2
+
+            sxx_x_old[i, j] = sxx_x[i, j]
+            sxy_x_old[i, j] = sxy_x[i, j]
+            syy_y_old[i, j] = syy_y[i, j]
+            sxy_y_old[i, j] = sxy_y[i, j]
+
+            #stress divergence calculation
             c_sxx_dx = - sxx_x[i - 1, j - 1] + sxx_x[i, j - 1]
             c_sxy_dx = - sxy_y[i - 1, j - 1] +  sxy_y[i, j - 1]
             c_sxy_dy = -sxy_x[i - 1, j - 1] + sxy_x[i - 1, j]
             c_syy_dy = -syy_y[i - 1, j - 1] + syy_y[i - 1, j]
 
-            # --- Calcul final avec le masque ---
             m = solid_not_uimp[i, j] / lm
-            a_u_x[i, j] = (c_sxx_dx + c_sxy_dy) * m
-            a_u_y[i, j] = (c_syy_dy + c_sxy_dx) * m
+            a_u_x = (c_sxx_dx + c_sxy_dy) * m
+            a_u_y = (c_syy_dy + c_sxy_dx) * m
 
-    acc_x = ( a_u_x - bx ) #division by vol_mass on next line for speed
-    acc_y = ( a_u_y - by )
+            dvx = ( a_u_x - bx[i, j] ) #dvx = acc_x * dt
+            dvy = ( a_u_y - by[i, j] )
 
-    dvx = acc_x * dt_by_vol_mass
-    dvy = acc_y * dt_by_vol_mass
+            dvx *= dt_by_vol_mass
+            dvy *= dt_by_vol_mass
 
-    vx += dvx
-    vy += dvy
+            vx[i, j] += dvx
+            vy[i, j] += dvy
 
-    fx_imp -= damping_eff * dvx
-    fy_imp -= damping_eff * dvy
+            fx_imp[i, j] -= damping_eff * dvx
+            fy_imp[i, j] -= damping_eff * dvy
 
-    ux += vx * dt
-    uy += vy * dt
+            ux[i, j] += vx[i, j] * dt
+            uy[i, j] += vy[i, j] * dt
 
-    return ux
+    return ux, uy, vx, vy
 
 
 
@@ -972,23 +976,13 @@ class ElasticProblem:
         return sxx_x,sxy_x,syy_y,sxy_y
 
     @profile
-    def explicit_step(self):
+    def explicit_step_old(self):
         #Explicit step using LeapFrog method
         sxx_x, sxy_x, syy_y, sxy_y = self.calc_stress_explicit()
         a_u_x, a_u_y = self.calc_a_u_sig(sxx_x, sxy_x, syy_y, sxy_y )
 
         acc_x = ( a_u_x - self.bx ) #division by vol_mass on next line for speed
         acc_y = ( a_u_y - self.by )
-
-        # if self.precond:
-        #     #repartitioning the acceleration on surrounding cells, keeping the total accel constant.
-        #     # ( would need adaptation if vol mass not constant)
-        #     acc_x = (conv_big(acc_x / self.precond_norm_x, self.precond_xx)
-        #              + conv_big(acc_y / self.precond_norm_y, self.precond_yx))
-        #     acc_y = (conv_big(acc_y / self.precond_norm_y, self.precond_yy)
-        #              + conv_big(acc_x / self.precond_norm_x, self.precond_xy))
-        #     acc_x[np.bitwise_not(self.movable)] = 0
-        #     acc_y[np.bitwise_not(self.movable)] = 0
 
         dvx = acc_x * ( self.dt/ self.vol_mass )
         dvy = acc_y * ( self.dt/ self.vol_mass )
@@ -1001,6 +995,39 @@ class ElasticProblem:
 
         self.ux += self.vx * self.dt
         self.uy += self.vy * self.dt
+
+    def explicit_step(self):
+        explicit_step(
+            self.ux,
+            self.uy,
+            self.vx,
+            self.vy,
+            self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old,
+            self.fx_imp, self.fy_imp,
+            self.lm,
+            self.isddx1b,
+            self.isddx2b,
+            self.isddy1b,
+            self.isddy2b,
+            self.coef,
+            self.elas_lambda_ratio,
+            self.y_frontier_defb,
+            self.x_frontier_defb,
+            self.x_frontier_def_sb,
+            self.y_frontier_def_sb,
+            self.isstress_x_edge_lambda_2mu,
+            self.isstress_y_edge_lambda_2mu,
+            self.isstress_x_edge_2mu,
+            self.isstress_y_edge_2mu,
+            self.solid_not_uimp,
+            self.explicit_b,
+            self.G0,
+            (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a, #visco_fact_1,
+            np.exp(-self.explicit_a * self.dt), #viscu_fact2
+            self.bx, self.by,
+            self.dt / self.vol_mass,
+            self.damping_eff, self.dt
+        )
 
     def calc_VM_stress(self):
         # Calculate the second invariant of the deviatoric stress tensor
