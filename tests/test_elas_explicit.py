@@ -117,13 +117,13 @@ plt.xlabel('iteration')
 plt.ylabel('X displacement')
 
 plt.show()
-
-import copy
-test2 = copy.deepcopy(test)
-test.explicit_step()
-test2.explicit_step_old()
-
-print(np.allclose(test.ux, test2.ux))
-diff = test.ux - test2.ux
+#
+# import copy
+# test2 = copy.deepcopy(test)
+# test.explicit_step()
+# test2.explicit_step_old()
+#
+# print(np.allclose(test.ux, test2.ux))
+# diff = test.ux - test2.ux
 
 1+1

@@ -92,7 +92,9 @@ def conv_big(matrix, kernel):
 
 @njit(parallel=True, fastmath=True)
 def nfi_calc_stress(
-        uxt, uyt, lm ,
+    uxt, uyt,
+    sxx_x_old, sxy_x_old, syy_y_old, sxy_y_old,
+    lm ,
     isddx1,
     isddx2,
     isddy1,
@@ -106,16 +108,13 @@ def nfi_calc_stress(
     isstress_x_edge_l2m,
     isstress_y_edge_l2m,
     isstress_x_edge_2m,
-    isstress_y_edge_2m
+    isstress_y_edge_2m,
+    visco_fact_1,  # (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
+    visco_fact_2 #np.exp(-self.explicit_a * self.dt)
 ):
+    #equivalent to self.calc_stress + viscoelastic explicit : need to do all in one loop
 
     h, w = uxt.shape
-    # Pre-allocation des matrices de déformation
-    exx = np.zeros((h, w), dtype=np.float32)
-    eyy = np.zeros((h, w), dtype=np.float32)
-    exy = np.zeros((h, w), dtype=np.float32)
-    eyx = np.zeros((h, w), dtype=np.float32)
-
     # Sorties
     exx_x = np.zeros((h, w), dtype=np.float32)
     exy_x = np.zeros((h, w), dtype=np.float32)
@@ -212,9 +211,26 @@ def nfi_calc_stress(
             temp = exy00 + exy10 + 2.0 * (eyx00 + eyx10)
             exy_y[i, j] = (temp / 4.0 + _duxdy2) * isstress_y_edge_2m[i, j]
 
+            #Update viscoelastic values
+            #Stress update for viscoelasticity
+            exx_x[i, j] *= visco_fact_1
+            exy_x[i, j] *= visco_fact_1
+            eyy_y[i, j] *= visco_fact_1
+            exy_y[i, j] *= visco_fact_1
+
+            exx_x[i, j] += sxx_x_old[i, j] * visco_fact_2
+            exy_x[i, j] += sxy_x_old[i, j] * visco_fact_2
+            eyy_y[i, j] += syy_y_old[i, j] * visco_fact_2
+            exy_y[i, j] += sxy_y_old[i, j] * visco_fact_2
+
+            sxx_x_old[i, j] = exx_x[i, j]
+            sxy_x_old[i, j] = exy_x[i, j]
+            syy_y_old[i, j] = eyy_y[i, j]
+            sxy_y_old[i, j] = exy_y[i, j]
+
     return exx_x, exy_x, eyy_y, exy_y
 
-@njit(parallel=False, fastmath=False)
+@njit(parallel=True, fastmath=True)
 def explicit_step(
     ux,
     uy,
@@ -258,6 +274,7 @@ def explicit_step(
     sxx_x, sxy_x, syy_y, sxy_y = nfi_calc_stress(
         explicit_b * ux + G0 * vx,
         explicit_b * uy + G0 * vy,
+        sxx_x_old, sxy_x_old, syy_y_old, sxy_y_old,
         lm,
         isddx1,
         isddx2,
@@ -272,7 +289,9 @@ def explicit_step(
         isstress_x_edge_l2m,
         isstress_y_edge_l2m,
         isstress_x_edge_2m,
-        isstress_y_edge_2m
+        isstress_y_edge_2m,
+        visco_fact_1,#(1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
+        visco_fact_2
     )
 
 
@@ -285,21 +304,6 @@ def explicit_step(
     # On commence à 1 pour éviter les débordements d'index (i-1, j-1)
     for i in prange(1, h):
         for j in range(1, w):
-            #Stress update for viscoelasticity
-            sxx_x[i, j] *= visco_fact_1
-            sxy_x[i, j] *= visco_fact_1
-            syy_y[i, j] *= visco_fact_1
-            sxy_y[i, j] *= visco_fact_1
-
-            sxx_x[i, j] += sxx_x_old[i, j] * visco_fact_2
-            sxy_x[i, j] += sxy_x_old[i, j] * visco_fact_2
-            syy_y[i, j] += syy_y_old[i, j] * visco_fact_2
-            sxy_y[i, j] += sxy_y_old[i, j] * visco_fact_2
-
-            sxx_x_old[i, j] = sxx_x[i, j]
-            sxy_x_old[i, j] = sxy_x[i, j]
-            syy_y_old[i, j] = syy_y[i, j]
-            sxy_y_old[i, j] = sxy_y[i, j]
 
             #stress divergence calculation
             c_sxx_dx = - sxx_x[i - 1, j - 1] + sxx_x[i, j - 1]
@@ -929,6 +933,7 @@ class ElasticProblem:
         sxx_x, sxy_x, syy_y, sxy_y = nfi_calc_stress(
             ux,
             uy,
+            self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old,
             self.lm,
             self.isddx1b,
             self.isddx2b,
@@ -943,7 +948,9 @@ class ElasticProblem:
             self.isstress_x_edge_lambda_2mu,
             self.isstress_y_edge_lambda_2mu,
             self.isstress_x_edge_2mu,
-            self.isstress_y_edge_2mu
+            self.isstress_y_edge_2mu,
+            (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a,  # visco_fact_1,
+            np.exp(-self.explicit_a * self.dt)
         )
         return sxx_x, sxy_x, syy_y, sxy_y
 
@@ -955,30 +962,9 @@ class ElasticProblem:
         # is the same as the elastic response
 
         #NUmpy+OpenCV version
-        # sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress(
-        #     self.explicit_b * self.ux + self.G0 * self.vx,
-        #     self.explicit_b * self.uy + self.G0 * self.vy)
-
-        #Numba version
-        sxx_x, sxy_x, syy_y, sxy_y = nfi_calc_stress(
+        sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress(
             self.explicit_b * self.ux + self.G0 * self.vx,
-            self.explicit_b * self.uy + self.G0 * self.vy,
-            self.lm,
-            self.isddx1b,
-            self.isddx2b,
-            self.isddy1b,
-            self.isddy2b,
-            self.coef,
-            self.elas_lambda_ratio,
-            self.y_frontier_defb,
-            self.x_frontier_defb,
-            self.x_frontier_def_sb,
-            self.y_frontier_def_sb,
-            self.isstress_x_edge_lambda_2mu,
-            self.isstress_y_edge_lambda_2mu,
-            self.isstress_x_edge_2mu,
-            self.isstress_y_edge_2mu
-        )
+            self.explicit_b * self.uy + self.G0 * self.vy)
 
         temp = (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
         sxx_x *= temp
