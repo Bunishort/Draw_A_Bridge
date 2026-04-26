@@ -214,7 +214,7 @@ def nfi_calc_stress(
 
     return exx_x, exy_x, eyy_y, exy_y
 
-@njit(parallel=True, fastmath=True)
+@njit(parallel=False, fastmath=False)
 def explicit_step(
     ux,
     uy,
@@ -303,9 +303,9 @@ def explicit_step(
 
             #stress divergence calculation
             c_sxx_dx = - sxx_x[i - 1, j - 1] + sxx_x[i, j - 1]
-            c_sxy_dx = - sxy_x[i - 1, j - 1] +  sxy_x[i, j - 1]
-            c_sxy_dy = -sxy_y[i - 1, j - 1] + sxy_y[i - 1, j]
-            c_syy_dy = -syy_y[i - 1, j - 1] + syy_y[i - 1, j]
+            c_sxy_dx = - sxy_x[i - 1, j - 1] + sxy_x[i, j - 1]
+            c_sxy_dy = - sxy_y[i - 1, j - 1] + sxy_y[i - 1, j]
+            c_syy_dy = - syy_y[i - 1, j - 1] + syy_y[i - 1, j]
 
             m = solid_not_uimp[i, j] / lm
             a_u_x = (c_sxx_dx + c_sxy_dy) * m
@@ -925,6 +925,27 @@ class ElasticProblem:
         exy_y *= self.isstress_y_edge_2mu
 
         return exx_x,exy_x,eyy_y,exy_y
+    def nfi_calc_stress(self, ux, uy):
+        sxx_x, sxy_x, syy_y, sxy_y = nfi_calc_stress(
+            ux,
+            uy,
+            self.lm,
+            self.isddx1b,
+            self.isddx2b,
+            self.isddy1b,
+            self.isddy2b,
+            self.coef,
+            self.elas_lambda_ratio,
+            self.y_frontier_defb,
+            self.x_frontier_defb,
+            self.x_frontier_def_sb,
+            self.y_frontier_def_sb,
+            self.isstress_x_edge_lambda_2mu,
+            self.isstress_y_edge_lambda_2mu,
+            self.isstress_x_edge_2mu,
+            self.isstress_y_edge_2mu
+        )
+        return sxx_x, sxy_x, syy_y, sxy_y
 
     @profile
     def calc_stress_explicit(self):

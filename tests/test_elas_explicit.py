@@ -1,3 +1,5 @@
+import copy
+
 from context import sample
 import numpy as np
 import matplotlib.pyplot as plt
@@ -79,7 +81,7 @@ anim.animate()
 
 stop = timeit.default_timer()
 print('Explicit loop Time: ', stop - start)
-print('Average time step time: ', (stop - start) / nstep)
+# print('Average time step time: ', (stop - start) / nstep)
 
 
 uxt = anim.probe_vals['ux' + str(ixmax) + '_' + str(int(nx/2))]
@@ -116,5 +118,12 @@ plt.ylabel('X displacement')
 
 plt.show()
 
+import copy
+test2 = copy.deepcopy(test)
+test.explicit_step()
+test2.explicit_step_old()
+
+print(np.allclose(test.ux, test2.ux))
+diff = test.ux - test2.ux
 
 1+1
