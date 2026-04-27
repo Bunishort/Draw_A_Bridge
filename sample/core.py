@@ -5,7 +5,8 @@ import numpy as np
 from cv2 import filter2D
 # from torchgen.native_function_generation import self_to_out_signature
 from line_profiler import profile
-import numba
+from numba import njit, prange
+
 ###Remark : pyqt6 needed only for matplotlib show, maybe not necessary for pygame !
 
 def get_frontier(solid):
@@ -88,6 +89,254 @@ def conv_big(matrix, kernel):
     else:
         anch = (-1,-1)
     return filter2D(matrix,-1,kernel,anchor=anch)
+
+@njit(parallel=True, fastmath=True)
+def nfi_calc_stress(
+    uxt, uyt,
+    sxx_x_old, sxy_x_old, syy_y_old, sxy_y_old,
+    lm ,
+    isddx1,
+    isddx2,
+    isddy1,
+    isddy2,
+    coef,
+    elas_lambda_ratio,
+    y_frontier_def,
+    x_frontier_def,
+    x_frontier_def_s,
+    y_frontier_def_s,
+    isstress_x_edge_l2m,
+    isstress_y_edge_l2m,
+    isstress_x_edge_2m,
+    isstress_y_edge_2m,
+    visco_fact_1,  # (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
+    visco_fact_2 #np.exp(-self.explicit_a * self.dt)
+):
+    #equivalent to self.calc_stress + viscoelastic explicit : need to do all in one loop
+
+    h, w = uxt.shape
+    # Sorties
+    exx_x = np.zeros((h, w), dtype=np.float32)
+    exy_x = np.zeros((h, w), dtype=np.float32)
+    eyy_y = np.zeros((h, w), dtype=np.float32)
+    exy_y = np.zeros((h, w), dtype=np.float32)
+
+
+    # ---  DEFORMATIONS---
+    def calc_def(i,j):
+        # Implémentation directe des noyaux avec anchor (0,0)
+        # ddx1: [[-1], [1]] -> m[i+1, j] - m[i, j]
+        # ddx2: [[0, -1], [0, 1]] -> m[i+1, j+1] - m[i, j+1]
+        # ddy1: [[-1, 1]] -> m[i, j+1] - m[i, j]
+        # ddy2: [[0, 0], [-1, 1]] -> m[i+1, j+1] - m[i+1, j]
+
+        _exx = 0.0
+        _eyy = 0.0
+        _exy = 0.0
+        _eyx = 0.0
+
+        if isddx1[i, j]:
+            _exx += (uxt[i + 1, j] - uxt[i, j])
+            _eyx += (uyt[i + 1, j] - uyt[i, j])
+        if isddx2[i, j]:
+            _exx += (uxt[i + 1, j + 1] - uxt[i, j + 1])
+            _eyx += (uyt[i + 1, j + 1] - uyt[i, j + 1])
+        if isddy1[i, j]:
+            _eyy += (uyt[i, j + 1] - uyt[i, j])
+            _exy += (uxt[i, j + 1] - uxt[i, j])
+        if isddy2[i, j]:
+            _exy += (uxt[i + 1, j + 1] - uxt[i + 1, j])
+            _eyy += (uyt[i + 1, j + 1] - uyt[i + 1, j])
+
+        _exx /= 2 * lm
+        _eyy /= 2 * lm
+        _exy /= 4 * lm
+        _eyx /= 4 * lm
+
+        # Application des masques de frontière
+        if y_frontier_def[i, j]:
+            _exx += _exx
+            _eyx += _eyx
+        if x_frontier_def[i, j]:
+            _eyy += _eyy
+            _exy += _exy
+
+        if x_frontier_def_s[i, j]:
+            _exx = coef * _eyy
+            _eyx = -_exy
+        if y_frontier_def_s[i, j]:
+            _eyy = coef * _exx
+            _exy = -_eyx
+
+        return _exx, _eyy, _exy, _eyx
+
+    # --- stress loop---
+    for i in prange(h - 2):
+        for j in range(w - 2):
+            # Noyaux de moyenne : meanx = [[1],[1]] / meany = [[1,1]]
+            # conv(m, meany) -> m[i, j] + m[i, j+1]
+            # conv(m, meanx) -> m[i, j] + m[i+1, j]
+
+            _duxdx2 = 0
+            _duxdy2 = 0
+            _duydx2 = 0
+            _duydy2 = 0
+
+            # Recalcul des du (pour éviter de stocker 4 matrices de plus)
+            if isddx2[i,j]:
+                _duxdx2 += (uxt[i + 1, j + 1] - uxt[i, j + 1]) / 2 / lm
+                _duydx2 += (uyt[i + 1, j + 1] - uyt[i, j + 1]) / 4 / lm
+            if isddy2[i,j]:
+                _duxdy2 += (uxt[i + 1, j + 1] - uxt[i + 1, j]) / 4 / lm
+                _duydy2 += (uyt[i + 1, j + 1] - uyt[i + 1, j]) / 2 / lm
+
+            exx00, eyy00, exy00, eyx00 = calc_def(i,j)
+            exx01, eyy01, exy01, eyx01 = calc_def(i, j+1)
+
+            # exx_x = conv(exx + (2*ratio)*eyy, meany/4) + duxdx2
+            temp = exx00 + exx01 + (2.0 * elas_lambda_ratio) * (eyy00 + eyy01)
+            exx_x[i, j] = (temp / 4.0 + _duxdx2) * isstress_x_edge_l2m[i, j]
+
+            # exy_x = conv(2*exy + eyx, meany/4) + duydx2
+            temp = 2.0 * ( exy00 + exy01 ) + eyx00 + eyx01
+            exy_x[i, j] = (temp / 4.0 + _duydx2) * isstress_x_edge_2m[i, j]
+
+            exx10, eyy10, exy10, eyx10 = calc_def(i+1, j)
+
+            # eyy_y = conv(eyy + (2*ratio)*exx, meanx/4) + duydy2
+            temp = eyy00 + eyy10 + (2.0 * elas_lambda_ratio) * (exx00 + exx10)
+            eyy_y[i, j] = (temp / 4.0 + _duydy2) * isstress_y_edge_l2m[i, j]
+
+            # exy_y = conv(exy + 2*eyx, meanx/4) + duxdy2
+            temp = exy00 + exy10 + 2.0 * (eyx00 + eyx10)
+            exy_y[i, j] = (temp / 4.0 + _duxdy2) * isstress_y_edge_2m[i, j]
+
+            #Update viscoelastic values
+            #Stress update for viscoelasticity
+            exx_x[i, j] *= visco_fact_1
+            exy_x[i, j] *= visco_fact_1
+            eyy_y[i, j] *= visco_fact_1
+            exy_y[i, j] *= visco_fact_1
+
+            exx_x[i, j] += sxx_x_old[i, j] * visco_fact_2
+            exy_x[i, j] += sxy_x_old[i, j] * visco_fact_2
+            eyy_y[i, j] += syy_y_old[i, j] * visco_fact_2
+            exy_y[i, j] += sxy_y_old[i, j] * visco_fact_2
+
+            sxx_x_old[i, j] = exx_x[i, j]
+            sxy_x_old[i, j] = exy_x[i, j]
+            syy_y_old[i, j] = eyy_y[i, j]
+            sxy_y_old[i, j] = exy_y[i, j]
+
+    return exx_x, exy_x, eyy_y, exy_y
+
+@njit(parallel=True, fastmath=True)
+def explicit_step(
+    ux,
+    uy,
+    vx,
+    vy,
+    sxx_x_old, sxy_x_old, syy_y_old, sxy_y_old,
+    fx_imp, fy_imp,
+    lm ,
+    isddx1,
+    isddx2,
+    isddy1,
+    isddy2,
+    coef,
+    elas_lambda_ratio,
+    y_frontier_def,
+    x_frontier_def,
+    x_frontier_def_s,
+    y_frontier_def_s,
+    isstress_x_edge_l2m,
+    isstress_y_edge_l2m,
+    isstress_x_edge_2m,
+    isstress_y_edge_2m,
+    solid_not_uimp,
+    explicit_b,
+    G0,
+    visco_fact_1,#(1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
+    visco_fact_2,#exp(-explicit_a *a_dt)
+    bx,by,
+    dt_by_vol_mass,
+    damping_eff,dt,
+    ):
+
+
+    # calc_stress_explicit(self):
+    #######
+    # Calculating stress for a Standard Linear Solid (Zener)
+    # Viscoelastic parameters G0/G1/Eta1 normalized so that the long term response
+    # is the same as the elastic response
+
+    # Numba version
+    sxx_x, sxy_x, syy_y, sxy_y = nfi_calc_stress(
+        explicit_b * ux + G0 * vx,
+        explicit_b * uy + G0 * vy,
+        sxx_x_old, sxy_x_old, syy_y_old, sxy_y_old,
+        lm,
+        isddx1,
+        isddx2,
+        isddy1,
+        isddy2,
+        coef,
+        elas_lambda_ratio,
+        y_frontier_def,
+        x_frontier_def,
+        x_frontier_def_s,
+        y_frontier_def_s,
+        isstress_x_edge_l2m,
+        isstress_y_edge_l2m,
+        isstress_x_edge_2m,
+        isstress_y_edge_2m,
+        visco_fact_1,#(1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
+        visco_fact_2
+    )
+
+
+    ###########################
+    # Update stress with viscoelastic explicit behaviour and
+    #Calculate stress divergence from stress values on edges
+    ###########################
+    h, w = ux.shape
+
+    # On commence à 1 pour éviter les débordements d'index (i-1, j-1)
+    for i in prange(1, h):
+        for j in range(1, w):
+
+            #stress divergence calculation
+            c_sxx_dx = - sxx_x[i - 1, j - 1] + sxx_x[i, j - 1]
+            c_sxy_dx = - sxy_x[i - 1, j - 1] + sxy_x[i, j - 1]
+            c_sxy_dy = - sxy_y[i - 1, j - 1] + sxy_y[i - 1, j]
+            c_syy_dy = - syy_y[i - 1, j - 1] + syy_y[i - 1, j]
+
+            m = solid_not_uimp[i, j] / lm
+            a_u_x = (c_sxx_dx + c_sxy_dy) * m
+            a_u_y = (c_syy_dy + c_sxy_dx) * m
+
+            #Update speed and position from acceleration
+
+            dvx = ( a_u_x - bx[i, j] ) #dvx = acc_x * dt
+            dvy = ( a_u_y - by[i, j] )
+
+            dvx *= dt_by_vol_mass
+            dvy *= dt_by_vol_mass
+
+            vx[i, j] += dvx
+            vy[i, j] += dvy
+
+            fx_imp[i, j] -= damping_eff * dvx
+            fy_imp[i, j] -= damping_eff * dvy
+
+            ux[i, j] += vx[i, j] * dt
+            uy[i, j] += vy[i, j] * dt
+
+    return (ux, uy, vx, vy, sxx_x_old,
+            sxy_x_old, syy_y_old, sxy_y_old, fx_imp, fy_imp)
+
+
+
 
 class ElasticProblem:
     """
@@ -185,6 +434,10 @@ class ElasticProblem:
 
         self.frontier_def = np.bitwise_or(np.bitwise_not(self.isddx1),
                                              np.bitwise_not(self.isddx2))
+        self.isddx1b = self.isddx1.copy()
+        self.isddx2b = self.isddx2.copy()
+        self.isddy1b = self.isddy1.copy()
+        self.isddy2b = self.isddy2.copy()#todo clean
 
         self.isddx1 = np.float32(self.isddx1)
         self.isddx2 = np.float32(self.isddx2)
@@ -193,18 +446,20 @@ class ElasticProblem:
 
         self.coef = - self.elas_lambda / (self.elas_lambda + 2*self.elas_mu) #Correction coef for plane strain
         # frontiers without corners :
-        self.x_frontier_def_s = np.bitwise_and(self.x_frontier_def, np.bitwise_not(self.corner_def))
-        self.y_frontier_def_s = np.bitwise_and(self.y_frontier_def, np.bitwise_not(self.corner_def))
+        self.x_frontier_def_sb = np.bitwise_and(self.x_frontier_def, np.bitwise_not(self.corner_def))
+        self.y_frontier_def_sb = np.bitwise_and(self.y_frontier_def, np.bitwise_not(self.corner_def))
         #Preconditioning options
         self.precond = kwargs.get('precond',False)
         self.precond_type = kwargs.get('precond_type','formula')
         self.precond_n = np.float32(kwargs.get('precond_n',15))
         self.precond_xx, self.precond_xy, self.precond_yy, self.precond_yx = self.def_precond()
 
+        self.x_frontier_defb = self.x_frontier_def.copy()#TODO clean
+        self.y_frontier_defb = self.y_frontier_def.copy()
         self.x_frontier_def = np.where(self.x_frontier_def)
         self.y_frontier_def = np.where(self.y_frontier_def)
-        self.x_frontier_def_s = np.where(self.x_frontier_def_s)
-        self.y_frontier_def_s = np.where(self.y_frontier_def_s)
+        self.x_frontier_def_s = np.where(self.x_frontier_def_sb)#todo clean
+        self.y_frontier_def_s = np.where(self.y_frontier_def_sb)
 
         self.isstress_x_edge_lambda_2mu = self.isstress_x_edge * (self.elas_lambda + 2 * self.elas_mu)
         self.isstress_y_edge_lambda_2mu = self.isstress_y_edge * (self.elas_lambda + 2 * self.elas_mu)
@@ -379,19 +634,25 @@ class ElasticProblem:
 
         self.frontier_def = np.bitwise_or(np.bitwise_not(self.isddx1),
                                              np.bitwise_not(self.isddx2))
+        self.isddx1b = self.isddx1.copy()
+        self.isddx2b = self.isddx2.copy()
+        self.isddy1b = self.isddy1.copy()
+        self.isddy2b = self.isddy2.copy()#todo clean
 
         self.isddx1 = np.float32(self.isddx1)
         self.isddx2 = np.float32(self.isddx2)
         self.isddy1 = np.float32(self.isddy1)
         self.isddy2 = np.float32(self.isddy2)
 
-        self.x_frontier_def_s = np.bitwise_and(self.x_frontier_def, np.bitwise_not(self.corner_def))
-        self.y_frontier_def_s = np.bitwise_and(self.y_frontier_def, np.bitwise_not(self.corner_def))
+        self.x_frontier_def_sb = np.bitwise_and(self.x_frontier_def, np.bitwise_not(self.corner_def))
+        self.y_frontier_def_sb = np.bitwise_and(self.y_frontier_def, np.bitwise_not(self.corner_def))
 
+        self.x_frontier_defb = self.x_frontier_def.copy()  # TODO clean
+        self.y_frontier_defb = self.y_frontier_def.copy()
         self.x_frontier_def = np.where(self.x_frontier_def)
         self.y_frontier_def = np.where(self.y_frontier_def)
-        self.x_frontier_def_s = np.where(self.x_frontier_def_s)
-        self.y_frontier_def_s = np.where(self.y_frontier_def_s)
+        self.x_frontier_def_s = np.where(self.x_frontier_def_sb)#todo clean
+        self.y_frontier_def_s = np.where(self.y_frontier_def_sb)
 
         self.isstress_x_edge_lambda_2mu = self.isstress_x_edge * (self.elas_lambda + 2 * self.elas_mu)
         self.isstress_y_edge_lambda_2mu = self.isstress_y_edge * (self.elas_lambda + 2 * self.elas_mu)
@@ -668,6 +929,30 @@ class ElasticProblem:
         exy_y *= self.isstress_y_edge_2mu
 
         return exx_x,exy_x,eyy_y,exy_y
+    def nfi_calc_stress(self, ux, uy):
+        sxx_x, sxy_x, syy_y, sxy_y = nfi_calc_stress(
+            ux,
+            uy,
+            self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old,
+            self.lm,
+            self.isddx1b,
+            self.isddx2b,
+            self.isddy1b,
+            self.isddy2b,
+            self.coef,
+            self.elas_lambda_ratio,
+            self.y_frontier_defb,
+            self.x_frontier_defb,
+            self.x_frontier_def_sb,
+            self.y_frontier_def_sb,
+            self.isstress_x_edge_lambda_2mu,
+            self.isstress_y_edge_lambda_2mu,
+            self.isstress_x_edge_2mu,
+            self.isstress_y_edge_2mu,
+            (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a,  # visco_fact_1,
+            np.exp(-self.explicit_a * self.dt)
+        )
+        return sxx_x, sxy_x, syy_y, sxy_y
 
     @profile
     def calc_stress_explicit(self):
@@ -676,11 +961,10 @@ class ElasticProblem:
         # Viscoelastic parameters G0/G1/Eta1 normalized so that the long term response
         # is the same as the elastic response
 
-
+        #NUmpy+OpenCV version
         sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress(
             self.explicit_b * self.ux + self.G0 * self.vx,
             self.explicit_b * self.uy + self.G0 * self.vy)
-
 
         temp = (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
         sxx_x *= temp
@@ -702,23 +986,13 @@ class ElasticProblem:
         return sxx_x,sxy_x,syy_y,sxy_y
 
     @profile
-    def explicit_step(self):
+    def explicit_step_old(self):
         #Explicit step using LeapFrog method
         sxx_x, sxy_x, syy_y, sxy_y = self.calc_stress_explicit()
         a_u_x, a_u_y = self.calc_a_u_sig(sxx_x, sxy_x, syy_y, sxy_y )
 
         acc_x = ( a_u_x - self.bx ) #division by vol_mass on next line for speed
         acc_y = ( a_u_y - self.by )
-
-        # if self.precond:
-        #     #repartitioning the acceleration on surrounding cells, keeping the total accel constant.
-        #     # ( would need adaptation if vol mass not constant)
-        #     acc_x = (conv_big(acc_x / self.precond_norm_x, self.precond_xx)
-        #              + conv_big(acc_y / self.precond_norm_y, self.precond_yx))
-        #     acc_y = (conv_big(acc_y / self.precond_norm_y, self.precond_yy)
-        #              + conv_big(acc_x / self.precond_norm_x, self.precond_xy))
-        #     acc_x[np.bitwise_not(self.movable)] = 0
-        #     acc_y[np.bitwise_not(self.movable)] = 0
 
         dvx = acc_x * ( self.dt/ self.vol_mass )
         dvy = acc_y * ( self.dt/ self.vol_mass )
@@ -731,6 +1005,41 @@ class ElasticProblem:
 
         self.ux += self.vx * self.dt
         self.uy += self.vy * self.dt
+
+    def explicit_step(self):
+        (self.ux, self.uy, self.vx, self.vy,
+         self.sxx_x_old, self.sxy_x_old, self.syy_y_old,
+         self.sxy_y_old, self.fx_imp, self.fy_imp) = explicit_step(
+            self.ux,
+            self.uy,
+            self.vx,
+            self.vy,
+            self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old,
+            self.fx_imp, self.fy_imp,
+            self.lm,
+            self.isddx1b,
+            self.isddx2b,
+            self.isddy1b,
+            self.isddy2b,
+            self.coef,
+            self.elas_lambda_ratio,
+            self.y_frontier_defb,
+            self.x_frontier_defb,
+            self.x_frontier_def_sb,
+            self.y_frontier_def_sb,
+            self.isstress_x_edge_lambda_2mu,
+            self.isstress_y_edge_lambda_2mu,
+            self.isstress_x_edge_2mu,
+            self.isstress_y_edge_2mu,
+            self.solid_not_uimp,
+            self.explicit_b,
+            self.G0,
+            (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a, #visco_fact_1,
+            np.exp(-self.explicit_a * self.dt), #viscu_fact2
+            self.bx, self.by,
+            self.dt / self.vol_mass,
+            self.damping_eff, self.dt
+        )
 
     def calc_VM_stress(self):
         # Calculate the second invariant of the deviatoric stress tensor

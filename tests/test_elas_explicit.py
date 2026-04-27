@@ -1,9 +1,11 @@
+import copy
+
 from context import sample
 import numpy as np
 import matplotlib.pyplot as plt
 import timeit
 
-k = 36
+k = 36 #36*7 = 252
 nx=k*7
 ny=k*7
 
@@ -46,7 +48,7 @@ print( 'Max Sound speed * dt / lm ')
 print( 'Compression : ' + str(c_p * dt / lm))
 print( 'Shear: ' + str(c_s * dt / lm))
 
-nstep = 3000
+nstep = 10000
 iplot = 100000
 kplot=1
 
@@ -67,11 +69,7 @@ test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
                                   is_explicit = True, vol_mass=vol_mass, dt = dt, ratio = ratio, tau = tau,
                                   precond_type = precond_type, precond_n = precond_n, precond = precond)
 
-temp = sample.interface.ExplicitAnimation(test, nstep = 1, plot_interval = iplot, upscale_factor = kplot,
-                                          probe_fields = ['ux',], plot_field = 'VM_stress',
-                                          probe_ix = [ixmax,], probe_iy = [int(nx/2),], y_dec = 0., min_scale = -0.00,
-                                            max_scale = 0.02)
-temp.animate() #for numba compilation
+test.calc_stress_explicit()
 
 start = timeit.default_timer()
 
@@ -83,7 +81,7 @@ anim.animate()
 
 stop = timeit.default_timer()
 print('Explicit loop Time: ', stop - start)
-print('Average time step time: ', (stop - start) / nstep)
+# print('Average time step time: ', (stop - start) / nstep)
 
 
 uxt = anim.probe_vals['ux' + str(ixmax) + '_' + str(int(nx/2))]
@@ -119,6 +117,13 @@ plt.xlabel('iteration')
 plt.ylabel('X displacement')
 
 plt.show()
-
+#
+# import copy
+# test2 = copy.deepcopy(test)
+# test.explicit_step()
+# test2.explicit_step_old()
+#
+# print(np.allclose(test.ux, test2.ux))
+# diff = test.ux - test2.ux
 
 1+1
