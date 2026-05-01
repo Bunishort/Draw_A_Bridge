@@ -92,25 +92,25 @@ def conv_big(matrix, kernel):
 
 @njit(parallel=True, fastmath=True)
 def nfi_calc_stress(
-    uxt, uyt,
-    sxx_x_old, sxy_x_old, syy_y_old, sxy_y_old,
-    lm ,
-    isddx1,
-    isddx2,
-    isddy1,
-    isddy2,
-    coef,
-    elas_lambda_ratio,
-    y_frontier_def,
-    x_frontier_def,
-    x_frontier_def_s,
-    y_frontier_def_s,
-    isstress_x_edge_l2m,
-    isstress_y_edge_l2m,
-    isstress_x_edge_2m,
-    isstress_y_edge_2m,
-    visco_fact_1,  # (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
-    visco_fact_2 #np.exp(-self.explicit_a * self.dt)
+    uxt, uyt, # h*w float32 matrices
+    sxx_x_old, sxy_x_old, syy_y_old, sxy_y_old, # h*w float32 matrices
+    lm , #  float32 const
+    isddx1, # h*w bool matrix
+    isddx2,# h*w bool matrix
+    isddy1,# h*w bool matrix
+    isddy2,# h*w bool matrix
+    coef,#  float32 const
+    elas_lambda_ratio,#  float32 const
+    y_frontier_def,# h*w bool matrix
+    x_frontier_def,# h*w bool matrix
+    x_frontier_def_s,# h*w bool matrix
+    y_frontier_def_s,# h*w bool matrix
+    isstress_x_edge_l2m,# h*w float32 matrix
+    isstress_y_edge_l2m,# h*w float32 matrix
+    isstress_x_edge_2m,# h*w float32 matrix
+    isstress_y_edge_2m,# h*w float32 matrix
+    visco_fact_1,  #  float32 const# (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
+    visco_fact_2 ##  float32 const #np.exp(-self.explicit_a * self.dt)
 ):
     #equivalent to self.calc_stress + viscoelastic explicit : need to do all in one loop
 
@@ -232,35 +232,36 @@ def nfi_calc_stress(
 
 @njit(parallel=True, fastmath=True)
 def explicit_step(
-    ux,
-    uy,
-    vx,
-    vy,
-    sxx_x_old, sxy_x_old, syy_y_old, sxy_y_old,
-    fx_imp, fy_imp,
-    lm ,
-    isddx1,
-    isddx2,
-    isddy1,
-    isddy2,
-    coef,
-    elas_lambda_ratio,
-    y_frontier_def,
-    x_frontier_def,
-    x_frontier_def_s,
-    y_frontier_def_s,
-    isstress_x_edge_l2m,
-    isstress_y_edge_l2m,
-    isstress_x_edge_2m,
-    isstress_y_edge_2m,
-    solid_not_uimp,
-    explicit_b,
-    G0,
-    visco_fact_1,#(1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
-    visco_fact_2,#exp(-explicit_a *a_dt)
-    bx,by,
-    dt_by_vol_mass,
-    damping_eff,dt,
+    ux,# h*w float32 matrix
+    uy,# h*w float32 matrix
+    vx,# h*w float32 matrix
+    vy,# h*w float32 matrix
+    sxx_x_old, sxy_x_old, syy_y_old, sxy_y_old,# h*w float32 matrices
+    fx_imp, fy_imp,# h*w float32 matrices
+    lm , #float32 const
+    isddx1,# h*w bool matrix
+    isddx2,# h*w bool matrix
+    isddy1,# h*w bool matrix
+    isddy2,# h*w bool matrix
+    coef, #flaot32 const
+    elas_lambda_ratio,#float32 const
+    y_frontier_def,# h*w bool matrix
+    x_frontier_def,# h*w bool matrix
+    x_frontier_def_s,# h*w bool matrix
+    y_frontier_def_s,# h*w bool matrix
+    isstress_x_edge_l2m,# h*w float32 matrix
+    isstress_y_edge_l2m,# h*w float32 matrix
+    isstress_x_edge_2m,# h*w float32 matrix
+    isstress_y_edge_2m,# h*w float32 matrix
+    solid_not_uimp,# h*w bool matrix
+    explicit_b,#float32 const
+    G0,#float32 const
+    visco_fact_1,#float32 const#(1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
+    visco_fact_2,#float32 const#exp(-explicit_a *a_dt)
+    bx,by,# h*w float32 matrices
+    dt_by_vol_mass,#float32 const
+    damping_eff,#float32 const
+        dt,#float32 const
     ):
 
 
@@ -290,7 +291,7 @@ def explicit_step(
         isstress_y_edge_l2m,
         isstress_x_edge_2m,
         isstress_y_edge_2m,
-        visco_fact_1,#(1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
+        visco_fact_1,
         visco_fact_2
     )
 
@@ -298,10 +299,10 @@ def explicit_step(
     ###########################
     # Update stress with viscoelastic explicit behaviour and
     #Calculate stress divergence from stress values on edges
+    # and update speed and position
     ###########################
     h, w = ux.shape
 
-    # On commence à 1 pour éviter les débordements d'index (i-1, j-1)
     for i in prange(1, h):
         for j in range(1, w):
 
