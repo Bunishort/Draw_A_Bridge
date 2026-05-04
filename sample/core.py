@@ -513,21 +513,7 @@ class ElasticProblem:
                 print('Warning : Max Sound speed * dt / lm for Compression > 1 : ' + str(self.c_p * self.dt / self.lm))
             if self.c_s * self.dt / self.lm> 1:
                 print('Warning : Max Sound speed * dt / lm for Shear > 1 : ' + str(self.c_s * self.dt / self.lm))
-            if self.precond:
-                self.movable = np.bitwise_and(self.solid, np.bitwise_not(self.is_uimp))
-                precond_norm_xx = conv_big(self.movable, np.abs(self.precond_xx))
-                precond_norm_xy = conv_big(self.movable, np.abs(self.precond_xy))
-                precond_norm_yy = conv_big(self.movable, np.abs(self.precond_yy))
-                precond_norm_yx = conv_big(self.movable, np.abs(self.precond_yx))
 
-                # Remove the zeros (which whould be outside the solid exclusively, so no impact)
-                precond_norm_xx[precond_norm_xx == 0] = 1
-                precond_norm_xy[precond_norm_xy == 0] = 1
-                precond_norm_yy[precond_norm_yy == 0] = 1
-                precond_norm_yx[precond_norm_yx == 0] = 1
-
-                self.precond_norm_x = np.sqrt(precond_norm_xx**2 + precond_norm_xy**2)
-                self.precond_norm_y = np.sqrt(precond_norm_yy**2 + precond_norm_yx**2)
 
     def def_kernel(self):
         if self.kernel_type=='plane strain':
@@ -987,7 +973,7 @@ class ElasticProblem:
         return sxx_x,sxy_x,syy_y,sxy_y
 
     @profile
-    def explicit_step_old(self):
+    def explicit_step_numpy(self):
         #Explicit step using LeapFrog method
         sxx_x, sxy_x, syy_y, sxy_y = self.calc_stress_explicit()
         a_u_x, a_u_y = self.calc_a_u_sig(sxx_x, sxy_x, syy_y, sxy_y )
@@ -1007,7 +993,7 @@ class ElasticProblem:
         self.ux += self.vx * self.dt
         self.uy += self.vy * self.dt
 
-    def explicit_step(self):
+    def explicit_step_numba(self):
         (self.ux, self.uy, self.vx, self.vy,
          self.sxx_x_old, self.sxy_x_old, self.syy_y_old,
          self.sxy_y_old, self.fx_imp, self.fy_imp) = explicit_step(
@@ -1041,6 +1027,9 @@ class ElasticProblem:
             self.dt / self.vol_mass,
             self.damping_eff, self.dt
         )
+
+    def explicit_step(self):
+        #TODO
 
     def calc_VM_stress(self):
         # Calculate the second invariant of the deviatoric stress tensor
