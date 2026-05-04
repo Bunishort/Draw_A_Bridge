@@ -6,6 +6,7 @@ from cv2 import filter2D
 # from torchgen.native_function_generation import self_to_out_signature
 from line_profiler import profile
 from numba import njit, prange
+import moderngl
 
 ###Remark : pyqt6 needed only for matplotlib show, maybe not necessary for pygame !
 
@@ -513,6 +514,31 @@ class ElasticProblem:
                 print('Warning : Max Sound speed * dt / lm for Compression > 1 : ' + str(self.c_p * self.dt / self.lm))
             if self.c_s * self.dt / self.lm> 1:
                 print('Warning : Max Sound speed * dt / lm for Shear > 1 : ' + str(self.c_s * self.dt / self.lm))
+
+            #####   Init of GPU explicit step
+            #Read GLSL file
+            file_path = 'shaders.glsl'
+            with open(file_path, 'r') as file:
+                source_code_moderngl = file.read()
+
+            #Create context and buffers
+            self.ctx = moderngl.create_standalone_context()
+            self.buf_pos = self.ctx.buffer(np.stack([self.ux, self.uy], axis=-1).astype('f4'))
+            self.buf_vel = self.ctx.buffer(np.stack([self.vx, self.vy], axis=-1).astype('f4'))
+            self.buf_stress_old = self.ctx.buffer(np.stack([self.sxx_old, self.sxy_x_old, self.syy_old, self.sxy_y_old], axis=-1).astype('f4'))
+            self.buf_fimp = self.ctx.buffer(np.stack([self.fx_imp, self.fy_imp], axis=-1).astype('f4'))
+            self.buf_b = self.ctx.buffer(np.stack([self.bx, self.by], axis=-1).astype('f4'))
+            self.buf_masks = self.ctx.buffer(np.stack([self.isddx1, self.isddx2, self.isddy1, self.isddy2,
+            self.y_frontier_defb, self.x_frontier_defb, self.x_frontier_def_sb, self.y_frontier_def_sb,
+            self.solid_not_uimp], axis=-1).astype('i4'))
+            self.buf_masks_float = self.ctx.buffer(np.stack([self.isstress_x_edge_lambda_2mu,
+                                                   self.isstress_y_edge_lambda_2mu,
+                                                   self.isstress_x_edge_2mu,
+                                                   self.isstress_y_edge_2mu
+                                                   ], axis=-1).astype('f4'))
+            self.buf_stress_curr = self.ctx.buffer(reserve=self.buf_stress_old.nbytes)
+            #Compile program
+            self.explicit_step_gpu = self.ctx.compute_shader(source_code_moderngl)
 
 
     def def_kernel(self):

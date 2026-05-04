@@ -15,11 +15,14 @@ layout(std430, binding = 5) buffer b_masks {
     int isddx1[]; int isddx2[]; int isddy1[]; int isddy2[];
     int y_front_def[]; int x_front_def[]; int x_front_s[]; int y_front_s[];
     int solid_not_uimp[];
+};
+
+layout(std430, binding = 6) buffer b_masks_float {
     float isstress_x_l2m[]; float isstress_y_l2m[]; float isstress_x_2m[]; float isstress_y_2m[];
 };
 
 // Buffers temporaires pour stocker les contraintes de l'étape actuelle (nécessaires pour la divergence)
-layout(std430, binding = 6) buffer b_stress_curr { float sxx_c[]; float sxy_xc[]; float syy_c[]; float sxy_yc[]; };
+layout(std430, binding = 7) buffer b_stress_curr { float sxx_c[]; float sxy_xc[]; float syy_c[]; float sxy_yc[]; };
 
 uniform int width; uniform int height;
 uniform float lm; uniform float coef; uniform float elas_lambda_ratio;
@@ -88,6 +91,7 @@ void compute_physics() {
 
     int id = idx(i, j);
 
+    //TODO replace by sxOLD
     float div_x = -sxx_c[idx(i-1, j-1)] + sxx_c[idx(i, j-1)] - sxy_yc[idx(i-1, j-1)] + sxy_yc[idx(i-1, j)];
     float div_y = -syy_c[idx(i-1, j-1)] + syy_c[idx(i-1, j)] - sxy_xc[idx(i-1, j-1)] + sxy_xc[idx(i, j-1)];
 
