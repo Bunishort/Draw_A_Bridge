@@ -562,6 +562,10 @@ class ElasticProblem:
             self.buf_masks_float.bind_to_storage_buffer(6)
             self.buf_stress_curr.bind_to_storage_buffer(7)
 
+            #gpu thread group sizes
+            self.gx = int(np.ceil(self.solid.size[0] / 16))
+            self.gy = int(np.ceil(self.solid.size[1] / 16))
+
     def def_kernel(self):
         if self.kernel_type=='plane strain':
 
@@ -1076,7 +1080,11 @@ class ElasticProblem:
         )
 
     def explicit_step(self):
-        #TODO
+        self.explicit_step_gpu.run(self.gx, self.gy)
+
+    def get_results(self):
+        data = self.buf_pos.read()
+        return np.frombuffer(data, dtype='f4').reshape(2, self.solid.size[1], self.solid.size[0])
 
     def calc_VM_stress(self):
         # Calculate the second invariant of the deviatoric stress tensor
