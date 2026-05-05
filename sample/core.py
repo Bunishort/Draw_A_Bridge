@@ -560,8 +560,8 @@ class ElasticProblem:
             self.buf_fimp.bind_to_storage_buffer(3)
             self.buf_b.bind_to_storage_buffer(4)
             self.buf_masks.bind_to_storage_buffer(5)
-            self.buf_masks_float.bind_to_storage_buffer(6)
-            self.buf_stress_curr.bind_to_storage_buffer(7)
+            self.buf_masks_float.bind_to_storage_buffer(7)
+            self.buf_stress_curr.bind_to_storage_buffer(6)
 
             #gpu thread group sizes
             self.gx = int(np.ceil(self.solid.size[0] / 16))
