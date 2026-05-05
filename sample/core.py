@@ -517,7 +517,7 @@ class ElasticProblem:
 
             #####   Init of GPU explicit step
             #Read GLSL file
-            file_path = 'shaders.glsl'
+            file_path = '../sample/shaders.glsl'
             with open(file_path, 'r') as file:
                 source_code_moderngl = file.read()
 
@@ -525,7 +525,7 @@ class ElasticProblem:
             self.ctx = moderngl.create_standalone_context()
             self.buf_pos = self.ctx.buffer(np.stack([self.ux, self.uy], axis=-1).astype('f4'))
             self.buf_vel = self.ctx.buffer(np.stack([self.vx, self.vy], axis=-1).astype('f4'))
-            self.buf_stress_old = self.ctx.buffer(np.stack([self.sxx_old, self.sxy_x_old, self.syy_old, self.sxy_y_old], axis=-1).astype('f4'))
+            self.buf_stress_old = self.ctx.buffer(np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=-1).astype('f4'))
             self.buf_fimp = self.ctx.buffer(np.stack([self.fx_imp, self.fy_imp], axis=-1).astype('f4'))
             self.buf_b = self.ctx.buffer(np.stack([self.bx, self.by], axis=-1).astype('f4'))
             self.buf_masks = self.ctx.buffer(np.stack([self.isddx1, self.isddx2, self.isddy1, self.isddy2,
@@ -536,8 +536,9 @@ class ElasticProblem:
                                                    self.isstress_x_edge_2mu,
                                                    self.isstress_y_edge_2mu
                                                    ], axis=-1).astype('f4'))
-            self.buf_stress_curr = self.ctx.buffer(reserve=self.buf_stress_old.nbytes)
+            self.buf_stress_curr = self.ctx.buffer(np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=-1).astype('f4'))
             #Compile program
+            print(f"--- DEBUT DU SHADER ---\n{source_code_moderngl[:50]}\n--- FIN DU DEBUT ---")
             self.explicit_step_gpu = self.ctx.compute_shader(source_code_moderngl)
             #Constants declaration
             self.explicit_step_gpu['width'] = self.solid.size[0].astype('i4')
