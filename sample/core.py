@@ -538,21 +538,20 @@ class ElasticProblem:
                                                    ], axis=-1).astype('f4'))
             self.buf_stress_curr = self.ctx.buffer(np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=-1).astype('f4'))
             #Compile program
-            print(f"--- DEBUT DU SHADER ---\n{source_code_moderngl[:50]}\n--- FIN DU DEBUT ---")
             self.explicit_step_gpu = self.ctx.compute_shader(source_code_moderngl)
             #Constants declaration
-            self.explicit_step_gpu['width'] = self.solid.size[0].astype('i4')
-            self.explicit_step_gpu['height'] = self.solid.size[1].astype('i4')
-            self.explicit_step_gpu['coef'] = self.coef.astype('f4')
-            self.explicit_step_gpu['elas_lambda_ratio'] = self.elas_lambda_ratio.astype('f4')
-            self.explicit_step_gpu['explicit_b'] = self.explicit_b.astype('f4')
-            self.explicit_step_gpu['G0'] = self.G0.astype('f4')
-            self.explicit_step_gpu['visco_fact_1'] =   (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a,
+            self.explicit_step_gpu['width'] = self.solid.shape[0]
+            self.explicit_step_gpu['height'] = self.solid.shape[1]
+            self.explicit_step_gpu['coef'] = self.coef
+            self.explicit_step_gpu['elas_lambda_ratio'] = self.elas_lambda_ratio
+            self.explicit_step_gpu['explicit_b'] = self.explicit_b
+            self.explicit_step_gpu['G0'] = self.G0
+            self.explicit_step_gpu['visco_fact_1'] = (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
             self.explicit_step_gpu['visco_fact_2'] = np.exp(-self.explicit_a * self.dt)
-            self.explicit_step_gpu['dt_by_vol_mass'] = self.dt.astype('f4') / self.vol_mass.astype('f4')
-            self.explicit_step_gpu['damping_eff'] = self.damping_eff.astype('f4')
-            self.explicit_step_gpu['lm'].value = self.lm.astype('f4')
-            self.explicit_step_gpu['dt'].value = self.dt.astype('f4')
+            self.explicit_step_gpu['dt_by_vol_mass'] = self.dt / self.vol_mass
+            self.explicit_step_gpu['damping_eff'] = self.damping_eff
+            self.explicit_step_gpu['lm'].value = self.lm
+            self.explicit_step_gpu['dt'].value = self.dt
             #Buffer linking
             self.buf_pos.bind_to_storage_buffer(0)
             self.buf_vel.bind_to_storage_buffer(1)
@@ -564,8 +563,8 @@ class ElasticProblem:
             self.buf_stress_curr.bind_to_storage_buffer(6)
 
             #gpu thread group sizes
-            self.gx = int(np.ceil(self.solid.size[0] / 16))
-            self.gy = int(np.ceil(self.solid.size[1] / 16))
+            self.gx = int(np.ceil(self.solid.shape[0] / 16))
+            self.gy = int(np.ceil(self.solid.shape[1] / 16))
 
     def def_kernel(self):
         if self.kernel_type=='plane strain':
@@ -1085,7 +1084,7 @@ class ElasticProblem:
 
     def get_results(self):
         data = self.buf_pos.read()
-        return np.frombuffer(data, dtype='f4').reshape(2, self.solid.size[1], self.solid.size[0])
+        return np.frombuffer(data, dtype='f4').reshape(2, self.solid.shape[1], self.solid.shape[0])
 
     def calc_VM_stress(self):
         # Calculate the second invariant of the deviatoric stress tensor

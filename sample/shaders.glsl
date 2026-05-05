@@ -99,10 +99,10 @@ void main() {
         int id10 = idx(i, j-1);
         int id01 = idx(i-1, j);
 
-        float c_sxx_dx = -s_curr[id00] + s_curr[id10];
-        float c_sxy_dx = -s_curr[id00 + off] + s_curr[id10 + off];
-        float c_sxy_dy = -s_curr[id00 + 3*off] + s_curr[id01 + 3*off];
-        float c_syy_dy = -s_curr[id00 + 2*off] + s_curr[id01 + 2*off];
+        float c_sxx_dx = -s_old[id00] + s_old[id10];
+        float c_sxy_dx = -s_old[id00 + off] + s_old[id10 + off];
+        float c_sxy_dy = -s_old[id00 + 3*off] + s_old[id01 + 3*off];
+        float c_syy_dy = -s_old[id00 + 2*off] + s_old[id01 + 2*off];
 
         float m = float(m_int[id + 8*off]) / lm; // solid_not_uimp
         float dvx = (c_sxx_dx + c_sxy_dy) * m - ext_forces[id];
