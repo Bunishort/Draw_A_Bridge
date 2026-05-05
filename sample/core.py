@@ -539,7 +539,28 @@ class ElasticProblem:
             self.buf_stress_curr = self.ctx.buffer(reserve=self.buf_stress_old.nbytes)
             #Compile program
             self.explicit_step_gpu = self.ctx.compute_shader(source_code_moderngl)
-
+            #Constants declaration
+            self.explicit_step_gpu['width'] = self.solid.size[0].astype('i4')
+            self.explicit_step_gpu['height'] = self.solid.size[1].astype('i4')
+            self.explicit_step_gpu['coef'] = self.coef.astype('f4')
+            self.explicit_step_gpu['elas_lambda_ratio'] = self.elas_lambda_ratio.astype('f4')
+            self.explicit_step_gpu['explicit_b'] = self.explicit_b.astype('f4')
+            self.explicit_step_gpu['G0'] = self.G0.astype('f4')
+            self.explicit_step_gpu['visco_fact_1'] =   (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a,
+            self.explicit_step_gpu['visco_fact_2'] = np.exp(-self.explicit_a * self.dt)
+            self.explicit_step_gpu['dt_by_vol_mass'] = self.dt.astype('f4') / self.vol_mass.astype('f4')
+            self.explicit_step_gpu['damping_eff'] = self.damping_eff.astype('f4')
+            self.explicit_step_gpu['lm'].value = self.lm.astype('f4')
+            self.explicit_step_gpu['dt'].value = self.dt.astype('f4')
+            #Buffer linking
+            self.buf_pos.bind_to_storage_buffer(0)
+            self.buf_vel.bind_to_storage_buffer(1)
+            self.buf_stress_old.bind_to_storage_buffer(2)
+            self.buf_fimp.bind_to_storage_buffer(3)
+            self.buf_b.bind_to_storage_buffer(4)
+            self.buf_masks.bind_to_storage_buffer(5)
+            self.buf_masks_float.bind_to_storage_buffer(6)
+            self.buf_stress_curr.bind_to_storage_buffer(7)
 
     def def_kernel(self):
         if self.kernel_type=='plane strain':
