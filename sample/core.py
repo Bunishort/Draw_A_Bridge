@@ -540,8 +540,8 @@ class ElasticProblem:
             #Compile program
             self.explicit_step_gpu = self.ctx.compute_shader(source_code_moderngl)
             #Constants declaration
-            self.explicit_step_gpu['width'] = self.solid.shape[0]
-            self.explicit_step_gpu['height'] = self.solid.shape[1]
+            self.explicit_step_gpu['width'] = self.solid.shape[1]
+            self.explicit_step_gpu['height'] = self.solid.shape[0]
             self.explicit_step_gpu['coef'] = self.coef
             self.explicit_step_gpu['elas_lambda_ratio'] = self.elas_lambda_ratio
             self.explicit_step_gpu['explicit_b'] = self.explicit_b
@@ -563,8 +563,8 @@ class ElasticProblem:
             self.buf_stress_curr.bind_to_storage_buffer(6)
 
             #gpu thread group sizes
-            self.gx = int(np.ceil(self.solid.shape[0] / 16))
-            self.gy = int(np.ceil(self.solid.shape[1] / 16))
+            self.gx = int(np.ceil(self.solid.shape[1] / 16))
+            self.gy = int(np.ceil(self.solid.shape[0] / 16))
 
     def def_kernel(self):
         if self.kernel_type=='plane strain':
