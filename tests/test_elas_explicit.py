@@ -94,6 +94,12 @@ plt.figure()
 plt.imshow(test.calc_VM_stress())
 plt.title('Von Mises Stress')
 
+#Re init of test to avoid errors
+
+test = sample.core.ElasticProblem(solid,elas_lambda,elas_mu,lm,ux_imp,uy_imp,
+                                  px_bound=px_bound,py_bound=py_bound,max_iter=max_iter,max_res = max_res,
+                                  is_explicit = False, vol_mass=vol_mass, dt = dt, ratio = ratio, tau = tau,
+                                  precond_type = precond_type, precond_n = precond_n, precond = precond)
 n_iter,resx,resy,res_max_convergence,convergence_hist  = test.cg_loop()
 sxx_xe,sxy_xe,syy_ye,sxy_ye = test.calc_stress(test.ux, test.uy)
 

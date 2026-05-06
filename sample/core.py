@@ -1084,7 +1084,17 @@ class ElasticProblem:
 
     def get_results(self):
         data = self.buf_pos.read()
-        return np.frombuffer(data, dtype='f4').reshape(2, self.solid.shape[1], self.solid.shape[0])
+        data = np.frombuffer(data, dtype='f4').reshape(2, self.solid.shape[0], self.solid.shape[1])
+        self.ux = data[0]
+        self.uy = data[1]
+        data = np.frombuffer(self.buf_vel.read(), dtype='f4').reshape(2, self.solid.shape[0], self.solid.shape[1])
+        self.vx = data[0]
+        self.vy = data[1]
+        data = np.frombuffer(self.buf_stress_old.read(), dtype='f4').reshape(4, self.solid.shape[0], self.solid.shape[1])
+        self.sxx_x_old = data[0]
+        self.sxy_x_old = data[1]
+        self.syy_y_old = data[2]
+        self.sxy_y_old = data[3]
 
     def calc_VM_stress(self):
         # Calculate the second invariant of the deviatoric stress tensor

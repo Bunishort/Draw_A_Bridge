@@ -79,6 +79,7 @@ class ExplicitAnimation:
             for i in range(0, self.nstep):
                 self.elas.explicit_step()
                 if np.mod(i, self.plot_interval) == 0:
+                    self.elas.get_results()
                     z = np.zeros(gridxplot.shape)
                     if self.plot_field == 'VM_stress':
                         self.elas.VM_stress = self.elas.calc_VM_stress()
@@ -122,6 +123,7 @@ class ExplicitAnimation:
         else:
             for i in range(0, self.nstep):
                 self.elas.explicit_step()
+        self.elas.get_results()
 
 ######################--------------------Game interface---------------################
 import pygame
@@ -256,6 +258,8 @@ class SimulationApp:
             else:
                 for i in range(0, self.nbstep):
                     self.solver.explicit_step()
+                self.solver.get_results() # Update results
+
                 self.disp[:,:,1] = -self.solver.ux * 2 / (self.res[0] * self.solver.lm) # why - sign here ?
                 self.disp[:, :, 0] = self.solver.uy * 2 / (self.res[1] * self.solver.lm)
 
