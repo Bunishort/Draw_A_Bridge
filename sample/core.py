@@ -516,10 +516,13 @@ class ElasticProblem:
                 print('Warning : Max Sound speed * dt / lm for Shear > 1 : ' + str(self.c_s * self.dt / self.lm))
 
             #####   Init of GPU explicit step
-            #Read GLSL file
-            file_path = '../sample/shaders.glsl'
+            #Read GLSL files
+            file_path = '../sample/calc_stress.glsl'
             with open(file_path, 'r') as file:
-                source_code_moderngl = file.read()
+                source_code_stress = file.read()
+            file_path = '../sample/update_physics.glsl'
+            with open(file_path, 'r') as file:
+                source_code_update = file.read()
 
             #Create context and buffers
             self.ctx = moderngl.create_standalone_context()
@@ -538,20 +541,25 @@ class ElasticProblem:
                                                    ], axis=0).copy(order='C').astype('f4').tobytes())
             self.buf_stress_curr = self.ctx.buffer(np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=0).copy(order='C').astype('f4').tobytes())
             #Compile program
-            self.explicit_step_gpu = self.ctx.compute_shader(source_code_moderngl)
+            self.calc_stress_gpu = self.ctx.compute_shader(source_code_stress)
+            self.update_pos_gpu = self.ctx.compute_shader(source_code_update)
+
             #Constants declaration
-            self.explicit_step_gpu['width'] = self.solid.shape[1]
-            self.explicit_step_gpu['height'] = self.solid.shape[0]
-            self.explicit_step_gpu['coef'] = self.coef
-            self.explicit_step_gpu['elas_lambda_ratio'] = self.elas_lambda_ratio
-            self.explicit_step_gpu['explicit_b'] = self.explicit_b
-            self.explicit_step_gpu['G0'] = self.G0
-            self.explicit_step_gpu['visco_fact_1'] = (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
-            self.explicit_step_gpu['visco_fact_2'] = np.exp(-self.explicit_a * self.dt)
-            self.explicit_step_gpu['dt_by_vol_mass'] = self.dt / self.vol_mass
-            self.explicit_step_gpu['damping_eff'] = self.damping_eff
-            self.explicit_step_gpu['lm'].value = self.lm
-            self.explicit_step_gpu['dt'].value = self.dt
+            self.calc_stress_gpu['width'] = self.solid.shape[1]
+            self.calc_stress_gpu['height'] = self.solid.shape[0]
+            self.update_pos_gpu['width'] = self.solid.shape[1]
+            self.update_pos_gpu['height'] = self.solid.shape[0]
+            self.calc_stress_gpu['coef'] = self.coef
+            self.calc_stress_gpu['elas_lambda_ratio'] = self.elas_lambda_ratio
+            self.calc_stress_gpu['explicit_b'] = self.explicit_b
+            self.calc_stress_gpu['G0'] = self.G0
+            self.calc_stress_gpu['visco_fact_1'] = (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
+            self.calc_stress_gpu['visco_fact_2'] = np.exp(-self.explicit_a * self.dt)
+            self.update_pos_gpu['dt_by_vol_mass'] = self.dt / self.vol_mass
+            self.update_pos_gpu['damping_eff'] = self.damping_eff
+            self.update_pos_gpu['lm'].value = self.lm
+            self.calc_stress_gpu['lm'].value = self.lm
+            self.update_pos_gpu['dt'].value = self.dt
             #Buffer linking
             self.buf_pos.bind_to_storage_buffer(0)
             self.buf_vel.bind_to_storage_buffer(1)
@@ -1080,7 +1088,9 @@ class ElasticProblem:
         )
 
     def explicit_step(self):
-        self.explicit_step_gpu.run(self.gx, self.gy)
+        self.calc_stress_gpu.run(self.gx, self.gy)
+        self.update_pos_gpu.run(self.gx, self.gy)
+
 
     def get_results(self):
         data = self.buf_pos.read()
