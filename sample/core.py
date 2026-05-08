@@ -523,20 +523,20 @@ class ElasticProblem:
 
             #Create context and buffers
             self.ctx = moderngl.create_standalone_context()
-            self.buf_pos = self.ctx.buffer(np.stack([self.ux, self.uy], axis=-1).astype('f4'))
-            self.buf_vel = self.ctx.buffer(np.stack([self.vx, self.vy], axis=-1).astype('f4'))
-            self.buf_stress_old = self.ctx.buffer(np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=-1).astype('f4'))
-            self.buf_fimp = self.ctx.buffer(np.stack([self.fx_imp, self.fy_imp], axis=-1).astype('f4'))
-            self.buf_b = self.ctx.buffer(np.stack([self.bx, self.by], axis=-1).astype('f4'))
+            self.buf_pos = self.ctx.buffer(np.stack([self.ux, self.uy], axis=0).copy(order='C').astype('f4').tobytes())
+            self.buf_vel = self.ctx.buffer(np.stack([self.vx, self.vy], axis=0).copy(order='C').astype('f4').tobytes())
+            self.buf_stress_old = self.ctx.buffer(np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=0).copy(order='C').astype('f4').tobytes())
+            self.buf_fimp = self.ctx.buffer(np.stack([self.fx_imp, self.fy_imp], axis=0).copy(order='C').astype('f4').tobytes())
+            self.buf_b = self.ctx.buffer(np.stack([self.bx, self.by], axis=0).copy(order='C').astype('f4').tobytes())
             self.buf_masks = self.ctx.buffer(np.stack([self.isddx1, self.isddx2, self.isddy1, self.isddy2,
             self.y_frontier_defb, self.x_frontier_defb, self.x_frontier_def_sb, self.y_frontier_def_sb,
-            self.solid_not_uimp], axis=-1).astype('i4'))
+            self.solid_not_uimp], axis=0).astype('i4'))
             self.buf_masks_float = self.ctx.buffer(np.stack([self.isstress_x_edge_lambda_2mu,
                                                    self.isstress_y_edge_lambda_2mu,
                                                    self.isstress_x_edge_2mu,
                                                    self.isstress_y_edge_2mu
-                                                   ], axis=-1).astype('f4'))
-            self.buf_stress_curr = self.ctx.buffer(np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=-1).astype('f4'))
+                                                   ], axis=0).copy(order='C').astype('f4').tobytes())
+            self.buf_stress_curr = self.ctx.buffer(np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=0).copy(order='C').astype('f4').tobytes())
             #Compile program
             self.explicit_step_gpu = self.ctx.compute_shader(source_code_moderngl)
             #Constants declaration

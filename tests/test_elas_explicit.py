@@ -48,8 +48,8 @@ print( 'Max Sound speed * dt / lm ')
 print( 'Compression : ' + str(c_p * dt / lm))
 print( 'Shear: ' + str(c_s * dt / lm))
 
-nstep = 100
-iplot = 1
+nstep = 1000
+iplot = 10
 kplot=1
 
 elas_lambda = E*nu /(1+nu)/(1-2*nu)
