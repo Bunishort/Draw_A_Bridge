@@ -181,16 +181,16 @@ class SimulationApp:
     :**kwarg f_attract_const : float : attraction force constant for the 'attractor' interactive tool
     """
 
-    def __init__(self, solver, **kwargs):
+    def __init__(self, solver, ctx, **kwargs):
         #solver = class initialisée par sample.core.ElasticProblem
-        pygame.init()
         self.solver = solver
+        self.ctx = ctx #opengl context
+
         self.res = solver.solid.shape
         self.screen_size = kwargs.get('screen_size', (800, 800))
         self.nbstep = kwargs.get('nbstep', 10)
         self.f_attract_const = kwargs.get('f_attract_const', 1e-2)
         self.max_stress = kwargs.get('max_stress', 1.0)
-        pygame.display.set_mode(self.screen_size, pygame.OPENGL | pygame.DOUBLEBUF)
 
         self.point_size = self.screen_size[0] / self.res[0] +0.5
 
@@ -198,7 +198,6 @@ class SimulationApp:
         self.fx_imp_live = 0 * solver.fx_imp.copy()
         self.fy_imp_live = 0 * solver.fy_imp.copy()
 
-        self.ctx = moderngl.create_context()
         self.ctx.enable(moderngl.PROGRAM_POINT_SIZE)
         self.prog = self.ctx.program(vertex_shader=VTX_SHADER, fragment_shader=FRAG_SHADER)
 
