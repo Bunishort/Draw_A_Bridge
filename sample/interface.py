@@ -258,6 +258,7 @@ class SimulationApp:
             else:
                 for i in range(0, self.nbstep):
                     self.solver.explicit_step()
+
                 self.solver.get_results() # Update results
 
                 self.disp[:,:,1] = -self.solver.ux * 2 / (self.res[0] * self.solver.lm) # why - sign here ?

@@ -707,12 +707,34 @@ class ElasticProblem:
 
         self.bx, self.by = self.calc_b()
 
+        #Update all buffers
+        self.buf_pos.write(np.stack([self.ux, self.uy], axis=0).copy(order='C').astype('f4').tobytes())
+        self.buf_vel.write(np.stack([self.vx, self.vy], axis=0).copy(order='C').astype('f4').tobytes())
+        self.buf_stress_old.write(
+            np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=0).copy(order='C').astype(
+                'f4').tobytes())
+        self.buf_fimp.write(
+            np.stack([self.fx_imp, self.fy_imp], axis=0).copy(order='C').astype('f4').tobytes())
+        self.buf_b.write(np.stack([self.bx, self.by], axis=0).copy(order='C').astype('f4').tobytes())
+        self.buf_masks.write(np.stack([self.isddx1, self.isddx2, self.isddy1, self.isddy2,
+                                                   self.y_frontier_defb, self.x_frontier_defb, self.x_frontier_def_sb,
+                                                   self.y_frontier_def_sb,
+                                                   self.solid_not_uimp], axis=0).astype('i4'))
+        self.buf_masks_float.write(np.stack([self.isstress_x_edge_lambda_2mu,
+                                                         self.isstress_y_edge_lambda_2mu,
+                                                         self.isstress_x_edge_2mu,
+                                                         self.isstress_y_edge_2mu
+                                                         ], axis=0).copy(order='C').astype('f4').tobytes())
+
         return
 
     def update_f_imp(self,fx_imp, fy_imp):
         self.fx_imp = fx_imp.copy()
         self.fy_imp = fy_imp.copy()
         self.bx, self.by = self.calc_b()
+        self.buf_fimp.write(
+            np.stack([self.fx_imp, self.fy_imp], axis=0).copy(order='C').astype('f4').tobytes())
+        self.buf_b.write(np.stack([self.bx, self.by], axis=0).copy(order='C').astype('f4').tobytes())
         return
 
     def def_precond(self):
@@ -1089,10 +1111,13 @@ class ElasticProblem:
 
     def explicit_step(self):
         self.calc_stress_gpu.run(self.gx, self.gy)
+        self.ctx.memory_barrier(moderngl.SHADER_STORAGE_BARRIER_BIT)
         self.update_pos_gpu.run(self.gx, self.gy)
 
 
     def get_results(self):
+        self.ctx.finish()
+        self.ctx.copy_buffer(self.buf_stress_old, self.buf_stress_old)  # Astuce pour forcer un flush
         data = self.buf_pos.read()
         data = np.frombuffer(data, dtype='f4').reshape(2, self.solid.shape[0], self.solid.shape[1])
         self.ux = data[0]
