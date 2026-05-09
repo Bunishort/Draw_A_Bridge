@@ -20,7 +20,7 @@ ratio = 0.9  # must be between 0 and 1
 tau = 20
 damping = 0.05*0.1
 
-nbstep = int(30/4) # nb of steps per frame
+nbstep = int(30) # nb of steps per frame
 
 
 fx = 0.001*lm/10

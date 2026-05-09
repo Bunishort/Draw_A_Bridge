@@ -525,7 +525,11 @@ class ElasticProblem:
                 source_code_update = file.read()
 
             #Create context and buffers
-            self.ctx = kwargs.get('gl_context', moderngl.create_standalone_context())
+            # self.ctx = kwargs.get('gl_context', moderngl.create_standalone_context())
+            if 'gl_context' in kwargs.keys():
+                self.ctx = kwargs['gl_context']
+            else:
+                self.ctx = moderngl.create_standalone_context()
             self.buf_pos = self.ctx.buffer(np.stack([self.ux, self.uy], axis=0).copy(order='C').astype('f4').tobytes())
             self.buf_vel = self.ctx.buffer(np.stack([self.vx, self.vy], axis=0).copy(order='C').astype('f4').tobytes())
             self.buf_stress_old = self.ctx.buffer(np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=0).copy(order='C').astype('f4').tobytes())
