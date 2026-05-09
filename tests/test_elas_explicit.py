@@ -7,7 +7,7 @@ import timeit
 
 k = 36 #36*7 = 252
 nx=k*7
-ny=k*9
+ny=k*7
 
 lx = k*5
 ly = k*5

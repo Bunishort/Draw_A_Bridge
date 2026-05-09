@@ -604,6 +604,9 @@ class ElasticProblem:
     def mod_solid(self,ix,iy,state):
         #Function to modify the solid
         # It means re initialising many things : all boundary conditions
+
+        #start by making sure the variables are OK to write on
+        self.ctx.finish()
         (nx, ny) = self.solid.shape
         ix = min(ix,nx-2)
         iy = min(iy,ny-2)
@@ -1123,13 +1126,13 @@ class ElasticProblem:
         self.ctx.finish()
         self.ctx.copy_buffer(self.buf_stress_old, self.buf_stress_old)  # Astuce pour forcer un flush
         data = self.buf_pos.read()
-        data = np.frombuffer(data, dtype='f4').reshape(2, self.solid.shape[0], self.solid.shape[1])
+        data = np.frombuffer(data, dtype='f4').copy().reshape(2, self.solid.shape[0], self.solid.shape[1])
         self.ux = data[0]
         self.uy = data[1]
-        data = np.frombuffer(self.buf_vel.read(), dtype='f4').reshape(2, self.solid.shape[0], self.solid.shape[1])
+        data = np.frombuffer(self.buf_vel.read(), dtype='f4').copy().reshape(2, self.solid.shape[0], self.solid.shape[1])
         self.vx = data[0]
         self.vy = data[1]
-        data = np.frombuffer(self.buf_stress_old.read(), dtype='f4').reshape(4, self.solid.shape[0], self.solid.shape[1])
+        data = np.frombuffer(self.buf_stress_old.read(), dtype='f4').copy().reshape(4, self.solid.shape[0], self.solid.shape[1])
         self.sxx_x_old = data[0]
         self.sxy_x_old = data[1]
         self.syy_y_old = data[2]
