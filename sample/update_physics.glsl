@@ -40,8 +40,8 @@ void main() {
         float c_syy_dy = -syy_prev + syy_curr;
 
         float m = float(m_int[id + 8*off]) / lm; // solid_not_uimp
-        float dvx = (c_sxx_dx + c_sxy_dy) * m - ext_forces[id];     // a_u_x - bx
-        float dvy = (c_syy_dy + c_sxy_dx) * m - ext_forces[id + off]; // a_u_y - by
+        float dvx = (c_sxx_dx + c_sxy_dy) * m - ext_forces[id] + forces[id];     // a_u_x - bx - damping force
+        float dvy = (c_syy_dy + c_sxy_dx) * m - ext_forces[id + off] + forces[id+off]; // a_u_y - by - damping force
 
         dvx *= dt_by_vol_mass; dvy *= dt_by_vol_mass;
 

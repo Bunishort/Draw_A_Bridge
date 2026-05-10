@@ -490,8 +490,10 @@ class ElasticProblem:
                 setattr(self, var, kwargs.get(var, np.zeros(self.solid.shape, dtype = np.float32)))
 
             self.damping_eff = self.damping * self.lm * self.lm # Effective damping for volumetric force computation
-            self.fx_imp -= self.damping_eff * self.vx
-            self.fy_imp -= self.damping_eff * self.vy
+            # self.fx_imp -= self.damping_eff * self.vx
+            # self.fy_imp -= self.damping_eff * self.vy
+            self.f_dampx = - self.damping_eff * self.vx
+            self.f_dampy = - self.damping_eff * self.vy
 
             self.ratio = np.float32(kwargs.get('ratio', 0.99) ) # must be between 0 and 1
             if (self.ratio >= 1) or (self.ratio <= 0):
@@ -533,7 +535,7 @@ class ElasticProblem:
             self.buf_pos = self.ctx.buffer(np.stack([self.ux, self.uy], axis=0).copy(order='C').astype('f4').tobytes())
             self.buf_vel = self.ctx.buffer(np.stack([self.vx, self.vy], axis=0).copy(order='C').astype('f4').tobytes())
             self.buf_stress_old = self.ctx.buffer(np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=0).copy(order='C').astype('f4').tobytes())
-            self.buf_fimp = self.ctx.buffer(np.stack([self.fx_imp, self.fy_imp], axis=0).copy(order='C').astype('f4').tobytes())
+            self.buf_fimp = self.ctx.buffer(np.stack([self.f_dampx, self.f_dampy], axis=0).copy(order='C').astype('f4').tobytes())
             self.buf_b = self.ctx.buffer(np.stack([self.bx, self.by], axis=0).copy(order='C').astype('f4').tobytes())
             self.buf_masks = self.ctx.buffer(np.stack([self.isddx1, self.isddx2, self.isddy1, self.isddy2,
             self.y_frontier_defb, self.x_frontier_defb, self.x_frontier_def_sb, self.y_frontier_def_sb,
@@ -713,6 +715,8 @@ class ElasticProblem:
         self.isstress_y_edge_2mu = self.isstress_y_edge *  2 * self.elas_mu
 
         self.bx, self.by = self.calc_b()
+        self.f_dampx = - self.damping_eff * self.vx
+        self.f_dampy = - self.damping_eff * self.vy
 
         #Update all buffers
         self.buf_pos.write(np.stack([self.ux, self.uy], axis=0).copy(order='C').astype('f4').tobytes())
@@ -720,8 +724,9 @@ class ElasticProblem:
         self.buf_stress_old.write(
             np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=0).copy(order='C').astype(
                 'f4').tobytes())
+        #buf fimp for damping forces only
         self.buf_fimp.write(
-            np.stack([self.fx_imp, self.fy_imp], axis=0).copy(order='C').astype('f4').tobytes())
+            np.stack([self.f_dampx,self.f_dampy], axis=0).copy(order='C').astype('f4').tobytes())
         self.buf_b.write(np.stack([self.bx, self.by], axis=0).copy(order='C').astype('f4').tobytes())
         self.buf_masks.write(np.stack([self.isddx1, self.isddx2, self.isddy1, self.isddy2,
                                                    self.y_frontier_defb, self.x_frontier_defb, self.x_frontier_def_sb,
@@ -739,8 +744,6 @@ class ElasticProblem:
         self.fx_imp = fx_imp.copy()
         self.fy_imp = fy_imp.copy()
         self.bx, self.by = self.calc_b()
-        self.buf_fimp.write(
-            np.stack([self.fx_imp, self.fy_imp], axis=0).copy(order='C').astype('f4').tobytes())
         self.buf_b.write(np.stack([self.bx, self.by], axis=0).copy(order='C').astype('f4').tobytes())
         return
 
