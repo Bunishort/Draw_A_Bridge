@@ -238,7 +238,7 @@ def explicit_step(
     vx,# h*w float32 matrix
     vy,# h*w float32 matrix
     sxx_x_old, sxy_x_old, syy_y_old, sxy_y_old,# h*w float32 matrices
-    fx_imp, fy_imp,# h*w float32 matrices
+    fx_damp, fy_damp,# h*w float32 matrices
     lm , #float32 const
     isddx1,# h*w bool matrix
     isddx2,# h*w bool matrix
@@ -319,8 +319,8 @@ def explicit_step(
 
             #Update speed and position from acceleration
 
-            dvx = ( a_u_x - bx[i, j] ) #dvx = acc_x * dt
-            dvy = ( a_u_y - by[i, j] )
+            dvx = ( a_u_x - bx[i, j] +fx_damp[i, j]) #dvx = acc_x * dt
+            dvy = ( a_u_y - by[i, j] + fy_damp[i,j])
 
             dvx *= dt_by_vol_mass
             dvy *= dt_by_vol_mass
@@ -328,14 +328,14 @@ def explicit_step(
             vx[i, j] += dvx
             vy[i, j] += dvy
 
-            fx_imp[i, j] -= damping_eff * dvx
-            fy_imp[i, j] -= damping_eff * dvy
+            fx_damp[i, j] -= damping_eff * dvx #damping forces
+            fy_damp[i, j] -= damping_eff * dvy
 
             ux[i, j] += vx[i, j] * dt
             uy[i, j] += vy[i, j] * dt
 
     return (ux, uy, vx, vy, sxx_x_old,
-            sxy_x_old, syy_y_old, sxy_y_old, fx_imp, fy_imp)
+            sxy_x_old, syy_y_old, sxy_y_old, fx_damp, fy_damp)
 
 
 
@@ -492,8 +492,8 @@ class ElasticProblem:
             self.damping_eff = self.damping * self.lm * self.lm # Effective damping for volumetric force computation
             # self.fx_imp -= self.damping_eff * self.vx
             # self.fy_imp -= self.damping_eff * self.vy
-            self.f_dampx = - self.damping_eff * self.vx
-            self.f_dampy = - self.damping_eff * self.vy
+            self.fx_damp= - self.damping_eff * self.vx
+            self.fy_damp = - self.damping_eff * self.vy
 
             self.ratio = np.float32(kwargs.get('ratio', 0.99) ) # must be between 0 and 1
             if (self.ratio >= 1) or (self.ratio <= 0):
@@ -535,7 +535,7 @@ class ElasticProblem:
             self.buf_pos = self.ctx.buffer(np.stack([self.ux, self.uy], axis=0).copy(order='C').astype('f4').tobytes())
             self.buf_vel = self.ctx.buffer(np.stack([self.vx, self.vy], axis=0).copy(order='C').astype('f4').tobytes())
             self.buf_stress_old = self.ctx.buffer(np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=0).copy(order='C').astype('f4').tobytes())
-            self.buf_fimp = self.ctx.buffer(np.stack([self.f_dampx, self.f_dampy], axis=0).copy(order='C').astype('f4').tobytes())
+            self.buf_fimp = self.ctx.buffer(np.stack([self.fx_damp, self.fy_damp], axis=0).copy(order='C').astype('f4').tobytes())
             self.buf_b = self.ctx.buffer(np.stack([self.bx, self.by], axis=0).copy(order='C').astype('f4').tobytes())
             self.buf_masks = self.ctx.buffer(np.stack([self.isddx1, self.isddx2, self.isddy1, self.isddy2,
             self.y_frontier_defb, self.x_frontier_defb, self.x_frontier_def_sb, self.y_frontier_def_sb,
@@ -715,8 +715,8 @@ class ElasticProblem:
         self.isstress_y_edge_2mu = self.isstress_y_edge *  2 * self.elas_mu
 
         self.bx, self.by = self.calc_b()
-        self.f_dampx = - self.damping_eff * self.vx
-        self.f_dampy = - self.damping_eff * self.vy
+        self.fx_damp= - self.damping_eff * self.vx
+        self.fy_damp = - self.damping_eff * self.vy
 
         #Update all buffers
         self.buf_pos.write(np.stack([self.ux, self.uy], axis=0).copy(order='C').astype('f4').tobytes())
@@ -726,7 +726,7 @@ class ElasticProblem:
                 'f4').tobytes())
         #buf fimp for damping forces only
         self.buf_fimp.write(
-            np.stack([self.f_dampx,self.f_dampy], axis=0).copy(order='C').astype('f4').tobytes())
+            np.stack([self.fx_damp,self.fy_damp], axis=0).copy(order='C').astype('f4').tobytes())
         self.buf_b.write(np.stack([self.bx, self.by], axis=0).copy(order='C').astype('f4').tobytes())
         self.buf_masks.write(np.stack([self.isddx1, self.isddx2, self.isddy1, self.isddy2,
                                                    self.y_frontier_defb, self.x_frontier_defb, self.x_frontier_def_sb,
@@ -1069,8 +1069,8 @@ class ElasticProblem:
         sxx_x, sxy_x, syy_y, sxy_y = self.calc_stress_explicit()
         a_u_x, a_u_y = self.calc_a_u_sig(sxx_x, sxy_x, syy_y, sxy_y )
 
-        acc_x = ( a_u_x - self.bx ) #division by vol_mass on next line for speed
-        acc_y = ( a_u_y - self.by )
+        acc_x = ( a_u_x - self.bx + self.fx_damp) #division by vol_mass on next line for speed
+        acc_y = ( a_u_y - self.by + self.fy_damp)
 
         dvx = acc_x * ( self.dt/ self.vol_mass )
         dvy = acc_y * ( self.dt/ self.vol_mass )
@@ -1078,8 +1078,8 @@ class ElasticProblem:
         self.vx += dvx
         self.vy += dvy
 
-        self.fx_imp -= self.damping_eff * dvx
-        self.fy_imp -= self.damping_eff * dvy
+        self.fx_damp -= self.damping_eff * dvx
+        self.fy_damp -= self.damping_eff * dvy
 
         self.ux += self.vx * self.dt
         self.uy += self.vy * self.dt
@@ -1087,13 +1087,13 @@ class ElasticProblem:
     def explicit_step_numba(self):
         (self.ux, self.uy, self.vx, self.vy,
          self.sxx_x_old, self.sxy_x_old, self.syy_y_old,
-         self.sxy_y_old, self.fx_imp, self.fy_imp) = explicit_step(
+         self.sxy_y_old, self.fx_damp, self.fy_damp) = explicit_step(
             self.ux,
             self.uy,
             self.vx,
             self.vy,
             self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old,
-            self.fx_imp, self.fy_imp,
+            self.fx_damp, self.fy_damp,
             self.lm,
             self.isddx1b,
             self.isddx2b,
