@@ -40,7 +40,7 @@ elas_mu = E/2/(1+nu)
 
 solid = np.zeros([nx,ny],dtype = bool)
 ix = int(nx*9/10)
-iy = int(ny*5/10)
+iy = int(ny*1/10)
 solid[ix:(ix+2),iy:(iy+2)] = True
 ux_imp=np.zeros(solid.shape)
 ux_imp[:,:] = np.nan

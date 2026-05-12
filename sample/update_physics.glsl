@@ -5,7 +5,6 @@ layout (local_size_x = 16, local_size_y = 16) in;
 // --- MAPPING DES BUFFERS (Strictement identique à votre stack Python) ---
 layout(std430, binding = 0) buffer b_pos { float pos[]; };
 layout(std430, binding = 1) buffer b_vel { float vel[]; };
-layout(std430, binding = 3) buffer b_force { float forces[]; };
 layout(std430, binding = 4) buffer b_ext { float ext_forces[]; };
 layout(std430, binding = 5) buffer b_masks_int { int m_int[]; };
 layout(std430, binding = 6) buffer b_stress_curr { float s_curr[]; };
@@ -40,15 +39,13 @@ void main() {
         float c_syy_dy = -syy_prev + syy_curr;
 
         float m = float(m_int[id + 8*off]) / lm; // solid_not_uimp
-        float dvx = (c_sxx_dx + c_sxy_dy) * m - ext_forces[id] + forces[id];     // a_u_x - bx - damping force
-        float dvy = (c_syy_dy + c_sxy_dx) * m - ext_forces[id + off] + forces[id+off]; // a_u_y - by - damping force
+        float dvx = (c_sxx_dx + c_sxy_dy) * m - ext_forces[id] - damping_eff * vel[id];     // a_u_x - bx - damping force
+        float dvy = (c_syy_dy + c_sxy_dx) * m - ext_forces[id + off] - damping_eff * vel[id+off]; // a_u_y - by - damping force
 
         dvx *= dt_by_vol_mass; dvy *= dt_by_vol_mass;
 
         vel[id] += dvx;
         vel[id + off] += dvy;
-        forces[id] -= damping_eff * dvx;
-        forces[id + off] -= damping_eff * dvy;
         pos[id] += vel[id] * dt;
         pos[id + off] += vel[id + off] * dt;
     }
