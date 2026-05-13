@@ -524,45 +524,69 @@ class ElasticProblem:
                 self.ctx = kwargs['gl_context']
             else:
                 self.ctx = moderngl.create_standalone_context()
-            self.buf_pos = self.ctx.buffer(np.stack([self.ux, self.uy], axis=0).copy(order='C').astype('f4').tobytes())
-            self.buf_vel = self.ctx.buffer(np.stack([self.vx, self.vy], axis=0).copy(order='C').astype('f4').tobytes())
-            self.buf_stress_old = self.ctx.buffer(np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=0).copy(order='C').astype('f4').tobytes())
-            self.buf_b = self.ctx.buffer(np.stack([self.bx, self.by], axis=0).copy(order='C').astype('f4').tobytes())
-            self.buf_masks = self.ctx.buffer(np.stack([self.isddx1, self.isddx2, self.isddy1, self.isddy2,
-            self.y_frontier_defb, self.x_frontier_defb, self.x_frontier_def_sb, self.y_frontier_def_sb,
-            self.solid_not_uimp], axis=0).astype('i4'))
-            self.buf_masks_float = self.ctx.buffer(np.stack([self.isstress_x_edge_lambda_2mu,
-                                                   self.isstress_y_edge_lambda_2mu,
-                                                   self.isstress_x_edge_2mu,
-                                                   self.isstress_y_edge_2mu
-                                                   ], axis=0).copy(order='C').astype('f4').tobytes())
-            #Compile program
+            # --- 1. Préparation des données (Format H, W, Canaux) ---
+            # Texture Pos_Vel : R=ux, G=uy, B=vx, A=vy
+            data_pos_vel = np.stack([self.ux, self.uy, self.vx, self.vy], axis=-1).astype('f4')
+
+            # Texture Stress : R=sxx, G=sxy_x, B=syy, A=sxy_y
+            data_stress = np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=-1).astype(
+                'f4')
+
+            # Texture Forces Externes : R=bx, G=by
+            data_ext = np.stack([self.bx, self.by], axis=-1).astype('f4')
+
+            # Texture Masques Flottants : R, G, B, A
+            data_masks_flt = np.stack([
+                self.isstress_x_edge_lambda_2mu,
+                self.isstress_y_edge_lambda_2mu,
+                self.isstress_x_edge_2mu,
+                self.isstress_y_edge_2mu
+            ], axis=-1).astype('f4')
+
+            # --- 2. Création des Textures ---
+            # Note : On utilise des textures 2D avec 4 composantes (RGBA) ou 2 (RG)
+            self.tex_pos_vel = self.ctx.texture(self.solid.shape[::-1], 4, data=data_pos_vel.tobytes(), dtype='f4')
+            self.tex_stress_old = self.ctx.texture(self.solid.shape[::-1], 4, data=data_stress.tobytes(), dtype='f4')
+            self.tex_ext = self.ctx.texture(self.solid.shape[::-1], 2, data=data_ext.tobytes(), dtype='f4')
+            self.tex_masks_flt = self.ctx.texture(self.solid.shape[::-1], 4, data=data_masks_flt.tobytes(), dtype='f4')
+
+            # --- 3. Création du Buffer pour les masques entiers (on le garde en SSBO car 9 couches) ---
+            # On garde l'ordre C (planaire) car le shader y accède via id + offset
+            self.buf_masks = self.ctx.buffer(np.stack([
+                self.isddx1, self.isddx2, self.isddy1, self.isddy2,
+                self.y_frontier_defb, self.x_frontier_defb, self.x_frontier_def_sb, self.y_frontier_def_sb,
+                self.solid_not_uimp
+            ], axis=0).astype('i4').tobytes())
+
+            # --- 4. Compilation et Uniforms ---
             self.calc_stress_gpu = self.ctx.compute_shader(source_code_stress)
             self.update_pos_gpu = self.ctx.compute_shader(source_code_update)
 
-            #Constants declaration
-            self.calc_stress_gpu['width'] = self.solid.shape[1]
-            self.calc_stress_gpu['height'] = self.solid.shape[0]
-            self.update_pos_gpu['width'] = self.solid.shape[1]
-            self.update_pos_gpu['height'] = self.solid.shape[0]
+            for prog in [self.calc_stress_gpu, self.update_pos_gpu]:
+                prog['width'] = self.solid.shape[1]
+                prog['height'] = self.solid.shape[0]
+                prog['lm'].value = self.lm
+
             self.calc_stress_gpu['coef'] = self.coef
             self.calc_stress_gpu['elas_lambda_ratio'] = self.elas_lambda_ratio
             self.calc_stress_gpu['explicit_b'] = self.explicit_b
             self.calc_stress_gpu['G0'] = self.G0
             self.calc_stress_gpu['visco_fact_1'] = (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
             self.calc_stress_gpu['visco_fact_2'] = np.exp(-self.explicit_a * self.dt)
+
             self.update_pos_gpu['dt_by_vol_mass'] = self.dt / self.vol_mass
             self.update_pos_gpu['damping_eff'] = self.damping_eff
-            self.update_pos_gpu['lm'].value = self.lm
-            self.calc_stress_gpu['lm'].value = self.lm
             self.update_pos_gpu['dt'].value = self.dt
-            #Buffer linking
-            self.buf_pos.bind_to_storage_buffer(0)
-            self.buf_vel.bind_to_storage_buffer(1)
-            self.buf_stress_old.bind_to_storage_buffer(2)
-            self.buf_b.bind_to_storage_buffer(4)
+
+            # --- 5. Liaison (Binding) ---
+            # IMPORTANT : Pour les textures dans un Compute Shader, on utilise bind_to_image
+            self.tex_pos_vel.bind_to_image(0, read=True, write=True)
+            self.tex_stress_old.bind_to_image(2, read=True, write=True)
+            self.tex_ext.bind_to_image(4, read=True, write=False)
+            self.tex_masks_flt.bind_to_image(7, read=True, write=False)
+
+            # Le buffer de masques reste un storage_buffer
             self.buf_masks.bind_to_storage_buffer(5)
-            self.buf_masks_float.bind_to_storage_buffer(7)
 
             #gpu thread group sizes
             self.gx = int(np.ceil(self.solid.shape[1] / 16))
@@ -1107,19 +1131,25 @@ class ElasticProblem:
 
     def get_results(self):
         self.ctx.finish()
-        self.ctx.copy_buffer(self.buf_stress_old, self.buf_stress_old)  # Astuce pour forcer un flush
-        data = self.buf_pos.read()
-        data = np.frombuffer(data, dtype='f4').copy().reshape(2, self.solid.shape[0], self.solid.shape[1])
-        self.ux = data[0]
-        self.uy = data[1]
-        data = np.frombuffer(self.buf_vel.read(), dtype='f4').copy().reshape(2, self.solid.shape[0], self.solid.shape[1])
-        self.vx = data[0]
-        self.vy = data[1]
-        data = np.frombuffer(self.buf_stress_old.read(), dtype='f4').copy().reshape(4, self.solid.shape[0], self.solid.shape[1])
-        self.sxx_x_old = data[0]
-        self.sxy_x_old = data[1]
-        self.syy_y_old = data[2]
-        self.sxy_y_old = data[3]
+
+        # 1. Lecture de la texture Pos_Vel (Contient ux, uy, vx, vy)
+        # On récupère (H, W, 4) car c'est du RGBA
+        data_pv = self.tex_pos_vel.read()
+        res_pv = np.frombuffer(data_pv, dtype='f4').reshape(self.solid.shape[0], self.solid.shape[1], 4)
+
+        self.ux = res_pv[:, :, 0].copy()  # Canal R
+        self.uy = res_pv[:, :, 1].copy()  # Canal G
+        self.vx = res_pv[:, :, 2].copy()  # Canal B
+        self.vy = res_pv[:, :, 3].copy()  # Canal A
+
+        # 2. Lecture de la texture Stress (Contient sxx, sxy_x, syy, sxy_y)
+        data_s = self.tex_stress_old.read()
+        res_s = np.frombuffer(data_s, dtype='f4').reshape(self.solid.shape[0], self.solid.shape[1], 4)
+
+        self.sxx_x_old = res_s[:, :, 0].copy()
+        self.sxy_x_old = res_s[:, :, 1].copy()
+        self.syy_y_old = res_s[:, :, 2].copy()
+        self.sxy_y_old = res_s[:, :, 3].copy()
 
     def calc_VM_stress(self):
         # Calculate the second invariant of the deviatoric stress tensor
