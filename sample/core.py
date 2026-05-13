@@ -536,7 +536,6 @@ class ElasticProblem:
                                                    self.isstress_x_edge_2mu,
                                                    self.isstress_y_edge_2mu
                                                    ], axis=0).copy(order='C').astype('f4').tobytes())
-            self.buf_stress_curr = self.ctx.buffer(np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=0).copy(order='C').astype('f4').tobytes())
             #Compile program
             self.calc_stress_gpu = self.ctx.compute_shader(source_code_stress)
             self.update_pos_gpu = self.ctx.compute_shader(source_code_update)
@@ -564,7 +563,6 @@ class ElasticProblem:
             self.buf_b.bind_to_storage_buffer(4)
             self.buf_masks.bind_to_storage_buffer(5)
             self.buf_masks_float.bind_to_storage_buffer(7)
-            self.buf_stress_curr.bind_to_storage_buffer(6)
 
             #gpu thread group sizes
             self.gx = int(np.ceil(self.solid.shape[1] / 16))
