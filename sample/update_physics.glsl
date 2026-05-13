@@ -13,32 +13,39 @@ void main() {
     ivec2 p = ivec2(gl_GlobalInvocationID.xy);
 
     if (p.y >= 1 && p.x >= 1 && p.y < height && p.x < width) {
-        // Accès aux voisins directs via ivec2
-        vec4 s00 = imageLoad(img_stress_curr, p + ivec2(-1, -1));
-        vec4 s10 = imageLoad(img_stress_curr, p + ivec2(0, -1));
-        vec4 s01 = imageLoad(img_stress_curr, p + ivec2(-1, 0));
+        // Mapping Buffer vers Texture :
+        // idx(i-1, j-1) -> p + ivec2(-1, -1)
+        // idx(i, j-1)   -> p + ivec2(-1, 0)  (Même ligne, col préc.)
+        // idx(i-1, j)   -> p + ivec2(0, -1)  (Même col, ligne préc.)
 
-        // s.x=sxx, s.y=sxy_x, s.z=syy, s.w=sxy_y
-        float c_sxx_dx = -s00.x + s10.x;
-        float c_sxy_dx = -s00.y + s10.y;
-        float c_sxy_dy = -s00.w + s01.w;
-        float c_syy_dy = -s00.z + s01.z;
+        vec4 s_prev_prev = imageLoad(img_stress_curr, p + ivec2(-1, -1));
+        vec4 s_curr_prev = imageLoad(img_stress_curr, p + ivec2(-1, 0));
+        vec4 s_prev_curr = imageLoad(img_stress_curr, p + ivec2(0, -1));
+
+        // c_sxx_dx = -sxx(i-1, j-1) + sxx(i, j-1)
+        float c_sxx_dx = -s_prev_prev.x + s_curr_prev.x;
+        // c_sxy_dx = -sxy_x(i-1, j-1) + sxy_x(i, j-1)
+        float c_sxy_dx = -s_prev_prev.y + s_curr_prev.y;
+        // c_sxy_dy = -sxy_y(i-1, j-1) + sxy_y(i-1, j)
+        float c_sxy_dy = -s_prev_prev.w + s_prev_curr.w;
+        // c_syy_dy = -syy(i-1, j-1) + syy(i-1, j)
+        float c_syy_dy = -s_prev_prev.z + s_prev_curr.z;
 
         int id = p.y * width + p.x;
         float m = float(m_int[id + 8*(width*height)]) / lm;
 
         vec2 f_ext = imageLoad(img_ext, p).xy;
-        vec4 pv = imageLoad(img_pos_vel, p); // x=ux, y=uy, z=vx, w=vy
+        vec4 pv = imageLoad(img_pos_vel, p);
 
         float dvx = (c_sxx_dx + c_sxy_dy) * m - f_ext.x - damping_eff * pv.z;
         float dvy = (c_syy_dy + c_sxy_dx) * m - f_ext.y - damping_eff * pv.w;
 
         dvx *= dt_by_vol_mass; dvy *= dt_by_vol_mass;
 
-        pv.z += dvx;      // New vx
-        pv.w += dvy;      // New vy
-        pv.x += pv.z * dt; // New ux
-        pv.y += pv.w * dt; // New uy
+        pv.z += dvx;      // vx
+        pv.w += dvy;      // vy
+        pv.x += pv.z * dt; // ux
+        pv.y += pv.w * dt; // uy
 
         imageStore(img_pos_vel, p, pv);
     }
