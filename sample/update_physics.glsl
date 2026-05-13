@@ -7,7 +7,7 @@ layout(std430, binding = 0) buffer b_pos { float pos[]; };
 layout(std430, binding = 1) buffer b_vel { float vel[]; };
 layout(std430, binding = 4) buffer b_ext { float ext_forces[]; };
 layout(std430, binding = 5) buffer b_masks_int { int m_int[]; };
-layout(std430, binding = 6) buffer b_stress_curr { float s_curr[]; };
+layout(std430, binding = 2) buffer b_stress_old { float s_curr[]; };
 
 uniform int width; uniform int height;
 uniform float lm; uniform float dt_by_vol_mass; uniform float damping_eff; uniform float dt;

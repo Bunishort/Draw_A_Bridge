@@ -7,7 +7,6 @@ layout(std430, binding = 0) buffer b_pos { float pos[]; };
 layout(std430, binding = 1) buffer b_vel { float vel[]; };
 layout(std430, binding = 2) buffer b_stress_old { float s_old[]; };
 layout(std430, binding = 5) buffer b_masks_int { int m_int[]; };
-layout(std430, binding = 6) buffer b_stress_curr { float s_curr[]; };
 layout(std430, binding = 7) buffer b_masks_flt { float m_flt[]; };
 
 uniform int width; uniform int height;
@@ -77,17 +76,15 @@ void main() {
         float sxy_x = ((2.0*(s00.exy + s01.exy) + s00.eyx + s01.eyx)/4.0 + duydx2) * m_flt[id + 2*off];
         float sxy_y = ((s00.exy + s10.exy + 2.0*(s00.eyx + s10.eyx))/4.0 + duxdy2) * m_flt[id + 3*off];
 
-        // --- CORRECTION : Mise à jour viscoélastique AVANT la divergence ---
-        // On stocke le résultat mis à jour dans s_curr pour que la phase 2 l'utilise
-        s_curr[id]         = sxx * visco_fact_1 + s_old[id] * visco_fact_2;         // sxx_x
-        s_curr[id + off]   = sxy_x * visco_fact_1 + s_old[id + off] * visco_fact_2; // sxy_x
-        s_curr[id + 2*off] = syy * visco_fact_1 + s_old[id + 2*off] * visco_fact_2; // syy_y
-        s_curr[id + 3*off] = sxy_y * visco_fact_1 + s_old[id + 3*off] * visco_fact_2; // sxy_y
-
+        //  Mise à jour viscoélastique
         // Mise à jour du buffer permanent pour l'itération suivante (sxx_x_old = sxx_x)
-        s_old[id]         = s_curr[id];
-        s_old[id + off]   = s_curr[id + off];
-        s_old[id + 2*off] = s_curr[id + 2*off];
-        s_old[id + 3*off] = s_curr[id + 3*off];
+        s_old[id]         *= visco_fact_2;
+        s_old[id]         += sxx * visco_fact_1;
+        s_old[id + off]   *= visco_fact_2;
+        s_old[id + off]   += sxy_x * visco_fact_1;
+        s_old[id + 2*off] *= visco_fact_2;
+        s_old[id + 2*off] += syy * visco_fact_1;
+        s_old[id + 3*off] *= visco_fact_2;
+        s_old[id + 3*off] += sxy_y * visco_fact_1;
     }
 }
