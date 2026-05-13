@@ -728,22 +728,33 @@ class ElasticProblem:
 
         self.bx, self.by = self.calc_b()
 
-        #Update all buffers
-        self.buf_pos.write(np.stack([self.ux, self.uy], axis=0).copy(order='C').astype('f4').tobytes())
-        self.buf_vel.write(np.stack([self.vx, self.vy], axis=0).copy(order='C').astype('f4').tobytes())
-        self.buf_stress_old.write(
-            np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=0).copy(order='C').astype(
-                'f4').tobytes())
-        self.buf_b.write(np.stack([self.bx, self.by], axis=0).copy(order='C').astype('f4').tobytes())
-        self.buf_masks.write(np.stack([self.isddx1, self.isddx2, self.isddy1, self.isddy2,
-                                                   self.y_frontier_defb, self.x_frontier_defb, self.x_frontier_def_sb,
-                                                   self.y_frontier_def_sb,
-                                                   self.solid_not_uimp], axis=0).astype('i4'))
-        self.buf_masks_float.write(np.stack([self.isstress_x_edge_lambda_2mu,
-                                                         self.isstress_y_edge_lambda_2mu,
-                                                         self.isstress_x_edge_2mu,
-                                                         self.isstress_y_edge_2mu
-                                                         ], axis=0).copy(order='C').astype('f4').tobytes())
+        # 1. Update Pos_Vel (ux, uy, vx, vy)
+        data_pos_vel = np.stack([self.ux, self.uy, self.vx, self.vy], axis=-1).astype('f4')
+        self.tex_pos_vel.write(np.ascontiguousarray(data_pos_vel).tobytes())
+
+        # 2. Update Stress (sxx, sxy_x, syy, sxy_y)
+        data_stress = np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=-1).astype('f4')
+        self.tex_stress_old.write(np.ascontiguousarray(data_stress).tobytes())
+        # 3. Update Forces Externes (bx, by) - Texture RG (2 canaux)
+        data_ext = np.stack([self.bx, self.by], axis=-1).astype('f4')
+        self.tex_ext.write(np.ascontiguousarray(data_ext).tobytes())
+
+        # 4. Update Masques Flottants (RGBA)
+        data_masks_flt = np.stack([
+            self.isstress_x_edge_lambda_2mu,
+            self.isstress_y_edge_lambda_2mu,
+            self.isstress_x_edge_2mu,
+            self.isstress_y_edge_2mu
+        ], axis=-1).astype('f4')
+        self.tex_masks_flt.write(np.ascontiguousarray(data_masks_flt).tobytes())
+
+        # 5. Update Masques Entiers (SSBO - Reste en axis=0 car planaire)
+        data_masks_int = np.stack([
+            self.isddx1, self.isddx2, self.isddy1, self.isddy2,
+            self.y_frontier_defb, self.x_frontier_defb, self.x_frontier_def_sb,
+            self.y_frontier_def_sb, self.solid_not_uimp
+        ], axis=0).astype('i4')
+        self.buf_masks.write(data_masks_int.tobytes())
 
         return
 
@@ -751,7 +762,8 @@ class ElasticProblem:
         self.fx_imp = fx_imp.copy()
         self.fy_imp = fy_imp.copy()
         self.bx, self.by = self.calc_b()
-        self.buf_b.write(np.stack([self.bx, self.by], axis=0).copy(order='C').astype('f4').tobytes())
+        data_ext = np.stack([self.bx, self.by], axis=-1).astype('f4')
+        self.tex_ext.write(np.ascontiguousarray(data_ext).tobytes())
         return
 
     def def_precond(self):
