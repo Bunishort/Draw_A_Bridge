@@ -1137,8 +1137,9 @@ class ElasticProblem:
 
     def explicit_step(self):
         self.calc_stress_gpu.run(self.gx, self.gy)
-        self.ctx.memory_barrier(moderngl.SHADER_STORAGE_BARRIER_BIT)
+        self.ctx.memory_barrier(moderngl.SHADER_IMAGE_ACCESS_BARRIER_BIT)
         self.update_pos_gpu.run(self.gx, self.gy)
+        self.ctx.memory_barrier(moderngl.SHADER_IMAGE_ACCESS_BARRIER_BIT)
 
 
     def get_results(self):
