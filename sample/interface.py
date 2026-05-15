@@ -280,7 +280,8 @@ class SimulationApp:
                 self.solver.update_f_imp(self.solver.fx_imp , self.solver.fy_imp)
 
 
-            plot_field = np.log(1 + self.solver.calc_VM_stress() / self.max_stress) / np.log(2)
+            #plot_field = np.log(1 + self.solver.calc_VM_stress() / self.max_stress) / np.log(2)
+            plot_field = self.solver.sxy_x_old.copy() / self.max_stress
             plot_field[self.solver.is_uimp] = 1
             plot_field[plot_field > 1] = 1
             self.plot_field[:, :] = plot_field
