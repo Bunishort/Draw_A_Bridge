@@ -535,27 +535,18 @@ class ElasticProblem:
             # Texture Forces Externes : R=bx, G=by
             data_ext = np.stack([self.bx, self.by], axis=-1).astype('f4')
 
-            # Texture Masques Flottants : R, G, B, A
-            data_masks_flt = np.stack([
-                self.isstress_x_edge_lambda_2mu,
-                self.isstress_y_edge_lambda_2mu,
-                self.isstress_x_edge_2mu,
-                self.isstress_y_edge_2mu
-            ], axis=-1).astype('f4')
-
             # --- 2. Création des Textures ---
             # Note : On utilise des textures 2D avec 4 composantes (RGBA) ou 2 (RG)
             self.tex_pos_vel = self.ctx.texture(self.solid.shape[::-1], 4, data=data_pos_vel.tobytes(), dtype='f4')
             self.tex_stress_old = self.ctx.texture(self.solid.shape[::-1], 4, data=data_stress.tobytes(), dtype='f4')
             self.tex_ext = self.ctx.texture(self.solid.shape[::-1], 2, data=data_ext.tobytes(), dtype='f4')
-            self.tex_masks_flt = self.ctx.texture(self.solid.shape[::-1], 4, data=data_masks_flt.tobytes(), dtype='f4')
 
-            # --- 3. Création du Buffer pour les masques entiers (on le garde en SSBO car 9 couches) ---
+            # --- 3. Création du Buffer pour les masques entiers (on le garde en SSBO car 11 couches) ---
             # On garde l'ordre C (planaire) car le shader y accède via id + offset
             self.buf_masks = self.ctx.buffer(np.stack([
                 self.isddx1, self.isddx2, self.isddy1, self.isddy2,
                 self.y_frontier_defb, self.x_frontier_defb, self.x_frontier_def_sb, self.y_frontier_def_sb,
-                self.solid_not_uimp
+                self.solid_not_uimp, self.isstress_x_edge, self.isstress_y_edge
             ], axis=0).astype('i4').tobytes())
 
             # --- 4. Compilation et Uniforms ---
@@ -573,6 +564,9 @@ class ElasticProblem:
             self.calc_stress_gpu['G0'] = self.G0
             self.calc_stress_gpu['visco_fact_1'] = (1 - np.exp(-self.explicit_a * self.dt)) / self.explicit_a
             self.calc_stress_gpu['visco_fact_2'] = np.exp(-self.explicit_a * self.dt)
+            self.calc_stress_gpu['elas_lambda_2mu'] = self.elas_lambda + 2 * self.elas_mu
+            self.calc_stress_gpu['elas_2mu'] = 2 * self.elas_mu
+
 
             self.update_pos_gpu['dt_by_vol_mass'] = self.dt / self.vol_mass
             self.update_pos_gpu['damping_eff'] = self.damping_eff
@@ -583,7 +577,6 @@ class ElasticProblem:
             self.tex_pos_vel.bind_to_image(0, read=True, write=True)
             self.tex_stress_old.bind_to_image(2, read=True, write=True)
             self.tex_ext.bind_to_image(4, read=True, write=False)
-            self.tex_masks_flt.bind_to_image(7, read=True, write=False)
 
             # Le buffer de masques reste un storage_buffer
             self.buf_masks.bind_to_storage_buffer(5)
@@ -728,31 +721,19 @@ class ElasticProblem:
 
         self.bx, self.by = self.calc_b()
 
-        # 1. Update Pos_Vel (ux, uy, vx, vy)
         data_pos_vel = np.stack([self.ux, self.uy, self.vx, self.vy], axis=-1).astype('f4')
         self.tex_pos_vel.write(np.ascontiguousarray(data_pos_vel).tobytes())
 
-        # 2. Update Stress (sxx, sxy_x, syy, sxy_y)
         data_stress = np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=-1).astype('f4')
         self.tex_stress_old.write(np.ascontiguousarray(data_stress).tobytes())
         # 3. Update Forces Externes (bx, by) - Texture RG (2 canaux)
         data_ext = np.stack([self.bx, self.by], axis=-1).astype('f4')
         self.tex_ext.write(np.ascontiguousarray(data_ext).tobytes())
 
-        # 4. Update Masques Flottants (RGBA)
-        data_masks_flt = np.stack([
-            self.isstress_x_edge_lambda_2mu,
-            self.isstress_y_edge_lambda_2mu,
-            self.isstress_x_edge_2mu,
-            self.isstress_y_edge_2mu
-        ], axis=-1).astype('f4')
-        self.tex_masks_flt.write(np.ascontiguousarray(data_masks_flt).tobytes())
-
-        # 5. Update Masques Entiers (SSBO - Reste en axis=0 car planaire)
         data_masks_int = np.stack([
             self.isddx1, self.isddx2, self.isddy1, self.isddy2,
-            self.y_frontier_defb, self.x_frontier_defb, self.x_frontier_def_sb,
-            self.y_frontier_def_sb, self.solid_not_uimp
+            self.y_frontier_defb, self.x_frontier_defb, self.x_frontier_def_sb, self.y_frontier_def_sb,
+            self.solid_not_uimp, self.isstress_x_edge, self.isstress_y_edge
         ], axis=0).astype('i4')
         self.buf_masks.write(data_masks_int.tobytes())
 

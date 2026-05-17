@@ -10,6 +10,8 @@ uniform int width; uniform int height;
 uniform float lm; uniform float coef; uniform float elas_lambda_ratio;
 uniform float explicit_b; uniform float G0;
 uniform float visco_fact_1; uniform float visco_fact_2;
+uniform float elas_lambda_2mu; uniform float elas_2mu;
+
 
 vec2 get_ut(ivec2 p) {
     vec4 data = imageLoad(img_pos_vel, p);
@@ -76,18 +78,28 @@ void main() {
         Strains s01 = calc_def(p + ivec2(1, 0)); // j+1 correspond à idx(i, j+1)
         Strains s10 = calc_def(p + ivec2(0, 1)); // i+1 correspond à idx(i+1, j)
 
-        vec4 m_flt = imageLoad(img_masks_flt, p);
-        float sxx = ((s00.exx + s01.exx + 2.0*elas_lambda_ratio*(s00.eyy + s01.eyy))/4.0 + duxdx2) * m_flt.x;
-        float syy = ((s00.eyy + s10.eyy + 2.0*elas_lambda_ratio*(s00.exx + s10.exx))/4.0 + duydy2) * m_flt.y;
-        float sxy_x = ((2.0*(s00.exy + s01.exy) + s00.eyx + s01.eyx)/4.0 + duydx2) * m_flt.z;
-        float sxy_y = ((s00.exy + s10.exy + 2.0*(s00.eyx + s10.eyx))/4.0 + duxdy2) * m_flt.w;
-
         vec4 s_old_val = imageLoad(img_stress_old, p);
         vec4 s_now;
-        s_now.x = sxx * visco_fact_1 + s_old_val.x * visco_fact_2;
-        s_now.y = sxy_x * visco_fact_1 + s_old_val.y * visco_fact_2;
-        s_now.z = syy * visco_fact_1 + s_old_val.z * visco_fact_2;
-        s_now.w = sxy_y * visco_fact_1 + s_old_val.w * visco_fact_2;
+        s_now.x = s_old_val.x * visco_fact_2;
+        s_now.y = s_old_val.y * visco_fact_2;
+        s_now.z = s_old_val.z * visco_fact_2;
+        s_now.w = s_old_val.w * visco_fact_2;
+
+        // isstress x edge
+        if (m_int[id + 9*off] > 0) {
+            float sxx = ((s00.exx + s01.exx + 2.0*elas_lambda_ratio*(s00.eyy + s01.eyy))/4.0 + duxdx2) * elas_lambda_2mu;
+            float sxy_x = ((2.0*(s00.exy + s01.exy) + s00.eyx + s01.eyx)/4.0 + duydx2) * elas_2mu;
+            s_now.x += sxx * visco_fact_1;
+            s_now.y += sxy_x * visco_fact_1;
+        }
+        //isstress y edge
+        if (m_int[id + 10*off] > 0) {
+            float syy = ((s00.eyy + s10.eyy + 2.0*elas_lambda_ratio*(s00.exx + s10.exx))/4.0 + duydy2) * elas_lambda_2mu;
+            float sxy_y = ((s00.exy + s10.exy + 2.0*(s00.eyx + s10.eyx))/4.0 + duxdy2) * elas_2mu;
+            s_now.z += syy * visco_fact_1;
+            s_now.w += sxy_y * visco_fact_1;
+        }
+
 
         imageStore(img_stress_old, p, s_now);
     }
