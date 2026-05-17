@@ -3,7 +3,6 @@ layout (local_size_x = 16, local_size_y = 16) in;
 
 layout(rgba32f, binding = 0) uniform image2D img_pos_vel;
 layout(rgba32f, binding = 2) uniform image2D img_stress_old;
-layout(rgba32f, binding = 7) uniform image2D img_masks_flt;
 layout(std430, binding = 5) buffer b_masks_int { int m_int[]; };
 
 uniform int width; uniform int height;
