@@ -541,13 +541,9 @@ class ElasticProblem:
             self.tex_stress_old = self.ctx.texture(self.solid.shape[::-1], 4, data=data_stress.tobytes(), dtype='f4')
             self.tex_ext = self.ctx.texture(self.solid.shape[::-1], 2, data=data_ext.tobytes(), dtype='f4')
 
-            # --- 3. Création du Buffer pour les masques entiers (on le garde en SSBO car 11 couches) ---
-            # On garde l'ordre C (planaire) car le shader y accède via id + offset
-            self.buf_masks = self.ctx.buffer(np.stack([
-                self.isddx1, self.isddx2, self.isddy1, self.isddy2,
-                self.y_frontier_defb, self.x_frontier_defb, self.x_frontier_def_sb, self.y_frontier_def_sb,
-                self.solid_not_uimp, self.isstress_x_edge, self.isstress_y_edge
-            ], axis=0).astype('i4').tobytes())
+            data_masks = np.stack([self.solid, self.solid_not_uimp], axis=-1).astype('f4')
+            self.tex_masks = self.ctx.texture(self.solid.shape[::-1], 2, data=data_masks.tobytes(), dtype='f4')
+            self.tex_masks.filter = (moderngl.NEAREST, moderngl.NEAREST)
 
             # --- 4. Compilation et Uniforms ---
             self.calc_stress_gpu = self.ctx.compute_shader(source_code_stress)
@@ -579,7 +575,7 @@ class ElasticProblem:
             self.tex_ext.bind_to_image(4, read=True, write=False)
 
             # Le buffer de masques reste un storage_buffer
-            self.buf_masks.bind_to_storage_buffer(5)
+            self.tex_masks.bind_to_image(5, read=True, write=False)
 
             #gpu thread group sizes
             self.gx = int(np.ceil(self.solid.shape[1] / 16))

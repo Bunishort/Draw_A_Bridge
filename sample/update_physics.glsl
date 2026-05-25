@@ -3,7 +3,7 @@ layout (local_size_x = 16, local_size_y = 16) in;
 
 layout(rgba32f, binding = 0) uniform image2D img_pos_vel;
 layout(rg32f, binding = 4) uniform image2D img_ext;
-layout(std430, binding = 5) buffer b_masks_int { int m_int[]; };
+layout(rg32f, binding = 5) uniform image2D img_masks;
 layout(rgba32f, binding = 2) uniform image2D img_stress_curr;
 
 uniform int width; uniform int height;
@@ -32,7 +32,7 @@ void main() {
         float c_syy_dy = -s_prev_prev.z + s_prev_curr.z;
 
         int id = p.y * width + p.x;
-        float m = float(m_int[id + 8*(width*height)]) / lm;
+        float m = imageLoad(img_masks, p).y / lm; // Récupère solid_not_uimp (canal G)
 
         vec2 f_ext = imageLoad(img_ext, p).xy;
         vec4 pv = imageLoad(img_pos_vel, p);
