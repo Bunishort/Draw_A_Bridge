@@ -728,12 +728,11 @@ class ElasticProblem:
         data_ext = np.stack([self.bx, self.by], axis=-1).astype('f4')
         self.tex_ext.write(np.ascontiguousarray(data_ext).tobytes())
 
-        data_masks_int = np.stack([
-            self.isddx1, self.isddx2, self.isddy1, self.isddy2,
-            self.y_frontier_defb, self.x_frontier_defb, self.x_frontier_def_sb, self.y_frontier_def_sb,
-            self.solid_not_uimp, self.isstress_x_edge, self.isstress_y_edge
-        ], axis=0).astype('i4')
-        self.buf_masks.write(data_masks_int.tobytes())
+        data_masks = np.stack([self.solid, self.solid_not_uimp], axis=-1)
+        data_masks = (255 * data_masks).astype('u1')
+        self.tex_masks = self.ctx.texture(self.solid.shape[::-1], 2, data=data_masks.tobytes(), dtype='f1')
+        self.tex_masks.filter = (moderngl.NEAREST, moderngl.NEAREST)
+        self.tex_masks.bind_to_image(5, read=True, write=False)
 
         return
 

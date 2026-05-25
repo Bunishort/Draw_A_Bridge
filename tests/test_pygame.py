@@ -7,20 +7,20 @@ import moderngl
 # simulation parameters
 E=1
 nu = 0.4
-nx = 120
-ny = 120
+nx = 120*2
+ny = 120*2
 # nx = 80
 # ny = 80
 
 lm = 4.5 * 7/nx *2
 
 vol_mass = 0.5
-dt = 0.3 /1.7
+dt = 0.3 /1.7/2
 ratio = 0.9  # must be between 0 and 1
 tau = 20
-damping = 0.05 /200
+damping = 0.05
 
-nbstep = int(30*8) # nb of steps per frame
+nbstep = int(30*2) # nb of steps per frame
 
 fx = 0.001*lm/10
 fy = 0.0*lm /10
