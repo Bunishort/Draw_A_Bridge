@@ -541,7 +541,9 @@ class ElasticProblem:
             self.tex_stress_old = self.ctx.texture(self.solid.shape[::-1], 4, data=data_stress.tobytes(), dtype='f4')
             self.tex_ext = self.ctx.texture(self.solid.shape[::-1], 2, data=data_ext.tobytes(), dtype='f4')
 
-            data_masks = np.stack([self.solid, self.solid_not_uimp], axis=-1).astype('u1')
+            data_masks = np.stack([self.solid, self.solid_not_uimp], axis=-1)
+            data_masks = (255*data_masks).astype('u1')
+
             self.tex_masks = self.ctx.texture(self.solid.shape[::-1], 2, data=data_masks.tobytes(), dtype='f1')
             self.tex_masks.filter = (moderngl.NEAREST, moderngl.NEAREST)
 

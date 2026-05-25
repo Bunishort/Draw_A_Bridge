@@ -32,19 +32,18 @@ void main() {
         float c_syy_dy = -s_prev_prev.z + s_prev_curr.z;
 
         int id = p.y * width + p.x;
+        float m = imageLoad(img_masks, p).y / lm; // Récupère solid_not_uimp (canal G)
 
-        if(imageLoad(img_masks, p).y > 0.5){
-            vec2 f_ext = imageLoad(img_ext, p).xy;
-            vec4 pv = imageLoad(img_pos_vel, p);
+        vec2 f_ext = imageLoad(img_ext, p).xy;
+        vec4 pv = imageLoad(img_pos_vel, p);
 
-            float dvx = (c_sxx_dx + c_sxy_dy) / lm - f_ext.x - damping_eff * pv.z;
-            float dvy = (c_syy_dy + c_sxy_dx) / lm - f_ext.y - damping_eff * pv.w;
+        float dvx = (c_sxx_dx + c_sxy_dy) * m - f_ext.x - damping_eff * pv.z;
+        float dvy = (c_syy_dy + c_sxy_dx) * m - f_ext.y - damping_eff * pv.w;
 
-            dvx *= dt_by_vol_mass; dvy *= dt_by_vol_mass;
+        dvx *= dt_by_vol_mass; dvy *= dt_by_vol_mass;
 
-            pv.z += dvx;// vx
-            pv.w += dvy;// vy
-        }
+        pv.z += dvx;      // vx
+        pv.w += dvy;      // vy
         pv.x += pv.z * dt; // ux
         pv.y += pv.w * dt; // uy
 
