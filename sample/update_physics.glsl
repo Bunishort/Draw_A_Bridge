@@ -3,7 +3,7 @@ layout (local_size_x = 16, local_size_y = 16) in;
 
 layout(rgba32f, binding = 0) uniform image2D img_pos_vel;
 layout(rg32f, binding = 4) uniform image2D img_ext;
-layout(rg32f, binding = 5) uniform image2D img_masks;
+layout(rg8, binding = 5) uniform image2D img_masks;
 layout(rgba32f, binding = 2) uniform image2D img_stress_curr;
 
 uniform int width; uniform int height;
@@ -32,18 +32,19 @@ void main() {
         float c_syy_dy = -s_prev_prev.z + s_prev_curr.z;
 
         int id = p.y * width + p.x;
-        float m = imageLoad(img_masks, p).y / lm; // Récupère solid_not_uimp (canal G)
 
-        vec2 f_ext = imageLoad(img_ext, p).xy;
-        vec4 pv = imageLoad(img_pos_vel, p);
+        if(imageLoad(img_masks, p).y > 0.5){
+            vec2 f_ext = imageLoad(img_ext, p).xy;
+            vec4 pv = imageLoad(img_pos_vel, p);
 
-        float dvx = (c_sxx_dx + c_sxy_dy) * m - f_ext.x - damping_eff * pv.z;
-        float dvy = (c_syy_dy + c_sxy_dx) * m - f_ext.y - damping_eff * pv.w;
+            float dvx = (c_sxx_dx + c_sxy_dy) / lm - f_ext.x - damping_eff * pv.z;
+            float dvy = (c_syy_dy + c_sxy_dx) / lm - f_ext.y - damping_eff * pv.w;
 
-        dvx *= dt_by_vol_mass; dvy *= dt_by_vol_mass;
+            dvx *= dt_by_vol_mass; dvy *= dt_by_vol_mass;
 
-        pv.z += dvx;      // vx
-        pv.w += dvy;      // vy
+            pv.z += dvx;// vx
+            pv.w += dvy;// vy
+        }
         pv.x += pv.z * dt; // ux
         pv.y += pv.w * dt; // uy
 
