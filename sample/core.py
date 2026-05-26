@@ -524,19 +524,17 @@ class ElasticProblem:
                 self.ctx = kwargs['gl_context']
             else:
                 self.ctx = moderngl.create_standalone_context()
-            # --- 1. Préparation des données (Format H, W, Canaux) ---
-            # Texture Pos_Vel : R=ux, G=uy, B=vx, A=vy
+            # --- stacking necessary data for storage into textures
             data_pos_vel = np.stack([self.ux, self.uy, self.vx, self.vy], axis=-1).astype('f4')
 
             # Texture Stress : R=sxx, G=sxy_x, B=syy, A=sxy_y
             data_stress = np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=-1).astype(
                 'f4')
 
-            # Texture Forces Externes : R=bx, G=by
+            # External forces texture
             data_ext = np.stack([self.bx, self.by], axis=-1).astype('f4')
 
-            # --- 2. Création des Textures ---
-            # Note : On utilise des textures 2D avec 4 composantes (RGBA) ou 2 (RG)
+            # --- Creating Textures for efficient GPU memory buffers ---
             self.tex_pos_vel = self.ctx.texture(self.solid.shape[::-1], 4, data=data_pos_vel.tobytes(), dtype='f4')
             self.tex_stress_old = self.ctx.texture(self.solid.shape[::-1], 4, data=data_stress.tobytes(), dtype='f4')
             self.tex_ext = self.ctx.texture(self.solid.shape[::-1], 2, data=data_ext.tobytes(), dtype='f4')
@@ -547,7 +545,7 @@ class ElasticProblem:
             self.tex_masks = self.ctx.texture(self.solid.shape[::-1], 2, data=data_masks.tobytes(), dtype='f1')
             self.tex_masks.filter = (moderngl.NEAREST, moderngl.NEAREST)
 
-            # --- 4. Compilation et Uniforms ---
+            # --- Compilation & Uniforms declaration ---
             self.calc_stress_gpu = self.ctx.compute_shader(source_code_stress)
             self.update_pos_gpu = self.ctx.compute_shader(source_code_update)
 
@@ -570,13 +568,10 @@ class ElasticProblem:
             self.update_pos_gpu['damping_eff'] = self.damping_eff
             self.update_pos_gpu['dt'].value = self.dt
 
-            # --- 5. Liaison (Binding) ---
-            # IMPORTANT : Pour les textures dans un Compute Shader, on utilise bind_to_image
+            # --- Binding to buffers ---
             self.tex_pos_vel.bind_to_image(0, read=True, write=True)
             self.tex_stress_old.bind_to_image(2, read=True, write=True)
             self.tex_ext.bind_to_image(4, read=True, write=False)
-
-            # Le buffer de masques reste un storage_buffer
             self.tex_masks.bind_to_image(5, read=True, write=False)
 
             #gpu thread group sizes
@@ -670,12 +665,12 @@ class ElasticProblem:
 
         data_stress = np.stack([self.sxx_x_old, self.sxy_x_old, self.syy_y_old, self.sxy_y_old], axis=-1).astype('f4')
         self.tex_stress_old.write(np.ascontiguousarray(data_stress).tobytes())
-        # 3. Update Forces Externes (bx, by) - Texture RG (2 canaux)
+        # Update  External forces (bx, by)
         data_ext = np.stack([self.bx, self.by], axis=-1).astype('f4')
         self.tex_ext.write(np.ascontiguousarray(data_ext).tobytes())
 
         data_masks = np.stack([self.solid, self.solid_not_uimp], axis=-1)
-        data_masks = (255 * data_masks).astype('u1')
+        data_masks = (255 * data_masks).astype('u1') #*255 necessary for correct 8bit data
         self.tex_masks = self.ctx.texture(self.solid.shape[::-1], 2, data=data_masks.tobytes(), dtype='f1')
         self.tex_masks.filter = (moderngl.NEAREST, moderngl.NEAREST)
         self.tex_masks.bind_to_image(5, read=True, write=False)

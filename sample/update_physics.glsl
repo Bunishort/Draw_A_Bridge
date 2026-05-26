@@ -13,15 +13,13 @@ void main() {
     ivec2 p = ivec2(gl_GlobalInvocationID.xy);
 
     if (p.y >= 1 && p.x >= 1 && p.y < height && p.x < width) {
-        // Mapping Buffer vers Texture :
-        // idx(i-1, j-1) -> p + ivec2(-1, -1)
-        // idx(i, j-1)   -> p + ivec2(-1, 0)  (Même ligne, col préc.)
-        // idx(i-1, j)   -> p + ivec2(0, -1)  (Même col, ligne préc.)
+        // Loading stress values for divergence computation
 
         vec4 s_prev_prev = imageLoad(img_stress_curr, p + ivec2(-1, -1));
         vec4 s_curr_prev = imageLoad(img_stress_curr, p + ivec2(-1, 0));
         vec4 s_prev_curr = imageLoad(img_stress_curr, p + ivec2(0, -1));
 
+        // Calculating stress divergence
         // c_sxx_dx = -sxx(i-1, j-1) + sxx(i, j-1)
         float c_sxx_dx = -s_prev_prev.x + s_curr_prev.x;
         // c_sxy_dx = -sxy_x(i-1, j-1) + sxy_x(i, j-1)
@@ -31,17 +29,17 @@ void main() {
         // c_syy_dy = -syy(i-1, j-1) + syy(i-1, j)
         float c_syy_dy = -s_prev_prev.z + s_prev_curr.z;
 
-        int id = p.y * width + p.x;
-        float m = imageLoad(img_masks, p).y / lm; // Récupère solid_not_uimp (canal G)
+        float m = imageLoad(img_masks, p).y / lm; //  solid_not_uimp /lm
 
-        vec2 f_ext = imageLoad(img_ext, p).xy;
-        vec4 pv = imageLoad(img_pos_vel, p);
+        vec2 f_ext = imageLoad(img_ext, p).xy; // external forces
+        vec4 pv = imageLoad(img_pos_vel, p); // previous velocities
 
-        float dvx = (c_sxx_dx + c_sxy_dy) * m - f_ext.x - damping_eff * pv.z;
+        float dvx = (c_sxx_dx + c_sxy_dy) * m - f_ext.x - damping_eff * pv.z; // velocity variation
         float dvy = (c_syy_dy + c_sxy_dx) * m - f_ext.y - damping_eff * pv.w;
 
         dvx *= dt_by_vol_mass; dvy *= dt_by_vol_mass;
 
+        // Updating speed and position (euler integration)
         pv.z += dvx;      // vx
         pv.w += dvy;      // vy
         pv.x += pv.z * dt; // ux
