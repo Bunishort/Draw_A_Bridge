@@ -239,6 +239,8 @@ class SimulationApp:
                 if event.type == pygame.QUIT: self.running = False
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                     self.mode_simu = not self.mode_simu
+                    if self.mode_simu:
+                        self.solver.mod_solid_buffer_update()
 
             m_left, _, m_right = pygame.mouse.get_pressed()
             if m_left or m_right:
