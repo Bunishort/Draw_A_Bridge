@@ -671,9 +671,7 @@ class ElasticProblem:
 
         data_masks = np.stack([self.solid, self.solid_not_uimp], axis=-1)
         data_masks = (255 * data_masks).astype('u1') #*255 necessary for correct 8bit data
-        self.tex_masks = self.ctx.texture(self.solid.shape[::-1], 2, data=data_masks.tobytes(), dtype='f1')
-        self.tex_masks.filter = (moderngl.NEAREST, moderngl.NEAREST)
-        self.tex_masks.bind_to_image(5, read=True, write=False)
+        self.tex_masks.write(data_masks)
 
         return
 
