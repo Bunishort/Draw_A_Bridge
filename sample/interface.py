@@ -268,10 +268,10 @@ class SimulationApp:
                 if m_left:  # Attractor
                     dx = gy - (self.gridx +  self.solver.ux / self.solver.lm) #x/y inversion in gx gy
                     dy = gx - (self.gridy + self.solver.uy / self.solver.lm)#
-                    d = np.sqrt(dx ** 2 + dy ** 2)
-                    f_attract = self.f_attract_const / (1 + d)
-                    self.fx_imp_live = f_attract * dx / (1 + d)
-                    self.fy_imp_live = f_attract * dy / (1 + d)
+                    dp1 = np.sqrt(dx ** 2 + dy ** 2) +1
+                    f_attract = self.f_attract_const / dp1
+                    self.fx_imp_live = f_attract * dx / dp1
+                    self.fy_imp_live = f_attract * dy / dp1
                 else:
                     self.fx_imp_live *= 0
                     self.fy_imp_live *= 0
