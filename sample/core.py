@@ -536,6 +536,8 @@ class ElasticProblem:
 
             # --- Creating Textures for efficient GPU memory buffers ---
             self.tex_pos_vel = self.ctx.texture(self.solid.shape[::-1], 4, data=data_pos_vel.tobytes(), dtype='f4')
+            self.tex_pos_vel.filter = (moderngl.NEAREST, moderngl.NEAREST)
+
             self.tex_stress_old = self.ctx.texture(self.solid.shape[::-1], 4, data=data_stress.tobytes(), dtype='f4')
             self.tex_ext = self.ctx.texture(self.solid.shape[::-1], 2, data=data_ext.tobytes(), dtype='f4')
 
@@ -658,6 +660,11 @@ class ElasticProblem:
         self.solid_not_uimp = np.float32(np.bitwise_and(np.bitwise_not(self.is_uimp), self.solid))
 
         self.bx, self.by = self.calc_b()
+
+        #We need to update solid buffer here in order to see what we draw
+        data_masks = np.stack([self.solid, self.solid_not_uimp], axis=-1)
+        data_masks = (255 * data_masks).astype('u1') #*255 necessary for correct 8bit data
+        self.tex_masks.write(data_masks)
 
         return
 

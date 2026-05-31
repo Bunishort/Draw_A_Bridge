@@ -243,6 +243,8 @@ class SimulationApp:
         self.update_f_imp['u_mouse_row'].value = 0.0
         self.update_f_imp['u_f_attract'].value = 0.0
         self.update_f_imp['lm'].value = self.solver.lm
+        self.update_f_imp['width'] = self.solver.solid.shape[1]
+        self.update_f_imp['height'] = self.solver.solid.shape[0]
 
         self.tex_att.bind_to_image(6, read=True, write=True)
 
@@ -312,3 +314,8 @@ class SimulationApp:
         self.update_f_imp['u_mouse_col'].value = target_x
         self.update_f_imp['u_mouse_row'].value = target_y
         self.update_f_imp['u_f_attract'].value = force
+
+        group_x = int(np.ceil(self.W / 16.0))
+        group_y = int(np.ceil(self.H / 16.0))
+
+        self.update_f_imp.run(group_x, group_y)
