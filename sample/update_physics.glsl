@@ -8,11 +8,6 @@ layout(rgba32f, binding = 2) uniform image2D img_stress_curr;
 
 uniform int width; uniform int height;
 uniform float lm; uniform float dt_by_vol_mass; uniform float damping_eff; uniform float dt;
-//Variables for attractor computation
-uniform float u_mouse_active;
-uniform float u_mouse_col; // Position X de la souris
-uniform float u_mouse_row; // Position Y de la souris
-uniform float u_f_attract;
 
 void main() {
     ivec2 p = ivec2(gl_GlobalInvocationID.xy);
@@ -38,26 +33,6 @@ void main() {
 
         vec2 f_ext = imageLoad(img_ext, p).xy; // external forces
         vec4 pv = imageLoad(img_pos_vel, p); // previous position and velocities
-
-        //UPdate external forces with attractor
-        if (u_mouse_active > 0.0) {
-            // Coordonnées déformées du point courant
-            float def_col = float(p.x) + pv.y / lm;
-            float def_row = float(p.y) + pv.x / lm;
-
-            // Distances avec la souris
-            float dx_col = u_mouse_col - def_col;
-            float dy_row = u_mouse_row - def_row;
-
-            float dist = sqrt(dx_col * dx_col + dy_row * dy_row) + 1.0;
-            float f_mag = u_f_attract / dist;
-
-            // On convertit la force en b (rappel de ton CPU : b = -f * solid)
-            // bx s'applique à l'axe des lignes (ux) -> dy_row
-            // by s'applique à l'axe des colonnes (uy) -> dx_col
-            f_ext.x -= (f_mag * dy_row / dist);
-            f_ext.y -= (f_mag * dx_col / dist);
-        }
 
         float dvx = (c_sxx_dx + c_sxy_dy) * m - f_ext.x - damping_eff * pv.z; // velocity variation
         float dvy = (c_syy_dy + c_sxy_dx) * m - f_ext.y - damping_eff * pv.w;
