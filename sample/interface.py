@@ -258,6 +258,8 @@ class SimulationApp:
                     self.mode_simu = not self.mode_simu
                     if self.mode_simu:
                         self.solver.mod_solid_buffer_update()
+                    else:
+                        self.solver.get_results()
 
             m_left, _, m_right = pygame.mouse.get_pressed()
             mx, my = pygame.mouse.get_pos()
