@@ -130,29 +130,48 @@ import pygame
 import moderngl
 import numpy as np
 
-#Modern GL functions
-# --- SHADERS ---
+# --- SHADERS OPTIMISÉS ---
 VTX_SHADER = """
 #version 330
-in vec2 in_pos;      // Position grille (-1 à 1)
-in vec2 in_disp;     // Déplacement (u) calculé par NumPy
-in float in_stress;  // Intensité (contrainte)
+in vec2 in_pos; 
 
-uniform int u_mode;        // 0: Dessin, 1: Visualisation
-uniform float u_amp;       // Amplification de la déformée
+// Textures RGBA natives du solveur
+uniform sampler2D u_tex_pos_vel;    // R=ux (lignes/descendant), G=uy (colonnes/droite)
+uniform sampler2D u_tex_stress_old; // R=sxx, G=sxy_x, B=syy_y, A=sxy_y
+
+// Facteurs d'échelle physiques
+uniform vec2 u_disp_scale; 
+uniform float u_max_stress;
+
+uniform int u_mode;
+uniform float u_amp;
 uniform float point_size;
 
 out float v_stress;
-flat out int v_mode;
 
 void main() {
-    v_mode = u_mode;
-    v_stress = in_stress;
+    // Mapping [-1, 1] vers [0, 1] pour lire la texture
+    vec2 uv = vec2((in_pos.x + 1.0) * 0.5, (1.0 - in_pos.y) * 0.5);
+
+    // Lecture des données physiques GPU
+    vec4 pv = texture(u_tex_pos_vel, uv);
+    vec4 stress = texture(u_tex_stress_old, uv);
+
+    float solver_ux = pv.r; // Déplacement vertical (vers le bas)
+    float solver_uy = pv.g; // Déplacement horizontal (vers la droite)
+
+    // Contrainte (Canal G = sxy_x_old)
+    v_stress = stress.g / u_max_stress;
 
     vec2 final_pos = in_pos;
     if (u_mode == 1) {
-        final_pos += in_disp * u_amp; // Applique la déformée
+        // Application propre des axes cartésiens OpenGL
+        // X reçoit le déplacement horizontal (uy)
+        // Y reçoit le déplacement vertical inversé (-ux car Y OpenGL pointe vers le haut)
+        vec2 disp = vec2(solver_uy * u_disp_scale.x, -solver_ux * u_disp_scale.y);
+        final_pos += disp * u_amp; 
     }
+
     gl_Position = vec4(final_pos, 0.0, 1.0);
     gl_PointSize = point_size; 
 }
@@ -161,80 +180,71 @@ void main() {
 FRAG_SHADER = """
 #version 330
 in float v_stress;
-flat in int v_mode;
 out vec4 f_color;
 
 void main() {
-        f_color = vec4(v_stress, 0.5 * (1.0 - v_stress), 1.0 - v_stress, 1.0);
+    // Clamping pour éviter les couleurs bizarres si v_stress dépasse 1.0
+    float s = clamp(v_stress, 0.0, 1.0);
+    f_color = vec4(s, 0.5 * (1.0 - s), 1.0 - s, 1.0);
+}
+"""
+
+ATTRACTOR="""
+// Uniforms venant de pygame
+uniform bool u_mouse_active;
+uniform vec2 u_mouse_target; // gx, gy
+uniform float u_f_attract;
+
+// Dans le main() de ton solveur :
+if (u_mouse_active) {
+    // Calcul basé sur les valeurs courantes que le shader connait déjà !
+    float dx = u_mouse_target.x - (current_col + uy / lm);
+    float dy = u_mouse_target.y - (current_row + ux / lm);
+    float dist = sqrt(dx*dx + dy*dy) + 1.0;
+    
+    float force_mag = u_f_attract / dist;
+    fx_imp += force_mag * (dx / dist);
+    fy_imp += force_mag * (dy / dist);
 }
 """
 
 
 class SimulationApp:
-    """
-    Interactive simulation class.
-    So the actual game. All interactions and plotting are done here with pygame and moderngl
-    The simulation object should be initialized outside of this class. It's easier.
-    :param solver: ElasticProblem class object from sample.core, with is_explicit=True
-    :**kwarg screen_size : tuple (x,y) : size of the game screen in pixels
-    :**kwarg nbstep : number of simulation steps between each game frame
-    :**kwarg f_attract_const : float : attraction force constant for the 'attractor' interactive tool
-    """
-
     def __init__(self, solver, ctx, **kwargs):
-        #solver = class initialisée par sample.core.ElasticProblem
         self.solver = solver
-        self.ctx = ctx #opengl context
+        self.ctx = ctx
+        self.H, self.W = solver.solid.shape
 
-        self.res = solver.solid.shape
         self.screen_size = kwargs.get('screen_size', (800, 800))
         self.nbstep = kwargs.get('nbstep', 10)
         self.f_attract_const = kwargs.get('f_attract_const', 1e-2)
         self.max_stress = kwargs.get('max_stress', 1.0)
 
-        self.point_size = self.screen_size[0] / self.res[0] +0.5
-
-        #Volumic forces from mouse interaction
-        self.fx_imp_live = 0 * solver.fx_imp.copy()
-        self.fy_imp_live = 0 * solver.fy_imp.copy()
+        self.point_size = self.screen_size[0] / self.W + 0.5
 
         self.ctx.enable(moderngl.PROGRAM_POINT_SIZE)
         self.prog = self.ctx.program(vertex_shader=VTX_SHADER, fragment_shader=FRAG_SHADER)
 
-        # --- Simulation data init ---
-        self.plot_field = np.zeros((self.res[1], self.res[0]), dtype='f4')  # sigma
-        self.disp = np.zeros((self.res[1], self.res[0], 2), dtype='f4')
-
-        # --- GPU preparation---
-        # coordinates normalized (-1 à 1)
-        x = np.linspace(-1, 1, self.res[0])
-        y = np.linspace(1, -1, self.res[1])
+        # Grille statique
+        x = np.linspace(-1, 1, self.W)
+        y = np.linspace(1, -1, self.H)
         gx, gy = np.meshgrid(x, y)
         self.pos_init = np.stack([gx, gy], axis=-1).astype('f4')
 
         self.vbo_pos = self.ctx.buffer(self.pos_init.tobytes())
-        self.vbo_disp = self.ctx.buffer(reserve=self.pos_init.nbytes)
-        self.vbo_stress = self.ctx.buffer(reserve=self.pos_init.size * 4)
+        self.vao = self.ctx.vertex_array(self.prog, [(self.vbo_pos, '2f', 'in_pos')])
 
-        self.vao = self.ctx.vertex_array(self.prog, [
-            (self.vbo_pos, '2f', 'in_pos'),
-            (self.vbo_disp, '2f', 'in_disp'),
-            (self.vbo_stress, '1f', 'in_stress')
-        ])
+        # Pré-calcul des échelles de déplacement (pour remplacer la division CPU)
+        self.scale_x = 2.0 / (self.W * self.solver.lm)
+        self.scale_y = 2.0 / (self.H * self.solver.lm)
 
-        self.mode_simu = False  # False = Draw mode, True = Simulation
+        self.mode_simu = False
         self.running = True
 
-        xtemp = np.arange(self.solver.solid.shape[0])
-        ytemp = np.arange(self.solver.solid.shape[1])
-        self.gridy, self.gridx = np.meshgrid(ytemp, xtemp)
-
-    @profile
     def run(self):
         clock = pygame.time.Clock()
 
         while self.running:
-            # events
             for event in pygame.event.get():
                 if event.type == pygame.QUIT: self.running = False
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
@@ -243,77 +253,45 @@ class SimulationApp:
                         self.solver.mod_solid_buffer_update()
 
             m_left, _, m_right = pygame.mouse.get_pressed()
-            if m_left or m_right:
-                mx, my = pygame.mouse.get_pos()
-                # Mapping coord screen -> index grid
-                gx = int((mx / self.screen_size[0]) * self.res[0])
-                gy = int((my / self.screen_size[1]) * self.res[1])
+            mx, my = pygame.mouse.get_pos()
+            gx = max(0, min(int((mx / self.screen_size[0]) * self.W), self.W - 1))
+            gy = max(0, min(int((my / self.screen_size[1]) * self.H), self.H - 1))
 
-            # Draw mode
             if not self.mode_simu:
-                    if m_left:  # Draw
-                        self.solver.mod_solid(gy, gx, 1)
-                    if m_right:  # Erase
-                        self.solver.mod_solid(gy, gx, 0)
-            # Simulation mode
+                if m_left:  self.solver.mod_solid(gy, gx, 1)
+                if m_right: self.solver.mod_solid(gy, gx, 0)
+
             else:
-                for i in range(0, self.nbstep):
+                # --- GESTION DE L'ATTRACTEUR (DEVIENT UN APPEL GPU) ---
+                if m_left:
+                    # On délègue totalement le calcul de la force à la classe solver
+                    self.set_attractor_state(active=True, target_x=gx, target_y=gy, force=self.f_attract_const)
+                else:
+                    self.set_attractor_state(active=False)
+
+                # Étape explicite
+                for _ in range(self.nbstep):
                     self.solver.explicit_step()
 
-                self.solver.get_results() # Update results
-
-                self.disp[:,:,1] = -self.solver.ux * 2 / (self.res[0] * self.solver.lm) # why - sign here ?
-                self.disp[:, :, 0] = self.solver.uy * 2 / (self.res[1] * self.solver.lm)
-
-                self.solver.fx_imp -= self.fx_imp_live
-                self.solver.fy_imp -= self.fy_imp_live
-                if m_left:  # Attractor
-                    dx = gy - (self.gridx +  self.solver.ux / self.solver.lm) #x/y inversion in gx gy
-                    dy = gx - (self.gridy + self.solver.uy / self.solver.lm)#
-                    dp1 = np.sqrt(dx ** 2 + dy ** 2) +1
-                    f_attract = self.f_attract_const / dp1
-                    self.fx_imp_live = f_attract * dx / dp1
-                    self.fy_imp_live = f_attract * dy / dp1
-                else:
-                    self.fx_imp_live *= 0
-                    self.fy_imp_live *= 0
-                self.solver.fx_imp += self.fx_imp_live
-                self.solver.fy_imp += self.fy_imp_live
-                self.solver.update_f_imp(self.solver.fx_imp , self.solver.fy_imp)
-
-
-            #plot_field = np.log(1 + self.solver.calc_VM_stress() / self.max_stress) / np.log(2)
-            plot_field = self.solver.sxy_x_old.copy() / self.max_stress
-            plot_field[self.solver.is_uimp] = 1
-            plot_field[plot_field > 1] = 1
-            self.plot_field[:, :] = plot_field
-            #display
+            # --- RENDU DIRECT DEPUIS LES TEXTURES DU SOLVEUR ---
             self.ctx.clear(0.1, 0.1, 0.1)
 
-            # Display only points with matter
-            active_mask = self.solver.solid.flatten() > 0
-            if np.any(active_mask):
-                # Data filtering for GPU
-                idx = np.where(active_mask)[0]
-                d_data = self.disp.reshape(-1, 2)[idx].tobytes()
-                s_data = self.plot_field.flatten()[idx].tobytes()
-                p_data = self.pos_init.reshape(-1, 2)[idx].tobytes()
+            # Liaison des textures
+            self.solver.tex_pos_vel.use(location=0)
+            self.prog['u_tex_pos_vel'].value = 0
 
-                # Buffer update
-                self.vbo_pos.write(p_data)
-                self.vbo_disp.write(d_data)
-                self.vbo_stress.write(s_data)
+            self.solver.tex_stress_old.use(location=1)
+            self.prog['u_tex_stress_old'].value = 1
 
-                # Shader variables config
-                self.prog['u_mode'].value = 1 if self.mode_simu else 0
-                self.prog['u_amp'].value = 1.0  # Amplification factor
-                self.prog['point_size'].value = self.point_size  # Amplification factor
-                # Draw points
-                self.vao.render(moderngl.POINTS, vertices=len(idx))
+            # Variables uniformes
+            self.prog['u_mode'].value = 1 if self.mode_simu else 0
+            self.prog['u_amp'].value = 1.0
+            self.prog['point_size'].value = self.point_size
+            self.prog['u_disp_scale'].value = (self.scale_x, self.scale_y)
+            self.prog['u_max_stress'].value = self.max_stress
+
+            self.vao.render(moderngl.POINTS, vertices=self.W * self.H)
 
             pygame.display.flip()
             clock.tick(60)
-            pygame.display.set_caption(
-                f"Mode: {'SIMULATION' if self.mode_simu else 'DESSIN'} - FPS: {clock.get_fps():.0f}")
-
-
+            pygame.display.set_caption(f"Mode: {'SIMU' if self.mode_simu else 'DESSIN'} - FPS: {clock.get_fps():.0f}")

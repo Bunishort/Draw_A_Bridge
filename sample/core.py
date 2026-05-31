@@ -567,6 +567,10 @@ class ElasticProblem:
             self.update_pos_gpu['dt_by_vol_mass'] = self.dt / self.vol_mass
             self.update_pos_gpu['damping_eff'] = self.damping_eff
             self.update_pos_gpu['dt'].value = self.dt
+            self.update_pos_gpu['u_mouse_active'].value = 0.0
+            self.update_pos_gpu['u_mouse_col'].value = 0.0
+            self.update_pos_gpu['u_mouse_row'].value = 0.0
+            self.update_pos_gpu['u_f_attract'].value = 0.0
 
             # --- Binding to buffers ---
             self.tex_pos_vel.bind_to_image(0, read=True, write=True)
@@ -1112,3 +1116,12 @@ class ElasticProblem:
         J2 = 1/2 * (sxx**2 + syy**2 + szz**2) + sxy**2
 
         return np.sqrt(3*J2)
+
+    def set_attractor_state(self, active=False, target_x=0, target_y=0, force=0.0):
+        """
+        Send mouse coordinates to  Compute Shader.
+        """
+        self.update_pos_gpu['u_mouse_active'].value = active
+        self.update_pos_gpu['u_mouse_col'].value = target_x
+        self.update_pos_gpu['u_mouse_row'].value = target_y
+        self.update_pos_gpu['u_f_attract'].value = force
