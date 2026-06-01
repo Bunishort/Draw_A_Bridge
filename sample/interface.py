@@ -236,6 +236,8 @@ class SimulationApp:
 
         self.mode_simu = False
         self.running = True
+        self.gx_old = 1.0
+        self.gy_old = 1.0
 
         #Attractor init
         file_path = '../sample/update_f_imp.glsl'
@@ -255,6 +257,7 @@ class SimulationApp:
         self.update_f_imp['height'] = self.solver.solid.shape[0]
 
         self.tex_att.bind_to_image(6, read=True, write=True)
+
 
     def run(self):
         clock = pygame.time.Clock()
@@ -276,9 +279,20 @@ class SimulationApp:
             gy = max(0, min(int((my / self.screen_size[1]) * self.H), self.H - 1))
 
             if not self.mode_simu:
-                if m_left:  self.solver.mod_solid(gy, gx, 1)
-                if m_right: self.solver.mod_solid(gy, gx, 0)
+                if m_left:
+                    draw=1
+                if m_right:
+                    draw=0
 
+                if m_left or m_right:
+                    dist = int(np.sqrt((gx - self.gx_old)**2 + (gy - self.gy_old)**2))
+                    for i in range(1, dist+2):
+                        gxt = int(self.gx_old + (gx - self.gx_old) * i / (dist +1))
+                        gyt = int(self.gy_old + (gy - self.gy_old) * i / (dist +1))
+                        self.solver.mod_solid(gyt, gxt, draw)
+
+                self.gx_old = gx
+                self.gy_old = gy
             else:
                 # --- GESTION DE L'ATTRACTEUR (DEVIENT UN APPEL GPU) ---
                 if m_left:
