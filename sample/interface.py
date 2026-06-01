@@ -138,7 +138,7 @@ in vec2 in_pos;
 // Textures RGBA natives du solveur
 uniform sampler2D u_tex_pos_vel;    // R=ux (lignes/descendant), G=uy (colonnes/droite)
 uniform sampler2D u_tex_stress_old; // R=sxx, G=sxy_x, B=syy_y, A=sxy_y
-uniform sampler2D u_tex_solid; 
+uniform sampler2D u_tex_solid; // R=solid, G=solid_not_uimp
 
 // Facteurs d'échelle physiques
 uniform vec2 u_disp_scale; 
@@ -155,6 +155,8 @@ void main() {
     vec2 uv = vec2((in_pos.x + 1.0) * 0.5, (1.0 - in_pos.y) * 0.5);
      
     float is_solid = texture(u_tex_solid, uv).r;
+    float is_solid_not_uimp = texture(u_tex_solid, uv).g; 
+    
     if (is_solid < 0.5) {
         // Le point est vide : on le projette loin en dehors de l'écran pour l'annuler
         gl_Position = vec4(-2.0, -2.0, -2.0, 1.0);
@@ -168,8 +170,14 @@ void main() {
     float solver_ux = pv.r; // Déplacement vertical (vers le bas)
     float solver_uy = pv.g; // Déplacement horizontal (vers la droite)
 
-    // Contrainte (Canal G = sxy_x_old)
-    v_stress = stress.g / u_max_stress;
+    // Stress (G = sxy_x_old)
+    if (is_solid > 0.5 && is_solid_not_uimp < 0.5) {
+        v_stress = -1.0; 
+    } else {
+        // Calcul normal de la contrainte pour les autres points
+        vec4 stress = texture(u_tex_stress_old, uv);
+        v_stress = stress.g / u_max_stress;
+    }
 
     vec2 final_pos = in_pos;
     if (u_mode == 1) {
@@ -191,8 +199,8 @@ in float v_stress;
 out vec4 f_color;
 
 void main() {
-    // Clamping pour éviter les couleurs bizarres si v_stress dépasse 1.0
-    float s = clamp(v_stress, 0.0, 1.0);
+    // Clamping to avoid weird colors for high stress values
+    float s = clamp(v_stress, -1.0, 1.0);
     f_color = vec4(s, 0.5 * (1.0 - s), 1.0 - s, 1.0);
 }
 """
@@ -259,6 +267,7 @@ class SimulationApp:
                     if self.mode_simu:
                         self.solver.mod_solid_buffer_update()
                     else:
+                        self.set_attractor_state(active=0.0)
                         self.solver.get_results()
 
             m_left, _, m_right = pygame.mouse.get_pressed()
