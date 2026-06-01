@@ -290,6 +290,7 @@ class SimulationApp:
                         gxt = int(self.gx_old + (gx - self.gx_old) * i / (dist +1))
                         gyt = int(self.gy_old + (gy - self.gy_old) * i / (dist +1))
                         self.solver.mod_solid(gyt, gxt, draw)
+                    self.solver.mod_solid_update_solid()
 
                 self.gx_old = gx
                 self.gy_old = gy

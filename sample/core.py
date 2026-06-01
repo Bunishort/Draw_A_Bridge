@@ -661,12 +661,12 @@ class ElasticProblem:
 
         self.bx, self.by = self.calc_b()
 
+        return
+    def mod_solid_update_solid(self):
         #We need to update solid buffer here in order to see what we draw
         data_masks = np.stack([self.solid, self.solid_not_uimp], axis=-1)
         data_masks = (255 * data_masks).astype('u1') #*255 necessary for correct 8bit data
         self.tex_masks.write(data_masks)
-
-        return
 
     def mod_solid_buffer_update(self):
         data_pos_vel = np.stack([self.ux, self.uy, self.vx, self.vy], axis=-1).astype('f4')
