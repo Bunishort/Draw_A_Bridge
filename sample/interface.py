@@ -172,7 +172,7 @@ void main() {
 
     // Stress (G = sxy_x_old)
     if (is_solid > 0.5 && is_solid_not_uimp < 0.5) {
-        v_stress = -1.0; 
+        v_stress = 1.0; 
     } else {
         // Calcul normal de la contrainte pour les autres points
         vec4 stress = texture(u_tex_stress_old, uv);
