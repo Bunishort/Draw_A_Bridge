@@ -261,6 +261,7 @@ class SimulationApp:
 
     def run(self):
         clock = pygame.time.Clock()
+        draw_fixed = False
 
         while self.running:
             for event in pygame.event.get():
@@ -272,6 +273,9 @@ class SimulationApp:
                     else:
                         self.set_attractor_state(active=0.0)
                         self.solver.get_results()
+                        draw_fixed = False # change between draw deformable solid or fixed solid
+                if not self.mode_simu and event.type == pygame.KEYDOWN and event.key == pygame.K_b:
+                            draw_fixed = not draw_fixed
 
             m_left, _, m_right = pygame.mouse.get_pressed()
             mx, my = pygame.mouse.get_pos()
@@ -289,7 +293,7 @@ class SimulationApp:
                     for i in range(1, dist+2):
                         gxt = int(self.gx_old + (gx - self.gx_old) * i / (dist +1))
                         gyt = int(self.gy_old + (gy - self.gy_old) * i / (dist +1))
-                        self.solver.mod_solid(gyt, gxt, draw)
+                        self.solver.mod_solid(gyt, gxt, draw, draw_fixed)
                     self.solver.mod_solid_update_solid()
 
                 self.gx_old = gx

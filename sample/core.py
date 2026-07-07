@@ -602,7 +602,7 @@ class ElasticProblem:
             raise ValueError("Only \'plane strain\' is available")
         return ddx1,ddx2,ddy1,ddy2,meanx,meany,ddxx,ddyy
 
-    def mod_solid(self,ix,iy,state):
+    def mod_solid(self,ix,iy,state, draw_fixed):
         #Function to modify the solid
         # It means re initialising many things : all boundary conditions
 
@@ -612,7 +612,7 @@ class ElasticProblem:
         ix = min(ix,nx-2)
         iy = min(iy,ny-2)
 
-        if state > 0:
+        if state > 0 and not draw_fixed:
             sol = self.solid[ix:(ix+2),iy:(iy+2)]
             # if any of the 4 points is already solid, init speed and position of the other points
             # with the average values from the already solid part
@@ -650,8 +650,18 @@ class ElasticProblem:
                     self.vx[ix:(ix + 2), iy:(iy + 2)] = np.sum(self.vx[tour]) / nsolid
                     self.vy[ix:(ix + 2), iy:(iy + 2)] = np.sum(self.vy[tour]) / nsolid
             self.solid[ix:(ix + 2), iy:(iy + 2)] = True
+        elif state >0 and draw_fixed:
+            self.solid[ix:(ix + 2), iy:(iy + 2)] = True
+            self.ux[ix:(ix + 2), iy:(iy + 2)] = 0
+            self.uy[ix:(ix + 2), iy:(iy + 2)] = 0
+            self.vx[ix:(ix + 2), iy:(iy + 2)] = 0
+            self.vy[ix:(ix + 2), iy:(iy + 2)] = 0
+            self.ux_imp[ix:(ix + 2), iy:(iy + 2)] = 0
+            self.uy_imp[ix:(ix + 2), iy:(iy + 2)] = 0
         else:
             self.solid[ix:(ix + 2), iy:(iy + 2)] = False
+            self.ux_imp[ix:(ix + 2), iy:(iy + 2)] = np.nan
+            self.uy_imp[ix:(ix + 2), iy:(iy + 2)] = np.nan
 
         self.is_uimp = np.bitwise_and(np.bitwise_not(np.isnan(self.ux_imp)),
                                       np.bitwise_not(np.isnan(self.uy_imp)))
