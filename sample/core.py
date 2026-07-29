@@ -609,8 +609,10 @@ class ElasticProblem:
         #start by making sure the variables are OK to write on
         self.ctx.finish()
         (nx, ny) = self.solid.shape
-        ix = min(ix,nx-2)
-        iy = min(iy,ny-2)
+        ix = min(ix,nx-3)
+        ix = max(1, ix)
+        iy = min(iy,ny-3)
+        iy = max(1, iy)
 
         if state > 0 and not draw_fixed:
             sol = self.solid[ix:(ix+2),iy:(iy+2)]

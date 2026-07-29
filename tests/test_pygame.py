@@ -7,25 +7,27 @@ import moderngl
 # simulation parameters
 E=1
 nu = 0.4
-nx = 120
-ny = 120
+nx = 3*120
+ny = 3*120
 # nx = 80
 # ny = 80
+# nx = 30
+# ny = 30
 
 lm = 4.5 * 7/nx *2
 
 vol_mass = 0.5
-dt = 0.3 /1.7/2
+dt = 0.3 /1.7/3
 ratio = 0.9  # must be between 0 and 1
 tau = 20
 damping = 0.05 /10
 
-nbstep = int(30*8) # nb of steps per frame
+nbstep = int(30) # nb of steps per frame
 
 fx = 0.001*lm/10
 fy = 0.0*lm /10
 f_attract_const = 1
-max_stress = 0.02
+max_stress = 0.02 /10
 
 c_p = np.sqrt(E / ratio * (1 - nu) / (vol_mass * (1 + nu) * (1 - 2 * nu)))
 c_s = np.sqrt(E / ratio /  (2 * (1 + nu)) / vol_mass)
