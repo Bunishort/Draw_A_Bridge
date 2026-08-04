@@ -10,7 +10,7 @@ import moderngl
 import imgui
 from imgui.integrations.pygame import PygameRenderer
 import pygame
-from OpenGL.GL import glBindVertexArray
+from OpenGL.GL import glBindVertexArray, glUseProgram, glBindBuffer, GL_ARRAY_BUFFER
 
 class ExplicitAnimation:
     """
@@ -372,14 +372,8 @@ class SimulationApp:
                     self.draw_fixed = False
 
             # 2. Bouton Dessin Normal/Fixe (Touche B)[cite: 1]
-            # Affiché uniquement si on est en mode dessin
-            if not self.mode_simu:
-                if self.draw_image_button(self.draw_fixed):
-                    self.draw_fixed = not self.draw_fixed
-            else:
-                # Placeholder vide pour garder l'alignement quand le mode simu est actif
-                imgui.dummy(40, 40)
-                imgui.same_line(spacing=15)
+            if self.draw_image_button(self.draw_fixed):
+                self.draw_fixed = not self.draw_fixed
 
             # 3. Bouton Gravité
             if self.draw_image_button(self.state_gravity):
@@ -425,6 +419,9 @@ class SimulationApp:
 
             # --- RENDU DE L'INTERFACE PAR-DESSUS LA PHYSIQUE ---
             glBindVertexArray(0)
+            glUseProgram(0)  # Désactive ton shader de physique !
+            glBindBuffer(GL_ARRAY_BUFFER, 0)  #
+
             imgui.render()
             self.impl.render(imgui.get_draw_data())
 
