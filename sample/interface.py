@@ -278,12 +278,16 @@ class SimulationApp:
         self.tex_att.bind_to_image(6, read=True, write=True)
 
     # Fonction utilitaire pour dessiner un bouton avec ImGui
-    def draw_image_button(self, state):
+    def draw_image_button(self, button_id, state):
         # On passe l'identifiant OpenGL de la texture (.glo) à ImGui
+        imgui.push_id(str(button_id)) # remove if different texture for each button
+
         tex_id = self.tex_btn_actif.glo if state else self.tex_btn_passif.glo
         # Dimensions carrées demandées : 40x40
         clicked = imgui.image_button(tex_id, 40, 40)
         imgui.same_line(spacing=15)
+
+        imgui.pop_id()# remove if different texture for each button
         return clicked
 
     def run(self):
@@ -362,7 +366,7 @@ class SimulationApp:
             imgui.begin("Toolbar", flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE)
 
             # 1. Bouton Simulation/Dessin (Espace)[cite: 1]
-            if self.draw_image_button(self.mode_simu):
+            if self.draw_image_button("mode_simu", self.mode_simu):
                 self.mode_simu = not self.mode_simu
                 if self.mode_simu:
                     self.solver.mod_solid_buffer_update()
@@ -372,25 +376,25 @@ class SimulationApp:
                     self.draw_fixed = False
 
             # 2. Bouton Dessin Normal/Fixe (Touche B)[cite: 1]
-            if self.draw_image_button(self.draw_fixed):
+            if self.draw_image_button("draw_fixed", self.draw_fixed):
                 self.draw_fixed = not self.draw_fixed
 
             # 3. Bouton Gravité
-            if self.draw_image_button(self.state_gravity):
+            if self.draw_image_button("state_gravity", self.state_gravity):
                 self.state_gravity = not self.state_gravity
                 # TODO: Implémenter l'activation de la gravité
 
             # 4. Bouton Paramètres
-            if self.draw_image_button(self.state_settings):
+            if self.draw_image_button("state_setting", self.state_settings):
                 self.state_settings = not self.state_settings
                 # TODO: Implémenter l'ouverture des paramètres
 
             # 5. Bouton Vide 1
-            if self.draw_image_button(self.state_empty1):
+            if self.draw_image_button("empty1", self.state_empty1):
                 self.state_empty1 = not self.state_empty1
 
             # 6. Bouton Vide 2
-            if self.draw_image_button(self.state_empty2):
+            if self.draw_image_button("empty2", self.state_empty2):
                 self.state_empty2 = not self.state_empty2
 
             imgui.end()
