@@ -7,8 +7,8 @@ import moderngl
 # simulation parameters
 E=1
 nu = 0.4
-nx = 3*120
-ny = 3*120
+nx = 120
+ny = 120
 # nx = 80
 # ny = 80
 # nx = 30

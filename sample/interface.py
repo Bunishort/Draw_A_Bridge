@@ -6,6 +6,11 @@ from line_profiler import profile
 from scipy.ndimage import map_coordinates
 import moderngl
 
+# --- Import de l'interface ImGui ---
+import imgui
+from imgui.integrations.pygame import PygameRenderer
+import pygame
+from OpenGL.GL import glBindVertexArray
 
 class ExplicitAnimation:
     """
@@ -32,28 +37,28 @@ class ExplicitAnimation:
         self.nstep = kwargs.get('nstep', 1000)
         self.plot_interval = kwargs.get('plot_interval', 50)
         self.upscale_factor = kwargs.get('upscale_factor', 5)
-        self.probe_fields = kwargs.get('probe_fields', ['u_x',])
-        self.probe_ix = kwargs.get('probe_ix', [0.0,])
-        self.probe_iy = kwargs.get('probe_iy', [0.0,])
+        self.probe_fields = kwargs.get('probe_fields', ['u_x', ])
+        self.probe_ix = kwargs.get('probe_ix', [0.0, ])
+        self.probe_iy = kwargs.get('probe_iy', [0.0, ])
 
         self.probe_vals = {}
-        for (field,i,j) in zip(self.probe_fields, self.probe_ix, self.probe_iy):
-            self.probe_vals[field + str(i) + '_' + str(j)] = [getattr(elas,field)[i,j],]
+        for (field, i, j) in zip(self.probe_fields, self.probe_ix, self.probe_iy):
+            self.probe_vals[field + str(i) + '_' + str(j)] = [getattr(elas, field)[i, j], ]
 
         self.iplot = [0, ]
-        self.elas =  elas
+        self.elas = elas
         self.nx = elas.solid.shape[0]
         self.ny = elas.solid.shape[1]
 
         self.x = np.arange(self.nx) - (self.nx - 1) / 2
         self.y = np.arange(self.ny) - (self.ny - 1) / 2
 
-        self.x_dec = kwargs.get("x_dec",0)
-        self.y_dec = kwargs.get("y_dec",0)
-        self.min_scale = kwargs.get("min_scale",0)
-        self.max_scale = kwargs.get("max_scale",1)
-        self.pause = kwargs.get("pause",1/100)
-        self.plot_field = kwargs.get('plot_field','ux')
+        self.x_dec = kwargs.get("x_dec", 0)
+        self.y_dec = kwargs.get("y_dec", 0)
+        self.min_scale = kwargs.get("min_scale", 0)
+        self.max_scale = kwargs.get("max_scale", 1)
+        self.pause = kwargs.get("pause", 1 / 100)
+        self.plot_field = kwargs.get('plot_field', 'ux')
 
     def animate(self):
         xplot = (np.arange(self.upscale_factor * self.nx) - (self.upscale_factor * self.nx - 1) / 2) / self.upscale_factor
@@ -87,9 +92,11 @@ class ExplicitAnimation:
                     # Interpolate u on big grid
                     ux_plot = interpn((self.x, self.y), self.elas.ux, (gridxplot, gridyplot), method='linear', bounds_error=False,
                                       fill_value=0) / solidplot_norm
-                    uy_plot = interpn((self.x, self.y), self.elas.uy, (gridxplot, gridyplot), method='linear', bounds_error=False,
+                    uy_plot = interpn((self.x, self.y), self.elas.uy, (gridxplot, gridyplot), method='linear',
+                                      bounds_error=False,
                                       fill_value=0) / solidplot_norm
-                    out_plot = interpn((self.x + self.x_dec, self.y + self.y_dec), getattr(self.elas, self.plot_field), (gridxplot, gridyplot), method='linear',
+                    out_plot = interpn((self.x + self.x_dec, self.y + self.y_dec), getattr(self.elas, self.plot_field),
+                                       (gridxplot, gridyplot), method='linear',
                                        bounds_error=False, fill_value=0) / solidplot_norm
                     # y+0.5 because stress are not computed on the same grid as displacements !
 
@@ -126,9 +133,6 @@ class ExplicitAnimation:
         self.elas.get_results()
 
 ######################--------------------Game interface---------------################
-import pygame
-import moderngl
-import numpy as np
 
 # --- SHADERS OPTIMISÉS ---
 VTX_SHADER = """
@@ -136,11 +140,10 @@ VTX_SHADER = """
 in vec2 in_pos; 
 
 // Textures RGBA natives du solveur
-uniform sampler2D u_tex_pos_vel;    // R=ux (lignes/descendant), G=uy (colonnes/droite)
-uniform sampler2D u_tex_stress_old; // R=sxx, G=sxy_x, B=syy_y, A=sxy_y
-uniform sampler2D u_tex_solid; // R=solid, G=solid_not_uimp
+uniform sampler2D u_tex_pos_vel;    
+uniform sampler2D u_tex_stress_old; 
+uniform sampler2D u_tex_solid; 
 
-// Facteurs d'échelle physiques
 uniform vec2 u_disp_scale; 
 uniform float u_max_stress;
 
@@ -153,37 +156,31 @@ out float v_stress;
 void main() {
     // Mapping [-1, 1] vers [0, 1] pour lire la texture
     vec2 uv = vec2((in_pos.x + 1.0) * 0.5, (1.0 - in_pos.y) * 0.5);
-     
+
     float is_solid = texture(u_tex_solid, uv).r;
     float is_solid_not_uimp = texture(u_tex_solid, uv).g; 
-    
+
     if (is_solid < 0.5) {
         // Le point est vide : on le projette loin en dehors de l'écran pour l'annuler
         gl_Position = vec4(-2.0, -2.0, -2.0, 1.0);
         return;
     }
 
-    // Lecture des données physiques GPU
     vec4 pv = texture(u_tex_pos_vel, uv);
     vec4 stress = texture(u_tex_stress_old, uv);
 
-    float solver_ux = pv.r; // Déplacement vertical (vers le bas)
-    float solver_uy = pv.g; // Déplacement horizontal (vers la droite)
+    float solver_ux = pv.r; 
+    float solver_uy = pv.g; 
 
-    // Stress (G = sxy_x_old)
     if (is_solid > 0.5 && is_solid_not_uimp < 0.5) {
         v_stress = 1.0; 
     } else {
-        // Calcul normal de la contrainte pour les autres points
         vec4 stress = texture(u_tex_stress_old, uv);
         v_stress = stress.g / u_max_stress;
     }
 
     vec2 final_pos = in_pos;
     if (u_mode == 1) {
-        // Application propre des axes cartésiens OpenGL
-        // X reçoit le déplacement horizontal (uy)
-        // Y reçoit le déplacement vertical inversé (-ux car Y OpenGL pointe vers le haut)
         vec2 disp = vec2(solver_uy * u_disp_scale.x, -solver_ux * u_disp_scale.y);
         final_pos += disp * u_amp; 
     }
@@ -204,6 +201,7 @@ void main() {
     f_color = vec4(s, 0.5 * (1.0 - s), 1.0 - s, 1.0);
 }
 """
+
 
 class SimulationApp:
     def __init__(self, solver, ctx, **kwargs):
@@ -234,16 +232,37 @@ class SimulationApp:
         self.scale_x = 2.0 / (self.W * self.solver.lm)
         self.scale_y = 2.0 / (self.H * self.solver.lm)
 
-        self.mode_simu = False
         self.running = True
         self.gx_old = 1.0
         self.gy_old = 1.0
 
-        #Attractor init
+        # --- ÉTATS DES BOUTONS DE L'INTERFACE ---
+        self.mode_simu = False
+        self.draw_fixed = False  # Transformé en attribut pour ImGui[cite: 2]
+        self.state_gravity = False
+        self.state_settings = False
+        self.state_empty1 = False
+        self.state_empty2 = False
+
+        # --- INITIALISATION IMGUI ---
+        imgui.create_context()
+        self.impl = PygameRenderer()
+
+        # Création de textures "placeholders" pour les boutons (Évite de devoir charger des PNG tout de suite)
+        # Remplace cette logique par la conversion de surfaces pygame.image.load() plus tard
+        def create_ui_texture(color):
+            img_data = np.full((40, 40, 3), color, dtype='u1')
+            return self.ctx.texture((40, 40), 3, img_data.tobytes())
+
+        self.tex_btn_passif = create_ui_texture([100, 100, 100])  # Gris
+        self.tex_btn_actif = create_ui_texture([50, 200, 50])  # Vert
+
+        # Attractor init
         file_path = '../sample/update_f_imp.glsl'
         with open(file_path, 'r') as file:
             source_code_f_imp = file.read()
-        data_att = np.stack([np.zeros(self.solver.solid.shape), np.zeros(self.solver.solid.shape)], axis=-1).astype('f4')
+        data_att = np.stack([np.zeros(self.solver.solid.shape), np.zeros(self.solver.solid.shape)], axis=-1).astype(
+            'f4')
         self.tex_att = self.ctx.texture(self.solver.solid.shape[::-1], 2, data=data_att.tobytes(), dtype='f4')
 
         self.update_f_imp = self.ctx.compute_shader(source_code_f_imp)
@@ -258,14 +277,26 @@ class SimulationApp:
 
         self.tex_att.bind_to_image(6, read=True, write=True)
 
+    # Fonction utilitaire pour dessiner un bouton avec ImGui
+    def draw_image_button(self, state):
+        # On passe l'identifiant OpenGL de la texture (.glo) à ImGui
+        tex_id = self.tex_btn_actif.glo if state else self.tex_btn_passif.glo
+        # Dimensions carrées demandées : 40x40
+        clicked = imgui.image_button(tex_id, 40, 40)
+        imgui.same_line(spacing=15)
+        return clicked
 
     def run(self):
         clock = pygame.time.Clock()
-        draw_fixed = False
 
         while self.running:
             for event in pygame.event.get():
+                # On informe ImGui de l'événement en premier
+                self.impl.process_event(event)
+
                 if event.type == pygame.QUIT: self.running = False
+
+                # --- Touches Clavier[cite: 1] ---
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                     self.mode_simu = not self.mode_simu
                     if self.mode_simu:
@@ -273,42 +304,102 @@ class SimulationApp:
                     else:
                         self.set_attractor_state(active=0.0)
                         self.solver.get_results()
-                        draw_fixed = False # change between draw deformable solid or fixed solid
+                        self.draw_fixed = False
                 if not self.mode_simu and event.type == pygame.KEYDOWN and event.key == pygame.K_b:
-                            draw_fixed = not draw_fixed
+                    self.draw_fixed = not self.draw_fixed
 
-            m_left, _, m_right = pygame.mouse.get_pressed()
-            mx, my = pygame.mouse.get_pos()
-            gx = max(0, min(int((mx / self.screen_size[0]) * self.W), self.W - 1))
-            gy = max(0, min(int((my / self.screen_size[1]) * self.H), self.H - 1))
+            self.impl.process_inputs()
+            io = imgui.get_io()
+            io.display_size = self.screen_size # to avoid bug
+            # --- SOURIS (Rendu Physique) ---
+            # On ignore les clics pour la physique si la souris survole un bouton de l'interface
+            if not io.want_capture_mouse:
+                m_left, _, m_right = pygame.mouse.get_pressed()
+                mx, my = pygame.mouse.get_pos()
+                gx = max(0, min(int((mx / self.screen_size[0]) * self.W), self.W - 1))
+                gy = max(0, min(int((my / self.screen_size[1]) * self.H), self.H - 1))
 
-            if not self.mode_simu:
-                if m_left:
-                    draw=1
-                if m_right:
-                    draw=0
+                if not self.mode_simu:
+                    if m_left:
+                        draw = 1
+                    if m_right:
+                        draw = 0
 
-                if m_left or m_right:
-                    dist = int(np.sqrt((gx - self.gx_old)**2 + (gy - self.gy_old)**2))
-                    for i in range(1, dist+2):
-                        gxt = int(self.gx_old + (gx - self.gx_old) * i / (dist +1))
-                        gyt = int(self.gy_old + (gy - self.gy_old) * i / (dist +1))
-                        self.solver.mod_solid(gyt, gxt, draw, draw_fixed)
-                    self.solver.mod_solid_update_solid()
+                    if m_left or m_right:
+                        dist = int(np.sqrt((gx - self.gx_old) ** 2 + (gy - self.gy_old) ** 2))
+                        for i in range(1, dist + 2):
+                            gxt = int(self.gx_old + (gx - self.gx_old) * i / (dist + 1))
+                            gyt = int(self.gy_old + (gy - self.gy_old) * i / (dist + 1))
+                            self.solver.mod_solid(gyt, gxt, draw,
+                                                  self.draw_fixed)  # Utilisation de l'attribut de classe[cite: 2]
+                        self.solver.mod_solid_update_solid()
 
-                self.gx_old = gx
-                self.gy_old = gy
-            else:
-                # --- GESTION DE L'ATTRACTEUR (DEVIENT UN APPEL GPU) ---
-                if m_left:
-                    # On délègue totalement le calcul de la force à la classe solver
-                    self.set_attractor_state(active=1.0, target_x=gx, target_y=gy, force=self.f_attract_const)
+                    self.gx_old = gx
+                    self.gy_old = gy
                 else:
+                    if m_left:
+                        self.set_attractor_state(active=1.0, target_x=gx, target_y=gy, force=self.f_attract_const)
+                    else:
+                        self.set_attractor_state(active=0.0)
+            else:
+                # Sécurité si on maintient le clic gauche sur l'interface pendant la simu
+                if self.mode_simu:
                     self.set_attractor_state(active=0.0)
 
-                # Étape explicite
+            # Étape explicite
+            if self.mode_simu:
                 for _ in range(self.nbstep):
                     self.solver.explicit_step()
+
+            # --- CONSTITUTION DE LA BARRE D'OUTILS IMGUI ---
+            imgui.new_frame()
+            # Positionnement de la fenêtre en bas de l'écran existant
+            toolbar_height = 60
+            imgui.set_next_window_position(0, self.screen_size[1] - toolbar_height)
+            imgui.set_next_window_size(self.screen_size[0], toolbar_height)
+
+            # Création d'une fenêtre sans bordures, ni titre, ni fond transparent
+            imgui.begin("Toolbar", flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE)
+
+            # 1. Bouton Simulation/Dessin (Espace)[cite: 1]
+            if self.draw_image_button(self.mode_simu):
+                self.mode_simu = not self.mode_simu
+                if self.mode_simu:
+                    self.solver.mod_solid_buffer_update()
+                else:
+                    self.set_attractor_state(active=0.0)
+                    self.solver.get_results()
+                    self.draw_fixed = False
+
+            # 2. Bouton Dessin Normal/Fixe (Touche B)[cite: 1]
+            # Affiché uniquement si on est en mode dessin
+            if not self.mode_simu:
+                if self.draw_image_button(self.draw_fixed):
+                    self.draw_fixed = not self.draw_fixed
+            else:
+                # Placeholder vide pour garder l'alignement quand le mode simu est actif
+                imgui.dummy(40, 40)
+                imgui.same_line(spacing=15)
+
+            # 3. Bouton Gravité
+            if self.draw_image_button(self.state_gravity):
+                self.state_gravity = not self.state_gravity
+                # TODO: Implémenter l'activation de la gravité
+
+            # 4. Bouton Paramètres
+            if self.draw_image_button(self.state_settings):
+                self.state_settings = not self.state_settings
+                # TODO: Implémenter l'ouverture des paramètres
+
+            # 5. Bouton Vide 1
+            if self.draw_image_button(self.state_empty1):
+                self.state_empty1 = not self.state_empty1
+
+            # 6. Bouton Vide 2
+            if self.draw_image_button(self.state_empty2):
+                self.state_empty2 = not self.state_empty2
+
+            imgui.end()
 
             # --- RENDU DIRECT DEPUIS LES TEXTURES DU SOLVEUR ---
             self.ctx.clear(0.1, 0.1, 0.1)
@@ -331,6 +422,11 @@ class SimulationApp:
             self.prog['u_max_stress'].value = self.max_stress
 
             self.vao.render(moderngl.POINTS, vertices=self.W * self.H)
+
+            # --- RENDU DE L'INTERFACE PAR-DESSUS LA PHYSIQUE ---
+            glBindVertexArray(0)
+            imgui.render()
+            self.impl.render(imgui.get_draw_data())
 
             pygame.display.flip()
             clock.tick(60)
