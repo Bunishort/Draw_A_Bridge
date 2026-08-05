@@ -5,6 +5,7 @@ from scipy.interpolate import griddata, interpn
 from line_profiler import profile
 from scipy.ndimage import map_coordinates
 import moderngl
+from os.path import join
 
 # --- Import de l'interface ImGui ---
 import imgui
@@ -256,9 +257,19 @@ class SimulationApp:
         def create_ui_texture(color):
             img_data = np.full((40, 40, 3), color, dtype='u1')
             return self.ctx.texture((40, 40), 3, img_data.tobytes())
+        def create_ui_texture_file(filename):
+            image = pygame.image.load(filename).convert_alpha()
+            image = pygame.transform.smoothscale(image, (40, 40))
+            img_data = pygame.image.tostring(image, "RGBA", True)  # True inverse l'axe Y pour OpenGL
 
-        self.tex_btn_passif = create_ui_texture([100, 100, 100])  # Gris
-        self.tex_btn_actif = create_ui_texture([50, 200, 50])  # Vert
+            return self.ctx.texture((40, 40), 4, img_data)
+
+
+        self.tex_btn_passive = {}
+        self.tex_btn_active = {}
+        for button_id in ["mode_simu", "state_setting", "state_gravity", "draw_fixed", "empty1", "empty2"]:
+            self.tex_btn_passive[button_id] = create_ui_texture_file(join('../sample', 'data', button_id + '_passive.png'))
+            self.tex_btn_active[button_id]  = create_ui_texture_file(join('../sample', 'data', button_id + '_active.png'))
 
         # Attractor init
         file_path = '../sample/update_f_imp.glsl'
@@ -297,7 +308,7 @@ class SimulationApp:
         # On passe l'identifiant OpenGL de la texture (.glo) à ImGui
         imgui.push_id(str(button_id)) # remove if different texture for each button
 
-        tex_id = self.tex_btn_actif.glo if state else self.tex_btn_passif.glo
+        tex_id = self.tex_btn_active[button_id].glo if state else self.tex_btn_passive[button_id].glo
         # Dimensions carrées demandées : 40x40
         clicked = imgui.image_button(tex_id, 40, 40)
         imgui.same_line(spacing=15)
@@ -402,7 +413,6 @@ class SimulationApp:
                 group_y = int(np.ceil(self.H / 16.0))
 
                 self.toggle_gravity.run(group_x, group_y)
-                # TODO: Implémenter l'activation de la gravité
 
             # 4. Bouton Paramètres
             if self.draw_image_button("state_setting", self.state_settings):
