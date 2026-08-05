@@ -11,7 +11,7 @@ from os.path import join
 import imgui
 from imgui.integrations.pygame import PygameRenderer
 import pygame
-from OpenGL.GL import glBindVertexArray, glUseProgram, glBindBuffer, GL_ARRAY_BUFFER
+from OpenGL.GL import glBindVertexArray, glUseProgram, glBindBuffer, GL_ARRAY_BUFFER, glBindSampler, glActiveTexture, GL_TEXTURE0
 
 class ExplicitAnimation:
     """
@@ -252,15 +252,10 @@ class SimulationApp:
         imgui.create_context()
         self.impl = PygameRenderer()
 
-        # Création de textures "placeholders" pour les boutons (Évite de devoir charger des PNG tout de suite)
-        # Remplace cette logique par la conversion de surfaces pygame.image.load() plus tard
-        def create_ui_texture(color):
-            img_data = np.full((40, 40, 3), color, dtype='u1')
-            return self.ctx.texture((40, 40), 3, img_data.tobytes())
         def create_ui_texture_file(filename):
             image = pygame.image.load(filename).convert_alpha()
             image = pygame.transform.smoothscale(image, (40, 40))
-            img_data = pygame.image.tostring(image, "RGBA", True)  # True inverse l'axe Y pour OpenGL
+            img_data = pygame.image.tostring(image, "RGBA", False)  # True inverse l'axe Y pour OpenGL
 
             return self.ctx.texture((40, 40), 4, img_data)
 
@@ -455,6 +450,8 @@ class SimulationApp:
             glBindVertexArray(0)
             glUseProgram(0)  # Désactive ton shader de physique !
             glBindBuffer(GL_ARRAY_BUFFER, 0)  #
+            glActiveTexture(GL_TEXTURE0)
+            glBindSampler(0, 0)
 
             imgui.render()
             self.impl.render(imgui.get_draw_data())
