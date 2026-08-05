@@ -72,7 +72,8 @@ def main():
                                       is_explicit=True, vol_mass=vol_mass, dt = dt, ratio=ratio, tau=tau,
                                         fx_imp=fx_imp, fy_imp = fy_imp, damping = damping, gl_context=ctx)
 
-    game = sample.interface.SimulationApp(solver, ctx, screen_size=screen_size, nbstep=nbstep, max_stress=max_stress)
+    game = sample.interface.SimulationApp(solver, ctx, screen_size=screen_size, nbstep=nbstep, max_stress=max_stress,
+                                          fx_grav=fx, fy_grav=fy)
     game.run()
 
     pygame.quit()

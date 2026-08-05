@@ -212,6 +212,9 @@ class SimulationApp:
         self.screen_size = kwargs.get('screen_size', (800, 800))
         self.nbstep = kwargs.get('nbstep', 10)
         self.f_attract_const = kwargs.get('f_attract_const', 1e-2)
+        self.fx_grav = kwargs.get('fx_grav', 0.0)
+        self.fy_grav = kwargs.get('fy_grav', 0.0)
+
         self.max_stress = kwargs.get('max_stress', 1.0)
 
         self.point_size = self.screen_size[0] / self.W + 0.5
@@ -239,7 +242,7 @@ class SimulationApp:
         # --- ÉTATS DES BOUTONS DE L'INTERFACE ---
         self.mode_simu = False
         self.draw_fixed = False  # Transformé en attribut pour ImGui[cite: 2]
-        self.state_gravity = False
+        self.state_gravity = True
         self.state_settings = False
         self.state_empty1 = False
         self.state_empty2 = False
@@ -276,6 +279,18 @@ class SimulationApp:
         self.update_f_imp['height'] = self.solver.solid.shape[0]
 
         self.tex_att.bind_to_image(6, read=True, write=True)
+
+        #Gravity toggle init
+        file_path = '../sample/toggle_gravity.glsl'
+        with open(file_path, 'r') as file:
+            source_code_grav = file.read()
+
+        self.toggle_gravity = self.ctx.compute_shader(source_code_grav)
+        self.toggle_gravity['fx'].value = self.fx_grav
+        self.toggle_gravity['fy'].value = self.fy_grav
+        self.toggle_gravity['width'].value = self.solver.solid.shape[1]
+        self.toggle_gravity['height'].value = self.solver.solid.shape[0]
+        self.toggle_gravity['activate'].value = self.state_gravity
 
     # Fonction utilitaire pour dessiner un bouton avec ImGui
     def draw_image_button(self, button_id, state):
@@ -382,12 +397,17 @@ class SimulationApp:
             # 3. Bouton Gravité
             if self.draw_image_button("state_gravity", self.state_gravity):
                 self.state_gravity = not self.state_gravity
+                self.toggle_gravity['activate'].value = self.state_gravity
+                group_x = int(np.ceil(self.W / 16.0))
+                group_y = int(np.ceil(self.H / 16.0))
+
+                self.toggle_gravity.run(group_x, group_y)
                 # TODO: Implémenter l'activation de la gravité
 
             # 4. Bouton Paramètres
             if self.draw_image_button("state_setting", self.state_settings):
                 self.state_settings = not self.state_settings
-                # TODO: Implémenter l'ouverture des paramètres
+                # TODO: Implémenter l'ouverture des paramètres + restart button
 
             # 5. Bouton Vide 1
             if self.draw_image_button("empty1", self.state_empty1):
