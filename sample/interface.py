@@ -205,6 +205,9 @@ void main() {
 
 
 class SimulationApp:
+    """
+    TODO now need to draw nice images, param menu and restart. ANd maybe check how to remove the button box pixels from the simulation
+    """
     def __init__(self, solver, ctx, **kwargs):
         self.solver = solver
         self.ctx = ctx
@@ -243,9 +246,9 @@ class SimulationApp:
         # --- ÉTATS DES BOUTONS DE L'INTERFACE ---
         self.mode_simu = False
         self.draw_fixed = False  # Transformé en attribut pour ImGui[cite: 2]
+        self.state_rubber = False
         self.state_gravity = True
         self.state_settings = False
-        self.state_empty1 = False
         self.state_empty2 = False
 
         # --- INITIALISATION IMGUI ---
@@ -262,7 +265,9 @@ class SimulationApp:
 
         self.tex_btn_passive = {}
         self.tex_btn_active = {}
-        for button_id in ["mode_simu", "state_setting", "state_gravity", "draw_fixed", "empty1", "empty2"]:
+        # mode simu / state gravity / draw fixed/ rubber / state_setting
+        #option for later : reset pos/velocity, save simulation, load simulation
+        for button_id in ["mode_simu", "state_gravity", "draw_fixed", "state_rubber", "empty2", "state_setting"]:
             self.tex_btn_passive[button_id] = create_ui_texture_file(join('../sample', 'data', button_id + '_passive.png'))
             self.tex_btn_active[button_id]  = create_ui_texture_file(join('../sample', 'data', button_id + '_active.png'))
 
@@ -349,6 +354,8 @@ class SimulationApp:
                         draw = 1
                     if m_right:
                         draw = 0
+                    if self.state_rubber:
+                        draw = 0
 
                     if m_left or m_right:
                         dist = int(np.sqrt((gx - self.gx_old) ** 2 + (gy - self.gy_old) ** 2))
@@ -396,10 +403,6 @@ class SimulationApp:
                     self.solver.get_results()
                     self.draw_fixed = False
 
-            # 2. Bouton Dessin Normal/Fixe (Touche B)[cite: 1]
-            if self.draw_image_button("draw_fixed", self.draw_fixed):
-                self.draw_fixed = not self.draw_fixed
-
             # 3. Bouton Gravité
             if self.draw_image_button("state_gravity", self.state_gravity):
                 self.state_gravity = not self.state_gravity
@@ -409,18 +412,21 @@ class SimulationApp:
 
                 self.toggle_gravity.run(group_x, group_y)
 
-            # 4. Bouton Paramètres
-            if self.draw_image_button("state_setting", self.state_settings):
-                self.state_settings = not self.state_settings
-                # TODO: Implémenter l'ouverture des paramètres + restart button
+            # draw mode button
+            if self.draw_image_button("draw_fixed", self.draw_fixed):
+                self.draw_fixed = not self.draw_fixed
 
-            # 5. Bouton Vide 1
-            if self.draw_image_button("empty1", self.state_empty1):
-                self.state_empty1 = not self.state_empty1
+            #  Rubber button
+            if self.draw_image_button("state_rubber", self.state_rubber):
+                self.state_rubber = not self.state_rubber
 
             # 6. Bouton Vide 2
             if self.draw_image_button("empty2", self.state_empty2):
                 self.state_empty2 = not self.state_empty2
+            #  Parameter button
+            if self.draw_image_button("state_setting", self.state_settings):
+                self.state_settings = not self.state_settings
+                # TODO: Implémenter l'ouverture des paramètres + restart button
 
             imgui.end()
 
