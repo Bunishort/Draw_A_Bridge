@@ -319,6 +319,15 @@ class SimulationApp:
 
         imgui.pop_id()# remove if different texture for each button
         return clicked
+    def toggle_simu(self):
+        self.mode_simu = not self.mode_simu
+        if self.mode_simu:
+            self.solver.mod_solid_buffer_update()
+            self.state_rubber = False
+            self.draw_fixed = False
+        else:
+            self.set_attractor_state(active=0.0)
+            self.solver.get_results()
 
     def run(self):
         clock = pygame.time.Clock()
@@ -332,15 +341,7 @@ class SimulationApp:
 
                 # --- Touches Clavier[cite: 1] ---
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                    self.mode_simu = not self.mode_simu
-                    if self.mode_simu:
-                        self.solver.mod_solid_buffer_update()
-                    else:
-                        self.set_attractor_state(active=0.0)
-                        self.solver.get_results()
-                        self.draw_fixed = False
-                if not self.mode_simu and event.type == pygame.KEYDOWN and event.key == pygame.K_b:
-                    self.draw_fixed = not self.draw_fixed
+                    self.toggle_simu()
 
             self.impl.process_inputs()
             io = imgui.get_io()
@@ -398,23 +399,18 @@ class SimulationApp:
 
             # 1. Bouton Simulation/Dessin (Espace)[cite: 1]
             if self.draw_image_button("mode_simu", self.mode_simu):
-                self.mode_simu = not self.mode_simu
-                if self.mode_simu:
-                    self.solver.mod_solid_buffer_update()
-                    self.state_rubber = False
-                    self.draw_fixed = False
-                else:
-                    self.set_attractor_state(active=0.0)
-                    self.solver.get_results()
+                self.toggle_simu()
 
             # 3. Bouton Gravité
-            if self.draw_image_button("state_gravity", self.state_gravity):
-                self.state_gravity = not self.state_gravity
-                self.toggle_gravity['activate'].value = self.state_gravity
-                group_x = int(np.ceil(self.W / 16.0))
-                group_y = int(np.ceil(self.H / 16.0))
-
-                self.toggle_gravity.run(group_x, group_y)
+            if self.mode_simu:
+                if self.draw_image_button("state_gravity", self.state_gravity):
+                    self.state_gravity = not self.state_gravity
+                    self.toggle_gravity['activate'].value = self.state_gravity
+                    group_x = int(np.ceil(self.W / 16.0))
+                    group_y = int(np.ceil(self.H / 16.0))
+                    self.toggle_gravity.run(group_x, group_y)
+            else:
+                self.draw_image_button("state_gravity", False)
 
             # draw mode button
             state = not self.mode_simu and not self.draw_fixed
