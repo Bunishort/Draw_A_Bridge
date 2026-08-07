@@ -246,7 +246,57 @@ class SimulationApp:
         self.gx_old = 1.0
         self.gy_old = 1.0
 
-        # --- ÉTATS DES BOUTONS DE L'INTERFACE ---
+        # ==========================================
+        # ---   Custom mouse cursor initializationS ---
+        # ==========================================
+        self.cursor_state = None
+
+        # 1. Curseur Système (Flèche standard pour l'interface)
+        self.cursor_ui = pygame.cursors.Cursor(pygame.SYSTEM_CURSOR_ARROW)
+
+        # 2. Curseur Dessin (Carré pointillé 2x2 pixels de simulation)
+        # On convertit 2 cases de la grille en vrais pixels d'écran
+        cell_width_px = self.screen_size[0] / self.W
+        cell_height_px = (self.screen_size[1] - self.toolbar_height) / self.H
+        cursor_size = 2
+
+        cw = max(2, int(cursor_size * cell_width_px))
+        ch = max(2, int(cursor_size * cell_height_px))
+
+        # Création d'une surface transparente pour le curseur
+        surf_draw = pygame.Surface((cw, ch), pygame.SRCALPHA)
+
+        # Dessin des pointillés (alternance blanc/transparent)
+        dash = 3  # Longueur d'un pointillé en pixels
+        color = (255, 255, 255)  # Blanc (tu peux mettre du noir ou du rouge)
+        for x in range(0, cw, dash * 2):
+            pygame.draw.line(surf_draw, color, (x, 0), (min(x + dash - 1, cw - 1), 0))
+            pygame.draw.line(surf_draw, color, (x, ch - 1), (min(x + dash - 1, cw - 1), ch - 1))
+        for y in range(0, ch, dash * 2):
+            pygame.draw.line(surf_draw, color, (0, y), (0, min(y + dash - 1, ch - 1)))
+            pygame.draw.line(surf_draw, color, (cw - 1, y), (cw - 1, min(y + dash - 1, ch - 1)))
+
+        # Le "Hotspot" (le point de clic effectif) est placé au centre du carré
+        # self.cursor_draw = pygame.cursors.Cursor((cw // 2, ch // 2), surf_draw) # hotspot in square center
+        self.cursor_draw = pygame.cursors.Cursor((int(cell_width_px) // 2, int(cell_height_px) // 2), surf_draw) # hotspot in center of upper left simu pixel
+
+
+        # 3. Curseur Simulation (Image PNG)
+        try:
+            # Assure-toi d'avoir un fichier cursor_simu.png dans ton dossier data
+            surf_simu = pygame.image.load(join('../sample', 'data', 'cursor_simu.png')).convert_alpha()
+            # Optionnel : redimensionner si l'image est trop grande (ex: 24x24 px)
+            # surf_simu = pygame.transform.smoothscale(surf_simu, (24, 24))
+
+            # Hotspot placé au centre de l'image (ou (0,0) si c'est un pointeur de type flèche)
+            self.cursor_simu = pygame.cursors.Cursor((surf_simu.get_width() // 2, surf_simu.get_height() // 2),
+                                                     surf_simu)
+        except Exception as e:
+            print(f"Image cursor_simu.png not found, using crosshair. ({e})")
+            self.cursor_simu = pygame.cursors.Cursor(pygame.SYSTEM_CURSOR_CROSSHAIR)
+
+
+        # --- IMGUI Toolbox interface init ---
         self.mode_simu = False
         self.draw_fixed = False  # Transformé en attribut pour ImGui[cite: 2]
         self.state_rubber = False
@@ -270,7 +320,6 @@ class SimulationApp:
         self.tex_btn_active = {}
         # mode simu / state gravity / draw fixed/ rubber / state_setting
         #option for later : reset pos/velocity, save simulation, load simulation
-        # todo : add draw button
         for button_id in ["mode_simu", "state_gravity", "draw", "draw_fixed", "state_rubber", "state_setting"]:
             self.tex_btn_passive[button_id] = create_ui_texture_file(join('../sample', 'data', button_id + '_passive.png'))
             self.tex_btn_active[button_id]  = create_ui_texture_file(join('../sample', 'data', button_id + '_active.png'))
@@ -350,6 +399,31 @@ class SimulationApp:
             self.impl.process_inputs()
             io = imgui.get_io()
             io.display_size = self.screen_size # to avoid bug
+
+            # ==========================================
+            # --- Dynamic mouse cursor ---
+            # ==========================================
+            # Détermination de l'état du curseur souhaité
+            if io.want_capture_mouse:
+                desired_cursor = "UI"
+            elif self.mode_simu:
+                desired_cursor = "SIMU"
+            else:
+                desired_cursor = "DRAW"
+
+            # Application du nouveau curseur seulement s'il a changé
+            if self.cursor_state != desired_cursor:
+                self.cursor_state = desired_cursor
+
+                if desired_cursor == "UI":
+                    pygame.mouse.set_cursor(self.cursor_ui)
+                elif desired_cursor == "SIMU":
+                    pygame.mouse.set_cursor(self.cursor_simu)
+                elif desired_cursor == "DRAW":
+                    pygame.mouse.set_cursor(self.cursor_draw)
+            # ==========================================
+
+
             # --- SOURIS (Rendu Physique) ---
             # On ignore les clics pour la physique si la souris survole un bouton de l'interface
             if not io.want_capture_mouse:
