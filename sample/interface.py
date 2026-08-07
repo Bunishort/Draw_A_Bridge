@@ -409,6 +409,7 @@ class SimulationApp:
                     group_x = int(np.ceil(self.W / 16.0))
                     group_y = int(np.ceil(self.H / 16.0))
                     self.toggle_gravity.run(group_x, group_y)
+                    #TODO debug behaviour when going from mode_simu
             else:
                 self.draw_image_button("state_gravity", False)
 
