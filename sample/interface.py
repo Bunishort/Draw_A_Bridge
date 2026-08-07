@@ -313,7 +313,6 @@ class SimulationApp:
         imgui.push_id(str(button_id)) # remove if different texture for each button
 
         tex_id = self.tex_btn_active[button_id].glo if state else self.tex_btn_passive[button_id].glo
-        # Dimensions carrées demandées : 40x40
         clicked = imgui.image_button(tex_id, self.button_size, self.button_size)
         imgui.same_line(spacing=15)
 
@@ -419,20 +418,23 @@ class SimulationApp:
                 self.draw_image_button("state_gravity", False)
 
             # draw mode button
-            state = not self.mode_simu and not self.draw_fixed
+            state = not self.mode_simu and not self.draw_fixed and not self.state_rubber
             if self.draw_image_button("draw", state):
                 self.draw_fixed = False
                 self.mode_simu = False
+                self.state_rubber = False
 
             # draw fixed mode button
             if self.draw_image_button("draw_fixed", self.draw_fixed):
                 self.draw_fixed = not self.draw_fixed
                 self.mode_simu = False
+                self.state_rubber = False
 
             #  Rubber button
             if self.draw_image_button("state_rubber", self.state_rubber):
                 self.state_rubber = not self.state_rubber
                 self.mode_simu = False
+                self.draw_fixed = False
 
             #  Parameter button
             if self.draw_image_button("state_setting", self.state_settings):
