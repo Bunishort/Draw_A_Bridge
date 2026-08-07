@@ -260,10 +260,10 @@ class SimulationApp:
 
         def create_ui_texture_file(filename):
             image = pygame.image.load(filename).convert_alpha()
-            image = pygame.transform.smoothscale(image, (40, 40))
+            image = pygame.transform.smoothscale(image, (self.button_size, self.button_size))
             img_data = pygame.image.tostring(image, "RGBA", False)  # True inverse l'axe Y pour OpenGL
 
-            return self.ctx.texture((40, 40), 4, img_data)
+            return self.ctx.texture((self.button_size, self.button_size), 4, img_data)
 
 
         self.tex_btn_passive = {}
@@ -314,7 +314,7 @@ class SimulationApp:
 
         tex_id = self.tex_btn_active[button_id].glo if state else self.tex_btn_passive[button_id].glo
         # Dimensions carrées demandées : 40x40
-        clicked = imgui.image_button(tex_id, 40, 40)
+        clicked = imgui.image_button(tex_id, self.button_size, self.button_size)
         imgui.same_line(spacing=15)
 
         imgui.pop_id()# remove if different texture for each button
