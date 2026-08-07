@@ -214,6 +214,9 @@ class SimulationApp:
         self.H, self.W = solver.solid.shape
 
         self.screen_size = kwargs.get('screen_size', (800, 800))
+        self.button_size = 40
+        self.toolbar_height = self.button_size + 20
+
         self.nbstep = kwargs.get('nbstep', 10)
         self.f_attract_const = kwargs.get('f_attract_const', 1e-2)
         self.fx_grav = kwargs.get('fx_grav', 0.0)
@@ -348,7 +351,7 @@ class SimulationApp:
                 m_left, _, m_right = pygame.mouse.get_pressed()
                 mx, my = pygame.mouse.get_pos()
                 gx = max(0, min(int((mx / self.screen_size[0]) * self.W), self.W - 1))
-                gy = max(0, min(int((my / self.screen_size[1]) * self.H), self.H - 1))
+                gy = max(0, min(int((my / (self.screen_size[1] - self.toolbar_height)) * self.H), self.H - 1))
 
                 if not self.mode_simu:
                     if m_left:
@@ -387,9 +390,8 @@ class SimulationApp:
             # --- CONSTITUTION DE LA BARRE D'OUTILS IMGUI ---
             imgui.new_frame()
             # Positionnement de la fenêtre en bas de l'écran existant
-            toolbar_height = 60
-            imgui.set_next_window_position(0, self.screen_size[1] - toolbar_height)
-            imgui.set_next_window_size(self.screen_size[0], toolbar_height)
+            imgui.set_next_window_position(0, self.screen_size[1] - self.toolbar_height)
+            imgui.set_next_window_size(self.screen_size[0], self.toolbar_height)
 
             # Création d'une fenêtre sans bordures, ni titre, ni fond transparent
             imgui.begin("Toolbar", flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE)
@@ -457,9 +459,13 @@ class SimulationApp:
             self.prog['u_disp_scale'].value = (self.scale_x, self.scale_y)
             self.prog['u_max_stress'].value = self.max_stress
 
+            #viewport modifications to plot simulation above the toolbar only
+            self.ctx.viewport = (0, self.toolbar_height, self.screen_size[0], self.screen_size[1] - self.toolbar_height)
             self.vao.render(moderngl.POINTS, vertices=self.W * self.H)
 
-            # --- RENDU DE L'INTERFACE PAR-DESSUS LA PHYSIQUE ---
+            self.ctx.viewport = (0, 0, self.screen_size[0], self.screen_size[1])
+
+                # --- RENDU DE L'INTERFACE PAR-DESSUS LA PHYSIQUE ---
             glBindVertexArray(0)
             glUseProgram(0)  # Désactive ton shader de physique !
             glBindBuffer(GL_ARRAY_BUFFER, 0)  #
