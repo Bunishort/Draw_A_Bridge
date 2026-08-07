@@ -323,6 +323,11 @@ class SimulationApp:
         self.mode_simu = not self.mode_simu
         if self.mode_simu:
             self.solver.mod_solid_buffer_update()
+            # Reactivating gravity on the updated solid
+            if self.state_gravity:  # removing gravity before solid update, reactivating it afterwards
+                group_x = int(np.ceil(self.W / 16.0))
+                group_y = int(np.ceil(self.H / 16.0))
+                self.toggle_gravity.run(group_x, group_y)
             self.state_rubber = False
             self.draw_fixed = False
         else:
