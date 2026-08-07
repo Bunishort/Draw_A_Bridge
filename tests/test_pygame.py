@@ -17,7 +17,7 @@ ny = 120
 lm = 4.5 * 7/nx *2
 
 vol_mass = 0.5
-dt = 0.3 /1.7/3
+dt = 0.3 /1.7
 ratio = 0.9  # must be between 0 and 1
 tau = 20
 damping = 0.05 /10

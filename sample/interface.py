@@ -267,7 +267,8 @@ class SimulationApp:
         self.tex_btn_active = {}
         # mode simu / state gravity / draw fixed/ rubber / state_setting
         #option for later : reset pos/velocity, save simulation, load simulation
-        for button_id in ["mode_simu", "state_gravity", "draw_fixed", "state_rubber", "empty2", "state_setting"]:
+        # todo : add draw button
+        for button_id in ["mode_simu", "state_gravity", "draw", "draw_fixed", "state_rubber", "state_setting"]:
             self.tex_btn_passive[button_id] = create_ui_texture_file(join('../sample', 'data', button_id + '_passive.png'))
             self.tex_btn_active[button_id]  = create_ui_texture_file(join('../sample', 'data', button_id + '_active.png'))
 
@@ -398,10 +399,11 @@ class SimulationApp:
                 self.mode_simu = not self.mode_simu
                 if self.mode_simu:
                     self.solver.mod_solid_buffer_update()
+                    self.state_rubber = False
+                    self.draw_fixed = False
                 else:
                     self.set_attractor_state(active=0.0)
                     self.solver.get_results()
-                    self.draw_fixed = False
 
             # 3. Bouton Gravité
             if self.draw_image_button("state_gravity", self.state_gravity):
@@ -413,16 +415,21 @@ class SimulationApp:
                 self.toggle_gravity.run(group_x, group_y)
 
             # draw mode button
+            state = not self.mode_simu and not self.draw_fixed
+            if self.draw_image_button("draw", state):
+                self.draw_fixed = False
+                self.mode_simu = False
+
+            # draw fixed mode button
             if self.draw_image_button("draw_fixed", self.draw_fixed):
                 self.draw_fixed = not self.draw_fixed
+                self.mode_simu = False
 
             #  Rubber button
             if self.draw_image_button("state_rubber", self.state_rubber):
                 self.state_rubber = not self.state_rubber
+                self.mode_simu = False
 
-            # 6. Bouton Vide 2
-            if self.draw_image_button("empty2", self.state_empty2):
-                self.state_empty2 = not self.state_empty2
             #  Parameter button
             if self.draw_image_button("state_setting", self.state_settings):
                 self.state_settings = not self.state_settings
