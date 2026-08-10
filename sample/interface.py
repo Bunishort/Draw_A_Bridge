@@ -250,7 +250,10 @@ class SimulationApp:
         # ---   Custom mouse cursor initializationS ---
         # ==========================================
         self.cursor_state = None
-        self.cursor_size = 2
+        self.cursor_size_min = 2
+        self.cursor_size_max = 6
+        self.cursor_size = self.cursor_size_min
+        self.cursor_size_state = False
 
         # 1. Curseur Système (Flèche standard pour l'interface)
         self.cursor_ui = pygame.cursors.Cursor(pygame.SYSTEM_CURSOR_ARROW)
@@ -260,26 +263,29 @@ class SimulationApp:
         cell_width_px = self.screen_size[0] / self.W
         cell_height_px = (self.screen_size[1] - self.toolbar_height) / self.H
 
-        cw = max(2, int(self.cursor_size * cell_width_px))
-        ch = max(2, int(self.cursor_size * cell_height_px))
+        def draw_square_cursor(size):
+            cw = max(2, int(size * cell_width_px))
+            ch = max(2, int(size * cell_height_px))
 
-        # Création d'une surface transparente pour le curseur
-        surf_draw = pygame.Surface((cw, ch), pygame.SRCALPHA)
+            # Création d'une surface transparente pour le curseur
+            surf_draw = pygame.Surface((cw, ch), pygame.SRCALPHA)
 
-        # Dessin des pointillés (alternance blanc/transparent)
-        dash = 3  # Longueur d'un pointillé en pixels
-        color = (255, 255, 255)  # Blanc (tu peux mettre du noir ou du rouge)
-        for x in range(0, cw, dash * 2):
-            pygame.draw.line(surf_draw, color, (x, 0), (min(x + dash - 1, cw - 1), 0))
-            pygame.draw.line(surf_draw, color, (x, ch - 1), (min(x + dash - 1, cw - 1), ch - 1))
-        for y in range(0, ch, dash * 2):
-            pygame.draw.line(surf_draw, color, (0, y), (0, min(y + dash - 1, ch - 1)))
-            pygame.draw.line(surf_draw, color, (cw - 1, y), (cw - 1, min(y + dash - 1, ch - 1)))
+            # Dessin des pointillés (alternance blanc/transparent)
+            dash = 3  # Longueur d'un pointillé en pixels
+            color = (255, 255, 255)  # Blanc (tu peux mettre du noir ou du rouge)
+            for x in range(0, cw, dash * 2):
+                pygame.draw.line(surf_draw, color, (x, 0), (min(x + dash - 1, cw - 1), 0))
+                pygame.draw.line(surf_draw, color, (x, ch - 1), (min(x + dash - 1, cw - 1), ch - 1))
+            for y in range(0, ch, dash * 2):
+                pygame.draw.line(surf_draw, color, (0, y), (0, min(y + dash - 1, ch - 1)))
+                pygame.draw.line(surf_draw, color, (cw - 1, y), (cw - 1, min(y + dash - 1, ch - 1)))
 
-        # Le "Hotspot" (le point de clic effectif) est placé au centre du carré
-        # self.cursor_draw = pygame.cursors.Cursor((cw // 2, ch // 2), surf_draw) # hotspot in square center
-        self.cursor_draw = pygame.cursors.Cursor((int(cell_width_px) // 2, int(cell_height_px) // 2), surf_draw) # hotspot in center of upper left simu pixel
+            # Le "Hotspot" (le point de clic effectif) est placé au centre du carré
+            # self.cursor_draw = pygame.cursors.Cursor((cw // 2, ch // 2), surf_draw) # hotspot in square center
+            return pygame.cursors.Cursor((int(cell_width_px) // 2, int(cell_height_px) // 2), surf_draw) # hotspot in center of upper left simu pixel
 
+        self.cursor_min = draw_square_cursor(self.cursor_size_min)
+        self.cursor_max = draw_square_cursor(self.cursor_size_max)
 
         # 3. Curseur Simulation (Image PNG)
         try:
@@ -320,7 +326,7 @@ class SimulationApp:
         self.tex_btn_active = {}
         # mode simu / state gravity / draw fixed/ rubber / state_setting
         #option for later : reset pos/velocity, save simulation, load simulation
-        for button_id in ["mode_simu", "state_gravity", "draw", "draw_fixed", "state_rubber", "state_setting"]:
+        for button_id in ["mode_simu", "state_gravity", "draw", "draw_fixed", "state_rubber", "cursor_size_state", "state_setting"]:
             self.tex_btn_passive[button_id] = create_ui_texture_file(join('../sample', 'data', button_id + '_passive.png'))
             self.tex_btn_active[button_id]  = create_ui_texture_file(join('../sample', 'data', button_id + '_active.png'))
 
@@ -409,8 +415,10 @@ class SimulationApp:
             elif self.mode_simu:
                 desired_cursor = "SIMU"
             else:
-                desired_cursor = "DRAW"
-
+                if self.cursor_size_state:
+                    desired_cursor = "DRAW MAX"
+                else:
+                    desired_cursor = "DRAW MIN"
             # Application du nouveau curseur seulement s'il a changé
             if self.cursor_state != desired_cursor:
                 self.cursor_state = desired_cursor
@@ -419,8 +427,10 @@ class SimulationApp:
                     pygame.mouse.set_cursor(self.cursor_ui)
                 elif desired_cursor == "SIMU":
                     pygame.mouse.set_cursor(self.cursor_simu)
-                elif desired_cursor == "DRAW":
-                    pygame.mouse.set_cursor(self.cursor_draw)
+                elif desired_cursor == "DRAW MAX":
+                    pygame.mouse.set_cursor(self.cursor_max)
+                elif desired_cursor == "DRAW MIN":
+                    pygame.mouse.set_cursor(self.cursor_min)
             # ==========================================
 
 
@@ -508,6 +518,14 @@ class SimulationApp:
                 self.state_rubber = not self.state_rubber
                 self.mode_simu = False
                 self.draw_fixed = False
+
+            #  Cursor size button
+            if self.draw_image_button("cursor_size_state", self.cursor_size_state):
+                self.cursor_size_state = not self.cursor_size_state
+                if self.cursor_size_state:
+                    self.cursor_size = self.cursor_size_max
+                else:
+                    self.cursor_size = self.cursor_size_min
 
             #  Parameter button
             if self.draw_image_button("state_setting", self.state_settings):
