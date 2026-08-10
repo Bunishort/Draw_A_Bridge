@@ -206,7 +206,7 @@ void main() {
 
 class SimulationApp:
     """
-    TODO now need to draw nice images, param menu and restart. ANd maybe check how to remove the button box pixels from the simulation
+    TODO now need to add cursor size button, param menu and restart.
     """
     def __init__(self, solver, ctx, **kwargs):
         self.solver = solver
@@ -250,6 +250,7 @@ class SimulationApp:
         # ---   Custom mouse cursor initializationS ---
         # ==========================================
         self.cursor_state = None
+        self.cursor_size = 2
 
         # 1. Curseur Système (Flèche standard pour l'interface)
         self.cursor_ui = pygame.cursors.Cursor(pygame.SYSTEM_CURSOR_ARROW)
@@ -258,10 +259,9 @@ class SimulationApp:
         # On convertit 2 cases de la grille en vrais pixels d'écran
         cell_width_px = self.screen_size[0] / self.W
         cell_height_px = (self.screen_size[1] - self.toolbar_height) / self.H
-        cursor_size = 2
 
-        cw = max(2, int(cursor_size * cell_width_px))
-        ch = max(2, int(cursor_size * cell_height_px))
+        cw = max(2, int(self.cursor_size * cell_width_px))
+        ch = max(2, int(self.cursor_size * cell_height_px))
 
         # Création d'une surface transparente pour le curseur
         surf_draw = pygame.Surface((cw, ch), pygame.SRCALPHA)
@@ -446,7 +446,7 @@ class SimulationApp:
                             gxt = int(self.gx_old + (gx - self.gx_old) * i / (dist + 1))
                             gyt = int(self.gy_old + (gy - self.gy_old) * i / (dist + 1))
                             self.solver.mod_solid(gyt, gxt, draw,
-                                                  self.draw_fixed)  # Utilisation de l'attribut de classe[cite: 2]
+                                                  self.draw_fixed, self.cursor_size)  # Utilisation de l'attribut de classe[cite: 2]
                         self.solver.mod_solid_update_solid()
 
                     self.gx_old = gx
@@ -487,7 +487,6 @@ class SimulationApp:
                     group_x = int(np.ceil(self.W / 16.0))
                     group_y = int(np.ceil(self.H / 16.0))
                     self.toggle_gravity.run(group_x, group_y)
-                    #TODO debug behaviour when going from mode_simu
             else:
                 self.draw_image_button("state_gravity", False)
 
@@ -513,7 +512,6 @@ class SimulationApp:
             #  Parameter button
             if self.draw_image_button("state_setting", self.state_settings):
                 self.state_settings = not self.state_settings
-                # TODO: Implémenter l'ouverture des paramètres + restart button
 
             imgui.end()
 

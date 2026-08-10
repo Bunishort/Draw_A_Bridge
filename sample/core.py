@@ -602,68 +602,68 @@ class ElasticProblem:
             raise ValueError("Only \'plane strain\' is available")
         return ddx1,ddx2,ddy1,ddy2,meanx,meany,ddxx,ddyy
 
-    def mod_solid(self,ix,iy,state, draw_fixed):
+    def mod_solid(self,ix,iy,state, draw_fixed, size):
         #Function to modify the solid
         # It means re initialising many things : all boundary conditions
 
         #start by making sure the variables are OK to write on
         self.ctx.finish()
         (nx, ny) = self.solid.shape
-        ix = min(ix,nx-3)
+        ix = min(ix,nx-size -1)
         ix = max(1, ix)
-        iy = min(iy,ny-3)
+        iy = min(iy,ny-size - 1)
         iy = max(1, iy)
 
         if state > 0 and not draw_fixed:
-            sol = self.solid[ix:(ix+2),iy:(iy+2)]
+            sol = self.solid[ix:(ix+size),iy:(iy+size)]
             # if any of the 4 points is already solid, init speed and position of the other points
             # with the average values from the already solid part
             # Else, take the average values of the surrounding points if there are any
             if np.sum(sol)>0:
                 sol_solid =  np.where(sol)
                 sol_mod = np.where(np.bitwise_not(sol))
-                ux = self.ux[ix:(ix+2),iy:(iy+2)]
-                uy = self.uy[ix:(ix+2),iy:(iy+2)]
-                vx = self.ux[ix:(ix+2),iy:(iy+2)]
-                vy = self.uy[ix:(ix+2),iy:(iy+2)]
+                ux = self.ux[ix:(ix+size),iy:(iy+size)]
+                uy = self.uy[ix:(ix+size),iy:(iy+size)]
+                vx = self.ux[ix:(ix+size),iy:(iy+size)]
+                vy = self.uy[ix:(ix+size),iy:(iy+size)]
                 ux[sol_mod] = np.mean(ux[sol_solid])
                 uy[sol_mod] = np.mean(uy[sol_solid])
                 vx[sol_mod] = np.mean(vx[sol_solid])
                 vy[sol_mod] = np.mean(vy[sol_solid])
-                self.ux[ix:(ix + 2), iy:(iy + 2)] = ux
-                self.uy[ix:(ix + 2), iy:(iy + 2)] = uy
-                self.ux[ix:(ix + 2), iy:(iy + 2)] = vx
-                self.uy[ix:(ix + 2), iy:(iy + 2)] = vy
+                self.ux[ix:(ix + size), iy:(iy + size)] = ux
+                self.uy[ix:(ix + size), iy:(iy + size)] = uy
+                self.ux[ix:(ix + size), iy:(iy + size)] = vx
+                self.uy[ix:(ix + size), iy:(iy + size)] = vy
             else:
                 ixm = max(ix-1,0)
-                ixp = min(ix+2,nx-3)
+                ixp = min(ix+size,nx-size - 1)
                 iym = max(iy - 1, 0)
-                iyp = min(iy + 2, ny - 3)
+                iyp = min(iy + size, ny - size - 1)
                 tour = np.zeros(self.solid.shape, dtype=np.bool)
-                tour[ixm, iy:(iy+2)] = True
-                tour[ixp, iy:(iy+2)] = True
-                tour[ix:(ix+2), iym] = True
-                tour[ix:(ix+2), iyp] = True
+                tour[ixm, iy:(iy+size)] = True
+                tour[ixp, iy:(iy+size)] = True
+                tour[ix:(ix+size), iym] = True
+                tour[ix:(ix+size), iyp] = True
                 tour = np.where(tour) #TODO optimize !!
                 nsolid = np.sum(self.solid[tour].astype(np.float32))
                 if nsolid>0:
-                    self.ux[ix:(ix + 2), iy:(iy + 2)] = np.sum(self.ux[tour]) / nsolid
-                    self.uy[ix:(ix + 2), iy:(iy + 2)] = np.sum(self.uy[tour]) / nsolid
-                    self.vx[ix:(ix + 2), iy:(iy + 2)] = np.sum(self.vx[tour]) / nsolid
-                    self.vy[ix:(ix + 2), iy:(iy + 2)] = np.sum(self.vy[tour]) / nsolid
-            self.solid[ix:(ix + 2), iy:(iy + 2)] = True
+                    self.ux[ix:(ix + size), iy:(iy + size)] = np.sum(self.ux[tour]) / nsolid
+                    self.uy[ix:(ix + size), iy:(iy + size)] = np.sum(self.uy[tour]) / nsolid
+                    self.vx[ix:(ix + size), iy:(iy + size)] = np.sum(self.vx[tour]) / nsolid
+                    self.vy[ix:(ix + size), iy:(iy + size)] = np.sum(self.vy[tour]) / nsolid
+            self.solid[ix:(ix + size), iy:(iy + size)] = True
         elif state >0 and draw_fixed:
-            self.solid[ix:(ix + 2), iy:(iy + 2)] = True
-            self.ux[ix:(ix + 2), iy:(iy + 2)] = 0
-            self.uy[ix:(ix + 2), iy:(iy + 2)] = 0
-            self.vx[ix:(ix + 2), iy:(iy + 2)] = 0
-            self.vy[ix:(ix + 2), iy:(iy + 2)] = 0
-            self.ux_imp[ix:(ix + 2), iy:(iy + 2)] = 0
-            self.uy_imp[ix:(ix + 2), iy:(iy + 2)] = 0
+            self.solid[ix:(ix + size), iy:(iy + size)] = True
+            self.ux[ix:(ix + size), iy:(iy + size)] = 0
+            self.uy[ix:(ix + size), iy:(iy + size)] = 0
+            self.vx[ix:(ix + size), iy:(iy + size)] = 0
+            self.vy[ix:(ix + size), iy:(iy + size)] = 0
+            self.ux_imp[ix:(ix + size), iy:(iy + size)] = 0
+            self.uy_imp[ix:(ix + size), iy:(iy + size)] = 0
         else:
-            self.solid[ix:(ix + 2), iy:(iy + 2)] = False
-            self.ux_imp[ix:(ix + 2), iy:(iy + 2)] = np.nan
-            self.uy_imp[ix:(ix + 2), iy:(iy + 2)] = np.nan
+            self.solid[ix:(ix + size), iy:(iy + size)] = False
+            self.ux_imp[ix:(ix + size), iy:(iy + size)] = np.nan
+            self.uy_imp[ix:(ix + size), iy:(iy + size)] = np.nan
 
         self.is_uimp = np.bitwise_and(np.bitwise_not(np.isnan(self.ux_imp)),
                                       np.bitwise_not(np.isnan(self.uy_imp)))
