@@ -17,8 +17,8 @@ ny = 180
 lm = 4.5 * 7/nx *2
 
 vol_mass = 0.5
-dt = 0.3 /1.7 / 1.5
-nbstep = int(30) # nb of steps per frame
+dt = 0.3 /1.7 /1.2
+nbstep = int(30*1.5) # nb of steps per frame
 
 ratio = 0.9  # must be between 0 and 1
 tau = 20
