@@ -664,6 +664,10 @@ class ElasticProblem:
             self.solid[ix:(ix + size), iy:(iy + size)] = False
             self.ux_imp[ix:(ix + size), iy:(iy + size)] = np.nan
             self.uy_imp[ix:(ix + size), iy:(iy + size)] = np.nan
+            self.ux[ix:(ix + size), iy:(iy + size)] = 0
+            self.uy[ix:(ix + size), iy:(iy + size)] = 0
+            self.vx[ix:(ix + size), iy:(iy + size)] = 0
+            self.vy[ix:(ix + size), iy:(iy + size)] = 0
 
         self.is_uimp = np.bitwise_and(np.bitwise_not(np.isnan(self.ux_imp)),
                                       np.bitwise_not(np.isnan(self.uy_imp)))
@@ -695,6 +699,29 @@ class ElasticProblem:
         self.tex_masks.write(data_masks)
 
         return
+
+    def reset(self):
+        self.solid[:] = False
+        self.ux_imp[:] = np.nan
+        self.uy_imp[:] = np.nan
+        self.ux[:] = 0
+        self.uy[:] = 0
+        self.vx[:] = 0
+        self.vy[:] = 0
+
+        self.is_uimp = np.bitwise_and(np.bitwise_not(np.isnan(self.ux_imp)),
+                                  np.bitwise_not(np.isnan(self.uy_imp)))
+        self.is_uimp = np.bitwise_and(self.is_uimp, self.solid)
+
+        self.solid_not_uimp = np.float32(np.bitwise_and(np.bitwise_not(self.is_uimp), self.solid))
+
+        self.bx, self.by = self.calc_b()
+
+        self.mod_solid_update_solid()
+        self.mod_solid_buffer_update()
+
+        return
+
 
     def update_f_imp(self,fx_imp, fy_imp):
         self.fx_imp = fx_imp.copy()
