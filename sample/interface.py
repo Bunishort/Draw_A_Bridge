@@ -326,7 +326,7 @@ class SimulationApp:
         self.tex_btn_active = {}
         # mode simu / state gravity / draw fixed/ rubber / state_setting
         #option for later : reset pos/velocity, save simulation, load simulation
-        for button_id in ["mode_simu", "state_gravity", "draw", "draw_fixed", "state_rubber", "cursor_size_state", "state_setting"]:
+        for button_id in ["mode_simu", "state_gravity", "draw", "draw_fixed", "state_rubber", "cursor_size_state", "reset", "state_setting"]:
             self.tex_btn_passive[button_id] = create_ui_texture_file(join('../sample', 'data', button_id + '_passive.png'))
             self.tex_btn_active[button_id]  = create_ui_texture_file(join('../sample', 'data', button_id + '_active.png'))
 
@@ -527,9 +527,14 @@ class SimulationApp:
                 else:
                     self.cursor_size = self.cursor_size_min
 
-            #  Parameter button
-            if self.draw_image_button("state_setting", self.state_settings):
-                self.state_settings = not self.state_settings
+            #  Reset button
+            if self.draw_image_button("reset", False):
+                self.solver.reset()
+
+            # #  Parameter button
+            # if self.draw_image_button("state_setting", self.state_settings):
+            #     self.state_settings = not self.state_settings
+            #     self.solver.reset()
 
             imgui.end()
 

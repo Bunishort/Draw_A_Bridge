@@ -708,6 +708,10 @@ class ElasticProblem:
         self.uy[:] = 0
         self.vx[:] = 0
         self.vy[:] = 0
+        self.sxx_x_old[:] = 0
+        self.sxy_x_old[:] = 0
+        self.syy_y_old[:] = 0
+        self.sxy_y_old[:] = 0
 
         self.is_uimp = np.bitwise_and(np.bitwise_not(np.isnan(self.ux_imp)),
                                   np.bitwise_not(np.isnan(self.uy_imp)))
@@ -716,6 +720,7 @@ class ElasticProblem:
         self.solid_not_uimp = np.float32(np.bitwise_and(np.bitwise_not(self.is_uimp), self.solid))
 
         self.bx, self.by = self.calc_b()
+
 
         self.mod_solid_update_solid()
         self.mod_solid_buffer_update()
