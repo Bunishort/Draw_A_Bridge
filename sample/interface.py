@@ -135,12 +135,12 @@ class ExplicitAnimation:
 
 ######################--------------------Game interface---------------################
 
-# --- SHADERS OPTIMISÉS ---
+# --- SHADERS  ---
 VTX_SHADER = """
 #version 330
 in vec2 in_pos; 
 
-// Textures RGBA natives du solveur
+// Textures RGBA from solver
 uniform sampler2D u_tex_pos_vel;    
 uniform sampler2D u_tex_stress_old; 
 uniform sampler2D u_tex_solid; 
@@ -155,14 +155,14 @@ uniform float point_size;
 out float v_stress;
 
 void main() {
-    // Mapping [-1, 1] vers [0, 1] pour lire la texture
+    // Mapping [-1, 1] --> [0, 1] to read texture
     vec2 uv = vec2((in_pos.x + 1.0) * 0.5, (1.0 - in_pos.y) * 0.5);
 
     float is_solid = texture(u_tex_solid, uv).r;
     float is_solid_not_uimp = texture(u_tex_solid, uv).g; 
 
     if (is_solid < 0.5) {
-        // Le point est vide : on le projette loin en dehors de l'écran pour l'annuler
+        // empty points are projected outside of screen
         gl_Position = vec4(-2.0, -2.0, -2.0, 1.0);
         return;
     }
@@ -173,6 +173,7 @@ void main() {
     float solver_ux = pv.r; 
     float solver_uy = pv.g; 
 
+    // fixed solid is red, the color of the rest depends on upper edge shear stress (normalized)
     if (is_solid > 0.5 && is_solid_not_uimp < 0.5) {
         v_stress = 1.0; 
     } else {
@@ -207,29 +208,34 @@ void main() {
 class SimulationApp:
     """
     TODO now need to add cursor size button, param menu and restart.
+    This class is the actual game interface
+    solver = instance of the core/ElasticProblem class
+    ctx = modernGL context (which would have been created for the creation of "solver")
+    Lots of kwargs
     """
     def __init__(self, solver, ctx, **kwargs):
         self.solver = solver
         self.ctx = ctx
-        self.H, self.W = solver.solid.shape
+        self.H, self.W = solver.solid.shape #Simulation size
 
-        self.screen_size = kwargs.get('screen_size', (800, 800))
-        self.button_size = 40
+        self.screen_size = kwargs.get('screen_size', (800, 800)) #screen size
+        self.button_size = 40 #for bottom toolbar buttons
         self.toolbar_height = self.button_size + 20
 
-        self.nbstep = kwargs.get('nbstep', 10)
-        self.f_attract_const = kwargs.get('f_attract_const', 1e-2)
-        self.fx_grav = kwargs.get('fx_grav', 0.0)
-        self.fy_grav = kwargs.get('fy_grav', 0.0)
+        self.nbstep = kwargs.get('nbstep', 10) #number of simulation steps for each game frame
+        self.f_attract_const = kwargs.get('f_attract_const', 1e-2) # magnitude of the attraction force when clicking during simulation
+        self.fx_grav = kwargs.get('fx_grav', 0.0) # volumic force in the x direction
+        self.fy_grav = kwargs.get('fy_grav', 0.0) # volumic force in the y direction
 
-        self.max_stress = kwargs.get('max_stress', 1.0)
+        self.max_stress = kwargs.get('max_stress', 1.0) # stress normalization factor
 
+        #Defining constants and grid for openGL display
         self.point_size = self.screen_size[0] / self.W + 0.5
 
         self.ctx.enable(moderngl.PROGRAM_POINT_SIZE)
         self.prog = self.ctx.program(vertex_shader=VTX_SHADER, fragment_shader=FRAG_SHADER)
 
-        # Grille statique
+        #Static grid
         x = np.linspace(-1, 1, self.W)
         y = np.linspace(1, -1, self.H)
         gx, gy = np.meshgrid(x, y)
@@ -238,7 +244,7 @@ class SimulationApp:
         self.vbo_pos = self.ctx.buffer(self.pos_init.tobytes())
         self.vao = self.ctx.vertex_array(self.prog, [(self.vbo_pos, '2f', 'in_pos')])
 
-        # Pré-calcul des échelles de déplacement (pour remplacer la division CPU)
+        # Pre computing displacement scale
         self.scale_x = 2.0 / (self.W * self.solver.lm)
         self.scale_y = 2.0 / (self.H * self.solver.lm)
 
@@ -247,7 +253,7 @@ class SimulationApp:
         self.gy_old = 1.0
 
         # ==========================================
-        # ---   Custom mouse cursor initializationS ---
+        # ---   Custom mouse cursor initializations ---
         # ==========================================
         self.cursor_state = None
         self.cursor_size_min = 2
@@ -255,11 +261,10 @@ class SimulationApp:
         self.cursor_size = self.cursor_size_min
         self.cursor_size_state = False
 
-        # 1. Curseur Système (Flèche standard pour l'interface)
+        # SYstem cursor
         self.cursor_ui = pygame.cursors.Cursor(pygame.SYSTEM_CURSOR_ARROW)
 
-        # 2. Curseur Dessin (Carré pointillé 2x2 pixels de simulation)
-        # On convertit 2 cases de la grille en vrais pixels d'écran
+        # Draw cursor ( rectangle )
         cell_width_px = self.screen_size[0] / self.W
         cell_height_px = (self.screen_size[1] - self.toolbar_height) / self.H
 
@@ -267,12 +272,12 @@ class SimulationApp:
             cw = max(2, int(size * cell_width_px))
             ch = max(2, int(size * cell_height_px))
 
-            # Création d'une surface transparente pour le curseur
+            # Creation of transparent surface
             surf_draw = pygame.Surface((cw, ch), pygame.SRCALPHA)
 
-            # Dessin des pointillés (alternance blanc/transparent)
-            dash = 3  # Longueur d'un pointillé en pixels
-            color = (255, 255, 255)  # Blanc (tu peux mettre du noir ou du rouge)
+            # Drawing dashed line
+            dash = 3
+            color = (255, 255, 255)
             for x in range(0, cw, dash * 2):
                 pygame.draw.line(surf_draw, color, (x, 0), (min(x + dash - 1, cw - 1), 0))
                 pygame.draw.line(surf_draw, color, (x, ch - 1), (min(x + dash - 1, cw - 1), ch - 1))
@@ -280,21 +285,20 @@ class SimulationApp:
                 pygame.draw.line(surf_draw, color, (0, y), (0, min(y + dash - 1, ch - 1)))
                 pygame.draw.line(surf_draw, color, (cw - 1, y), (cw - 1, min(y + dash - 1, ch - 1)))
 
-            # Le "Hotspot" (le point de clic effectif) est placé au centre du carré
+            # Click "Hotspot"
             # self.cursor_draw = pygame.cursors.Cursor((cw // 2, ch // 2), surf_draw) # hotspot in square center
             return pygame.cursors.Cursor((int(cell_width_px) // 2, int(cell_height_px) // 2), surf_draw) # hotspot in center of upper left simu pixel
 
         self.cursor_min = draw_square_cursor(self.cursor_size_min)
         self.cursor_max = draw_square_cursor(self.cursor_size_max)
 
-        # 3. Curseur Simulation (Image PNG)
+        # Simulation cursor (PNG or crosshair)
         try:
-            # Assure-toi d'avoir un fichier cursor_simu.png dans ton dossier data
             surf_simu = pygame.image.load(join('../sample', 'data', 'cursor_simu.png')).convert_alpha()
-            # Optionnel : redimensionner si l'image est trop grande (ex: 24x24 px)
-            # surf_simu = pygame.transform.smoothscale(surf_simu, (24, 24))
+            # re Dimension
+            surf_simu = pygame.transform.smoothscale(surf_simu, (24, 24))
 
-            # Hotspot placé au centre de l'image (ou (0,0) si c'est un pointeur de type flèche)
+            # Hotspot at image center
             self.cursor_simu = pygame.cursors.Cursor((surf_simu.get_width() // 2, surf_simu.get_height() // 2),
                                                      surf_simu)
         except Exception as e:
@@ -304,24 +308,22 @@ class SimulationApp:
 
         # --- IMGUI Toolbox interface init ---
         self.mode_simu = False
-        self.draw_fixed = False  # Transformé en attribut pour ImGui[cite: 2]
+        self.draw_fixed = False
         self.state_rubber = False
         self.state_gravity = True
         self.state_settings = False
         self.state_empty2 = False
-
-        # --- INITIALISATION IMGUI ---
         imgui.create_context()
         self.impl = PygameRenderer()
 
         def create_ui_texture_file(filename):
             image = pygame.image.load(filename).convert_alpha()
             image = pygame.transform.smoothscale(image, (self.button_size, self.button_size))
-            img_data = pygame.image.tostring(image, "RGBA", False)  # True inverse l'axe Y pour OpenGL
+            img_data = pygame.image.tostring(image, "RGBA", False)
 
             return self.ctx.texture((self.button_size, self.button_size), 4, img_data)
 
-
+        #INITIALIZE BUTTONS
         self.tex_btn_passive = {}
         self.tex_btn_active = {}
         # mode simu / state gravity / draw fixed/ rubber / state_setting
@@ -362,9 +364,8 @@ class SimulationApp:
         self.toggle_gravity['height'].value = self.solver.solid.shape[0]
         self.toggle_gravity['activate'].value = self.state_gravity
 
-    # Fonction utilitaire pour dessiner un bouton avec ImGui
+    # Boiler plate button drawing function for IMGUI
     def draw_image_button(self, button_id, state):
-        # On passe l'identifiant OpenGL de la texture (.glo) à ImGui
         imgui.push_id(str(button_id)) # remove if different texture for each button
 
         tex_id = self.tex_btn_active[button_id].glo if state else self.tex_btn_passive[button_id].glo
@@ -373,6 +374,8 @@ class SimulationApp:
 
         imgui.pop_id()# remove if different texture for each button
         return clicked
+
+    # Function to switch from simulation to drawing
     def toggle_simu(self):
         self.mode_simu = not self.mode_simu
         if self.mode_simu:
@@ -393,12 +396,13 @@ class SimulationApp:
 
         while self.running:
             for event in pygame.event.get():
-                # On informe ImGui de l'événement en premier
+                # IMGui
                 self.impl.process_event(event)
 
                 if event.type == pygame.QUIT: self.running = False
 
-                # --- Touches Clavier[cite: 1] ---
+                #Only keyboard shortcut : toggle simu ON/OFF
+                # Maybe more shortcuts could be useful ?
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                     self.toggle_simu()
 
@@ -409,7 +413,6 @@ class SimulationApp:
             # ==========================================
             # --- Dynamic mouse cursor ---
             # ==========================================
-            # Détermination de l'état du curseur souhaité
             if io.want_capture_mouse:
                 desired_cursor = "UI"
             elif self.mode_simu:
@@ -419,7 +422,7 @@ class SimulationApp:
                     desired_cursor = "DRAW MAX"
                 else:
                     desired_cursor = "DRAW MIN"
-            # Application du nouveau curseur seulement s'il a changé
+            # New cursor only if it has changed
             if self.cursor_state != desired_cursor:
                 self.cursor_state = desired_cursor
 
@@ -431,11 +434,8 @@ class SimulationApp:
                     pygame.mouse.set_cursor(self.cursor_max)
                 elif desired_cursor == "DRAW MIN":
                     pygame.mouse.set_cursor(self.cursor_min)
-            # ==========================================
-
-
-            # --- SOURIS (Rendu Physique) ---
-            # On ignore les clics pour la physique si la souris survole un bouton de l'interface
+            # ========================================== ---
+            # Mouse clicks (if not above toolbar)
             if not io.want_capture_mouse:
                 m_left, _, m_right = pygame.mouse.get_pressed()
                 mx, my = pygame.mouse.get_pos()
@@ -456,7 +456,7 @@ class SimulationApp:
                             gxt = int(self.gx_old + (gx - self.gx_old) * i / (dist + 1))
                             gyt = int(self.gy_old + (gy - self.gy_old) * i / (dist + 1))
                             self.solver.mod_solid(gyt, gxt, draw,
-                                                  self.draw_fixed, self.cursor_size)  # Utilisation de l'attribut de classe[cite: 2]
+                                                  self.draw_fixed, self.cursor_size)
                         self.solver.mod_solid_update_solid()
 
                     self.gx_old = gx
@@ -467,29 +467,28 @@ class SimulationApp:
                     else:
                         self.set_attractor_state(active=0.0)
             else:
-                # Sécurité si on maintient le clic gauche sur l'interface pendant la simu
+                # for safety
                 if self.mode_simu:
                     self.set_attractor_state(active=0.0)
 
-            # Étape explicite
+            # Explicit steps in simulation mode
             if self.mode_simu:
                 for _ in range(self.nbstep):
                     self.solver.explicit_step()
 
-            # --- CONSTITUTION DE LA BARRE D'OUTILS IMGUI ---
+            # --- IMGUI toolbar drawing---
             imgui.new_frame()
-            # Positionnement de la fenêtre en bas de l'écran existant
+            # Toolbar at screen bottom
             imgui.set_next_window_position(0, self.screen_size[1] - self.toolbar_height)
             imgui.set_next_window_size(self.screen_size[0], self.toolbar_height)
 
-            # Création d'une fenêtre sans bordures, ni titre, ni fond transparent
             imgui.begin("Toolbar", flags=imgui.WINDOW_NO_TITLE_BAR | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE)
 
-            # 1. Bouton Simulation/Dessin (Espace)[cite: 1]
+            # Simulation/Draw button
             if self.draw_image_button("mode_simu", self.mode_simu):
                 self.toggle_simu()
 
-            # 3. Bouton Gravité
+            # Gravity button
             if self.mode_simu:
                 if self.draw_image_button("state_gravity", self.state_gravity):
                     self.state_gravity = not self.state_gravity
@@ -531,17 +530,17 @@ class SimulationApp:
             if self.draw_image_button("reset", False):
                 self.solver.reset()
 
-            # #  Parameter button
+            # #  Parameter button TODO
             # if self.draw_image_button("state_setting", self.state_settings):
             #     self.state_settings = not self.state_settings
             #     self.solver.reset()
 
             imgui.end()
 
-            # --- RENDU DIRECT DEPUIS LES TEXTURES DU SOLVEUR ---
+            # --- Texture rendering ---
             self.ctx.clear(0.1, 0.1, 0.1)
 
-            # Liaison des textures
+
             self.solver.tex_pos_vel.use(location=0)
             self.prog['u_tex_pos_vel'].value = 0
 
@@ -551,7 +550,6 @@ class SimulationApp:
             self.solver.tex_masks.use(location=2)
             self.prog['u_tex_solid'].value = 2
 
-            # Variables uniformes
             self.prog['u_mode'].value = 1 if self.mode_simu else 0
             self.prog['u_amp'].value = 1.0
             self.prog['point_size'].value = self.point_size
@@ -564,9 +562,9 @@ class SimulationApp:
 
             self.ctx.viewport = (0, 0, self.screen_size[0], self.screen_size[1])
 
-                # --- RENDU DE L'INTERFACE PAR-DESSUS LA PHYSIQUE ---
+                # --- Interface rendering ---
             glBindVertexArray(0)
-            glUseProgram(0)  # Désactive ton shader de physique !
+            glUseProgram(0)  # Deactivate physics shader
             glBindBuffer(GL_ARRAY_BUFFER, 0)  #
             glActiveTexture(GL_TEXTURE0)
             glBindSampler(0, 0)
