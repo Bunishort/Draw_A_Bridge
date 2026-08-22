@@ -1,4 +1,4 @@
-This project aims at creating a bridge building simulation game, similar to World Of Goo, but with science.
+This project aims at creating a bridge building simulation game, similar to World Of Goo, but different.
 It is currently at a very early stage.
 
 To try the game, launch tests/test_pygame.py. Click to draw a bridge or anything, and press the space bar to start the simulation. You can alternate between draw mode and simulation mode using the space bar. 
