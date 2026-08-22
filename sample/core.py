@@ -485,8 +485,7 @@ class ElasticProblem:
                  'sxx_y_old', 'syy_y_old', 'sxy_y_old']:
                 setattr(self, var, kwargs.get(var, np.zeros(self.solid.shape, dtype = np.float32)))
 
-            self.damping_eff = self.damping * self.lm * self.lm # Effective damping for volumetric force computation
-            #TODO : remove *lm² which do not make sense with modernGL impementation
+            self.damping_eff = self.damping  # Effective damping for volumetric force computation
             self.ratio = np.float32(kwargs.get('ratio', 0.99) ) # must be between 0 and 1
             if (self.ratio >= 1) or (self.ratio <= 0):
                 print('Error : Ratio must be strictly between 0 and 1')

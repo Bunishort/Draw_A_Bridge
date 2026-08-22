@@ -19,7 +19,7 @@ nbstep = int(45) # nb of simulation time steps per frame
 
 ratio = 0.9  # Viscoelastic parameter. Must be >0 and <=1. Higher value = less dissipation
 tau = 20 # Viscoelastic characteristic time. Something around 1sec of real game time (=dt*nbstep*FPS) is OK.
-damping = 0.05 /10 # Viscous damping. Trial and error : lower the value for more bouncy simulation
+damping = 6e-4 # Viscous damping. Trial and error : lower the value for more bouncy simulation
 
 fx = 0.001*lm/10 #Gravity force amplitude. Trial and error
 fy = 0.0*lm /10 # If you want gravity in the lateral direction for some reason
