@@ -12,8 +12,8 @@ uniform int width; uniform int height;
 //Variables for attractor computation
 uniform float lm;
 uniform float u_mouse_active;
-uniform float u_mouse_col; // Position X de la souris
-uniform float u_mouse_row; // Position Y de la souris
+uniform float u_mouse_col; // mouse position
+uniform float u_mouse_row; //
 uniform float u_f_attract;
 
 void main() {
@@ -32,11 +32,11 @@ void main() {
         vec2 f_ext = imageLoad(img_ext, p).xy;// external forces
         vec4 pv = imageLoad(img_pos_vel, p);// position and velocities
         if (u_mouse_active > 0.0) {
-            // Coordonnées déformées du point courant
+            // Deformed coordinates
             float def_col = float(p.x) + pv.y / lm;
             float def_row = float(p.y) + pv.x / lm;
 
-            // Distances avec la souris
+            // distance from mouse cursor
             float dx_col = u_mouse_col - def_col;
             float dy_row = u_mouse_row - def_row;
 
