@@ -3,29 +3,35 @@ import numpy as np
 from context import sample
 import moderngl
 
-# simulation parameters
+###### Performance / Speed / Size tuning ######
+screen_size=(800,800) #Window size in pixels
+nx = 180 #Simulation grid size (higher for more grid points, at the cost of some FPS)
+ny = 180
+nbstep = int(45) # nb of simulation time steps per frame.
+# Higher value = faster response of the solid, but needs more computing power.
+# Lower the value if you have performance issues ( FPS < 60 )
+
+###### Simulation physical parameters ######
+# Those were found by trial and error to make the simmulation feel bouncy
+damping = 6e-4 # Viscous damping. Lower the value for more bouncy simulation
+fx = 3.5e-5 #Gravity force amplitude.
+fy = 0.0 # If you want gravity in the lateral direction for some reason
+f_attract_const = 1e-2 # Attraction force magnitude when clicking during simulation
+max_stress = 0.002 # Color scale normalization factor. Higher value for more uniform blue
+
+# -----------  vvvvvv   DO NOT CHANGE  vvvvvvv  ---------------
+# the following parameters. Unless you know what you are doing.
+
+###### Material parameters ######
 E=1 #Young modulus (higher value means stiffer)
 nu = 0.4 #Poisson ratio (must be between 0 and 0.49, check Wikipedia for definition)
-nx = 180 #Simulation grid size
-ny = 180
-
-lm = 4.5 * 7/nx *2 # Size of each element (= each simulation grid pixel)
-# This formula does not make any sense, it was all trial and error
-
 vol_mass = 0.5 #Volumic mass of the solid.
-nbstep = int(45) # nb of simulation time steps per frame
-# Higher value = faster response of the solid, but needs more computing power.
-# Lower the value if FPS < 60
-
 ratio = 0.9  # Viscoelastic parameter. Must be >0 and <=1. Higher value = less dissipation
 tau = 20 # Viscoelastic characteristic time. Something around 1sec of real game time (=dt*nbstep*FPS) is OK.
-damping = 6e-4 # Viscous damping. Trial and error : lower the value for more bouncy simulation
 
-fx = 0.001*lm/10 #Gravity force amplitude. Trial and error
-fy = 0.0*lm /10 # If you want gravity in the lateral direction for some reason
-f_attract_const = 1e-2 # Attraction force magnitude when clicking during simulation
-max_stress = 0.02 /10 # Color scale normalization factor. Higher value for more uniform blue
-
+### Delicate simulation parameters
+lm = 0.35 # Size of each element (= each simulation grid pixel)
+# The defautl 0.35 value does not have any specific sense, but changing it changes the whole solid behaviour.
 
 c_p = np.sqrt(E / ratio * (1 - nu) / (vol_mass * (1 + nu) * (1 - 2 * nu))) #Formula for compression sound wave speed
 c_s = np.sqrt(E / ratio /  (2 * (1 + nu)) / vol_mass) #Formula for shear sound wave speed
@@ -33,11 +39,10 @@ c_s = np.sqrt(E / ratio /  (2 * (1 + nu)) / vol_mass) #Formula for shear sound w
 dt = 0.9 * lm / c_p # Size of a simulation time step. cp*dt/lm must be <1 to ensure simulation stability.
 # This formula ensures stable simulation with close to the largest time step possible, to have the simulation feel as fast as possible
 
-print( 'Max Sound speed * dt / lm ')
-print( 'Compression : ' + str(c_p * dt / lm))
-print( 'Shear: ' + str(c_s * dt / lm))
+print( 'Sound speed * dt / lm ')
+print( "Compression : {:.2f}".format(c_p * dt / lm))
+print( "Shear : {:.2f}".format(c_s * dt / lm))
 
-screen_size=(800,800) #window size in pixels
 
 ####################################################
 #SOlid initialization
