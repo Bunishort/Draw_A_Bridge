@@ -7,8 +7,16 @@ from cv2 import filter2D
 from line_profiler import profile
 from numba import njit, prange
 import moderngl
+import sys
+import os
 
 ###Remark : pyqt6 needed only for matplotlib show, maybe not necessary for pygame !
+
+# Utility function for pyinstaller
+def get_resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
 
 def get_frontier(solid):
     # Calculate all the points at the frontier of the solid
@@ -510,10 +518,10 @@ class ElasticProblem:
 
             #####   Init of GPU explicit step
             #Read GLSL files
-            file_path = '../sample/calc_stress.glsl'
+            file_path = get_resource_path('../sample/calc_stress.glsl')
             with open(file_path, 'r') as file:
                 source_code_stress = file.read()
-            file_path = '../sample/update_physics.glsl'
+            file_path = get_resource_path('../sample/update_physics.glsl')
             with open(file_path, 'r') as file:
                 source_code_update = file.read()
 
