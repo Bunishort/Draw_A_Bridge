@@ -3,8 +3,8 @@ import numpy as np
 # from scipy.signal import convolve2d,correlate2d
 # from .convolutions import addition_convolution
 from cv2 import filter2D
-from line_profiler import profile
-from numba import njit, prange
+# from line_profiler import profile
+# from numba import njit, prange
 import moderngl
 import sys
 import os
@@ -100,6 +100,9 @@ def conv_big(matrix, kernel):
     else:
         anch = (-1,-1)
     return filter2D(matrix,-1,kernel,anchor=anch)
+
+"""
+Njit functions unused in game
 
 @njit(parallel=True, fastmath=True)
 def nfi_calc_stress(
@@ -345,6 +348,7 @@ def explicit_step(
 
 
 
+"""
 
 class ElasticProblem:
     """
@@ -902,7 +906,7 @@ class ElasticProblem:
         sxx_x,sxy_x,syy_y,sxy_y = self.calc_stress(uxt,uyt)
         return self.calc_a_u_sig(sxx_x,sxy_x,syy_y,sxy_y)
 
-    @profile
+    # @profile
     def calc_a_u_sig(self,sxx_x,sxy_x,syy_y,sxy_y ):
         # We could remove this /lm division by multiplying b by lm
         a_u_x = (conv(sxx_x,self.ddxx / self.lm)
@@ -932,7 +936,7 @@ class ElasticProblem:
 
         return bx,by
 
-    @profile
+    # @profile
     def calc_stress(self,uxt,uyt):
         # Calculate the stress in the center of the mesh edges
 
@@ -1030,7 +1034,7 @@ class ElasticProblem:
         )
         return sxx_x, sxy_x, syy_y, sxy_y
 
-    @profile
+    # @profile
     def calc_stress_explicit(self):
         #######
         # Calculating stress for a Standard Linear Solid (Zener)
@@ -1061,7 +1065,7 @@ class ElasticProblem:
 
         return sxx_x,sxy_x,syy_y,sxy_y
 
-    @profile
+    # @profile
     def explicit_step_numpy(self):
         #Explicit step using LeapFrog method
         sxx_x, sxy_x, syy_y, sxy_y = self.calc_stress_explicit()
