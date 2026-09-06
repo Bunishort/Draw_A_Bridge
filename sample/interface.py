@@ -295,7 +295,7 @@ class SimulationApp:
 
         # Simulation cursor (PNG or crosshair)
         try:
-            surf_simu = pygame.image.load(get_resource_path(join('../sample', 'data', 'cursor_simu.png'))).convert_alpha()
+            surf_simu = pygame.image.load(get_resource_path(join('sample', 'data', 'cursor_simu.png'))).convert_alpha()
             # re Dimension
             surf_simu = pygame.transform.smoothscale(surf_simu, (24, 24))
 
@@ -330,11 +330,11 @@ class SimulationApp:
         # mode simu / state gravity / draw fixed/ rubber / state_setting
         #option for later : reset pos/velocity, save simulation, load simulation
         for button_id in ["mode_simu", "state_gravity", "draw", "draw_fixed", "state_rubber", "cursor_size_state", "reset", "state_setting"]:
-            self.tex_btn_passive[button_id] = create_ui_texture_file(get_resource_path(join('../sample', 'data', button_id + '_passive.png')))
-            self.tex_btn_active[button_id]  = create_ui_texture_file(get_resource_path(join('../sample', 'data', button_id + '_active.png')))
+            self.tex_btn_passive[button_id] = create_ui_texture_file(get_resource_path(join('sample', 'data', button_id + '_passive.png')))
+            self.tex_btn_active[button_id]  = create_ui_texture_file(get_resource_path(join('sample', 'data', button_id + '_active.png')))
 
         # Attractor init
-        file_path = get_resource_path('../sample/update_f_imp.glsl')
+        file_path = get_resource_path(join('sample','update_f_imp.glsl'))
         with open(file_path, 'r') as file:
             source_code_f_imp = file.read()
         data_att = np.stack([np.zeros(self.solver.solid.shape), np.zeros(self.solver.solid.shape)], axis=-1).astype(
@@ -354,7 +354,7 @@ class SimulationApp:
         self.tex_att.bind_to_image(6, read=True, write=True)
 
         #Gravity toggle init
-        file_path = get_resource_path('../sample/toggle_gravity.glsl')
+        file_path = get_resource_path(join('sample','toggle_gravity.glsl'))
         with open(file_path, 'r') as file:
             source_code_grav = file.read()
 
@@ -575,7 +575,7 @@ class SimulationApp:
 
             pygame.display.flip()
             clock.tick(60)
-            pygame.display.set_caption(f"Mode: {'SIMU' if self.mode_simu else 'DESSIN'} - FPS: {clock.get_fps():.0f}")
+            pygame.display.set_caption(f"Mode: {'SIMULATION' if self.mode_simu else 'DRAW'} - FPS: {clock.get_fps():.0f}")
 
     def set_attractor_state(self, active=False, target_x=0, target_y=0, force=0.0):
         """
