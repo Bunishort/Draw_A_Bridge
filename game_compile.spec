@@ -13,6 +13,7 @@ added_files = [
 
 # Liaisons C/C++ parfois mal détectées statiquement
 hidden_imports = [
+    'cv2',
     'OpenGL.GL',
     'OpenGL.targets',
     'imgui.integrations.pygame',
