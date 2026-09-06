@@ -2,8 +2,8 @@ from sample.core import conv
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata, interpn
-from line_profiler import profile
-from scipy.ndimage import map_coordinates
+# from line_profiler import profile
+# from scipy.ndimage import map_coordinates
 import moderngl
 from os.path import join
 from .core import get_resource_path

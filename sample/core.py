@@ -3,7 +3,6 @@ import numpy as np
 # from scipy.signal import convolve2d,correlate2d
 # from .convolutions import addition_convolution
 from cv2 import filter2D
-# from torchgen.native_function_generation import self_to_out_signature
 from line_profiler import profile
 from numba import njit, prange
 import moderngl
