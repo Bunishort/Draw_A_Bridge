@@ -7,8 +7,8 @@ block_cipher = None
 
 # Ressources additionnelles à inclure : (chemin_source, dossier_destination)
 added_files = [
-    ('samples/data', 'samples/data'),
-    ('shaders', 'shaders'),  # Ajuste si le dossier des shaders a un autre nom/chemin
+    ('sample/data', 'sample/data'),
+    ('sample', 'sample'),  # Ajuste si le dossier des shaders a un autre nom/chemin
 ]
 
 # Liaisons C/C++ parfois mal détectées statiquement
@@ -50,12 +50,12 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='SimulationApp',
+    name='Draw_A_Bridge',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True, 
+    console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
@@ -71,5 +71,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='SimulationApp',
+    name='Draw_A_Bridge',
 )
