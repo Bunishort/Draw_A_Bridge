@@ -4,3 +4,4 @@ imgui[pygame]
 numpy
 opencv-python
 pyinstaller
+moderngl
