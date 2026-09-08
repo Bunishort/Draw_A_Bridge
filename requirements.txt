@@ -1,0 +1,6 @@
+pygame
+PyOpenGL
+imgui[pygame]
+numpy
+opencv-python
+pyinstaller
