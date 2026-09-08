@@ -1,7 +1,7 @@
 from sample.core import conv
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.interpolate import griddata, interpn
+# import matplotlib.pyplot as plt
+# from scipy.interpolate import griddata, interpn
 # from line_profiler import profile
 # from scipy.ndimage import map_coordinates
 import moderngl
