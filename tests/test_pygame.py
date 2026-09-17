@@ -70,6 +70,20 @@ fy_imp = np.ones(solid.shape) * fy
 elas_lambda = E*nu /(1+nu)/(1-2*nu) # Elastic parameter. Do not touch
 elas_mu = E/2/(1+nu)
 
+#Import libGL
+import sys
+import ctypes
+
+if sys.platform.startswith('linux'):
+    try:
+        ctypes.CDLL('libGL.so')
+    except OSError:
+        try:
+            # Forcer le chargement de la version runtime présente sur le système
+            ctypes.CDLL('libGL.so.1', mode=ctypes.RTLD_GLOBAL)
+        except OSError:
+            pass
+
 # ---PYGAME interface---
 def main():
 
