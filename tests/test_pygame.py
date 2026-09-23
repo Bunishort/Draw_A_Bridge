@@ -3,6 +3,15 @@ import os
 
 if sys.platform == "win32":
     os.environ["PYOPENGL_PLATFORM"] = "win32"
+    import ctypes
+    try:
+        # Pré-charger explicitement les DLLs avec leur extension pour le hook PyInstaller
+        ctypes.windll.LoadLibrary("opengl32.dll")
+        ctypes.windll.LoadLibrary("glu32.dll")
+    except OSError as e:
+        print(f"ERREUR FATALE : Impossible de charger opengl32.dll dans l'environnement. Détails : {e}")
+        sys.exit(1)
+
 
 import pygame
 import numpy as np
