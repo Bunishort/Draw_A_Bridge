@@ -2,24 +2,31 @@
 
 import os
 import sys
+from PyInstaller.utils.hooks import collect_all
 
 block_cipher = None
+
+# Collecte automatique complète de PyOpenGL (datas, binaires, imports cachés)
+opengl_datas, opengl_binaries, opengl_hiddenimports = collect_all('OpenGL')
 
 # Ressources additionnelles à inclure : (chemin_source, dossier_destination)
 added_files = [
     ('sample/data', 'sample/data'),
-    ('sample', 'sample'),  # Ajuste si le dossier des shaders a un autre nom/chemin
-]
+    ('sample', 'sample'),
+] + opengl_datas
 
-# Liaisons C/C++ parfois mal détectées statiquement
+# Liaisons C/C++ et modules dynamiques de plateforme
 hidden_imports = [
     'cv2',
     'OpenGL.GL',
     'OpenGL.targets',
+    'OpenGL.platform.win32',
+    'OpenGL.platform.glx',
+    'OpenGL.platform.baseplatform',
     'imgui.integrations.pygame',
-]
+] + opengl_hiddenimports
 
-# Exclusion des bibliothèques lourdes pour réduire la taille du paquet
+# Exclusion des bibliothèques lourdes inutilisées
 excluded_modules = [
     'matplotlib',
     'scipy',
@@ -29,9 +36,9 @@ excluded_modules = [
 ]
 
 a = Analysis(
-    [os.path.join('tests','test_pygame.py')],
+    [os.path.join('tests', 'test_pygame.py')],
     pathex=[],
-    binaries=[],
+    binaries=opengl_binaries,
     datas=added_files,
     hiddenimports=hidden_imports,
     hookspath=[],
