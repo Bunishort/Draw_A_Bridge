@@ -1,13 +1,13 @@
-import pygame
-import numpy as np
-from context import sample
-import moderngl
 import sys
 import os
 
 if sys.platform == "win32":
     os.environ["PYOPENGL_PLATFORM"] = "win32"
 
+import pygame
+import numpy as np
+from context import sample
+import moderngl
 
 ###### Performance / Speed / Size tuning ######
 screen_size=(800,800) #Window size in pixels
