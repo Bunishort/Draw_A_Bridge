@@ -1,38 +1,36 @@
 import sys
 import os
+import traceback
+
+print(f"=== DEBUG: sys.platform = {sys.platform} ===", flush=True)
 
 if sys.platform == "win32":
-    os.environ["PYOPENGL_PLATFORM"] = "win32"
-    import ctypes
+    print("=== DEBUG: Entrée dans le bloc win32 confirmée ===", flush=True)
 
-    # 1. Forcer l'extension ".dll" pour que le chargeur de PyInstaller
-    # trouve la bibliothèque système sous Wine sans lever d'erreur.
-    import OpenGL.platform.ctypesloader
-
-    original_load = OpenGL.platform.ctypesloader.loadLibrary
-
-
-    def patched_load(dllType, name, mode=ctypes.RTLD_GLOBAL):
-        if name in ("opengl32", "glu32") and not name.endswith(".dll"):
-            name += ".dll"
-        return original_load(dllType, name, mode)
-
-
-    OpenGL.platform.ctypesloader.loadLibrary = patched_load
-
-    # 2. Initialiser et verrouiller de force la plateforme Windows
-    # pour annuler totalement la détection automatique de PyOpenGL.
-    import OpenGL.platform
-    import OpenGL.platform.win32
-
+    # 1. Test du chargement direct de la DLL système sous Wine
     try:
-        win32_plat = OpenGL.platform.win32.Win32Platform()
-        OpenGL.platform._PLATFORM = win32_plat
-    except Exception as e:
-        # On convertit l'erreur en RuntimeError pour que PyOpenGL
-        # ne la masque plus jamais en basculant sur Linux.
-        raise RuntimeError(f"VRAIE ERREUR OPENGL : Impossible de charger opengl32.dll ({e})") from e
-# =====================================================================
+        import ctypes
+
+        print("=== DEBUG: Chargement direct de opengl32.dll via ctypes... ===", flush=True)
+        opengl32 = ctypes.windll.opengl32
+        print("=== DEBUG: opengl32.dll chargé avec succès ! ===", flush=True)
+    except Exception:
+        print("=== DEBUG ERREUR : Échec du chargement direct de opengl32.dll ===", flush=True)
+        traceback.print_exc()
+        sys.exit(1)
+
+    # 2. Test de l'instanciation de la plateforme Win32 de PyOpenGL
+    try:
+        print("=== DEBUG: Chargement de PyOpenGL win32... ===", flush=True)
+        os.environ["PYOPENGL_PLATFORM"] = "win32"
+        import OpenGL.platform.win32
+
+        plat = OpenGL.platform.win32.Win32Platform()
+        print("=== DEBUG: Win32Platform initialisé avec succès ! ===", flush=True)
+    except Exception:
+        print("=== DEBUG ERREUR : Échec lors de l'initialisation de Win32Platform ===", flush=True)
+        traceback.print_exc()
+        sys.exit(1)
 
 import pygame
 import numpy as np
