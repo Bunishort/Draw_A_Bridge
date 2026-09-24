@@ -1,36 +1,29 @@
 import sys
 import os
-import traceback
-
-print(f"=== DEBUG: sys.platform = {sys.platform} ===", flush=True)
 
 if sys.platform == "win32":
-    print("=== DEBUG: Entrée dans le bloc win32 confirmée ===", flush=True)
+    os.environ["PYOPENGL_PLATFORM"] = "win32"
 
-    # 1. Test du chargement direct de la DLL système sous Wine
-    try:
-        import ctypes
+    # 1. Importer le chargeur interne de PyOpenGL
+    import OpenGL.platform.ctypesloader
 
-        print("=== DEBUG: Chargement direct de opengl32.dll via ctypes... ===", flush=True)
-        opengl32 = ctypes.windll.opengl32
-        print("=== DEBUG: opengl32.dll chargé avec succès ! ===", flush=True)
-    except Exception:
-        print("=== DEBUG ERREUR : Échec du chargement direct de opengl32.dll ===", flush=True)
-        traceback.print_exc()
-        sys.exit(1)
+    # 2. Patcher la fonction loadLibrary pour ajouter systématiquement l'extension .dll
+    _orig_load_library = OpenGL.platform.ctypesloader.loadLibrary
 
-    # 2. Test de l'instanciation de la plateforme Win32 de PyOpenGL
-    try:
-        print("=== DEBUG: Chargement de PyOpenGL win32... ===", flush=True)
-        os.environ["PYOPENGL_PLATFORM"] = "win32"
-        import OpenGL.platform.win32
 
-        plat = OpenGL.platform.win32.Win32Platform()
-        print("=== DEBUG: Win32Platform initialisé avec succès ! ===", flush=True)
-    except Exception:
-        print("=== DEBUG ERREUR : Échec lors de l'initialisation de Win32Platform ===", flush=True)
-        traceback.print_exc()
-        sys.exit(1)
+    def _patched_load_library(dllType, name, *args, **kwargs):
+        if isinstance(name, str) and name in ("opengl32", "glu32") and not name.endswith(".dll"):
+            name += ".dll"
+        return _orig_load_library(dllType, name, *args, **kwargs)
+
+
+    OpenGL.platform.ctypesloader.loadLibrary = _patched_load_library
+
+    # 3. Charger et verrouiller la plateforme Win32
+    import OpenGL.platform.win32
+    import OpenGL.platform
+
+    OpenGL.platform._PLATFORM = OpenGL.platform.win32.Win32Platform()
 
 import pygame
 import numpy as np
