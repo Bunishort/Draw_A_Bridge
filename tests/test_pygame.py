@@ -4,14 +4,35 @@ import os
 if sys.platform == "win32":
     os.environ["PYOPENGL_PLATFORM"] = "win32"
     import ctypes
-    try:
-        # Pré-charger explicitement les DLLs avec leur extension pour le hook PyInstaller
-        ctypes.windll.LoadLibrary("opengl32.dll")
-        ctypes.windll.LoadLibrary("glu32.dll")
-    except OSError as e:
-        print(f"ERREUR FATALE : Impossible de charger opengl32.dll dans l'environnement. Détails : {e}")
-        sys.exit(1)
 
+    # 1. Forcer l'extension ".dll" pour que le chargeur de PyInstaller
+    # trouve la bibliothèque système sous Wine sans lever d'erreur.
+    import OpenGL.platform.ctypesloader
+
+    original_load = OpenGL.platform.ctypesloader.loadLibrary
+
+
+    def patched_load(dllType, name, mode=ctypes.RTLD_GLOBAL):
+        if name in ("opengl32", "glu32") and not name.endswith(".dll"):
+            name += ".dll"
+        return original_load(dllType, name, mode)
+
+
+    OpenGL.platform.ctypesloader.loadLibrary = patched_load
+
+    # 2. Initialiser et verrouiller de force la plateforme Windows
+    # pour annuler totalement la détection automatique de PyOpenGL.
+    import OpenGL.platform
+    import OpenGL.platform.win32
+
+    try:
+        win32_plat = OpenGL.platform.win32.Win32Platform()
+        OpenGL.platform._PLATFORM = win32_plat
+    except Exception as e:
+        # On convertit l'erreur en RuntimeError pour que PyOpenGL
+        # ne la masque plus jamais en basculant sur Linux.
+        raise RuntimeError(f"VRAIE ERREUR OPENGL : Impossible de charger opengl32.dll ({e})") from e
+# =====================================================================
 
 import pygame
 import numpy as np
