@@ -1,5 +1,17 @@
 import sys
 import os
+import traceback
+
+if sys.platform == "win32":
+    os.environ["PYOPENGL_PLATFORM"] = "win32"
+    try:
+        import OpenGL.platform.win32
+        plat = OpenGL.platform.win32.Win32Platform()
+        print("=== WIN32PLATFORM REUSSI ===", flush=True)
+    except Exception as e:
+        print("=== ERREUR BRUTE WIN32PLATFORM ===", flush=True)
+        traceback.print_exc(file=sys.stdout)
+        sys.exit(1)
 
 if sys.platform == "win32":
     os.environ["PYOPENGL_PLATFORM"] = "win32"
