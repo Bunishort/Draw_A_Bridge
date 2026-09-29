@@ -1,43 +1,8 @@
 import sys
 import os
 
-print("1 sys.platform =", sys.platform)
-
 if sys.platform == "win32":
-    os.environ["PYOPENGL_PLATFORM"] = "win32"
-
-print("2 PYOPENGL_PLATFORM =", os.environ.get("PYOPENGL_PLATFORM"))
-
-import OpenGL.platform
-
-print("3 platform module =", OpenGL.platform)
-print("4 PLATFORM =", OpenGL.platform.PLATFORM)
-print("5 PLATFORM type =", type(OpenGL.platform.PLATFORM))
-
-input("ENTER...")
-if sys.platform == "win32":
-    os.environ["PYOPENGL_PLATFORM"] = "win32"
-
-    # 1. Importer le chargeur interne de PyOpenGL
-    import OpenGL.platform.ctypesloader
-
-    # 2. Patcher la fonction loadLibrary pour ajouter systématiquement l'extension .dll
-    _orig_load_library = OpenGL.platform.ctypesloader.loadLibrary
-
-
-    def _patched_load_library(dllType, name, *args, **kwargs):
-        if isinstance(name, str) and name in ("opengl32", "glu32") and not name.endswith(".dll"):
-            name += ".dll"
-        return _orig_load_library(dllType, name, *args, **kwargs)
-
-
-    OpenGL.platform.ctypesloader.loadLibrary = _patched_load_library
-
-    # 3. Charger et verrouiller la plateforme Win32
-    import OpenGL.platform.win32
-    import OpenGL.platform
-
-    OpenGL.platform._PLATFORM = OpenGL.platform.win32.Win32Platform()
+    os.environ["PYOPENGL_PLATFORM"] = "nt"
 
 import pygame
 import numpy as np
