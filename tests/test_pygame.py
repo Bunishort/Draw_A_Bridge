@@ -8,7 +8,7 @@ import OpenGL.platform
 
 print("OpenGL.platform =", OpenGL.platform)
 print("PLATFORM =", OpenGL.platform.PLATFORM)
-print("PLATFORM type =", type(OpenGL.platform.PLATFORM)
+print("PLATFORM type =", type(OpenGL.platform.PLATFORM))
 
 if sys.platform == "win32":
     os.environ["PYOPENGL_PLATFORM"] = "win32"
