@@ -6,22 +6,22 @@ from PyInstaller.utils.hooks import copy_metadata
 
 block_cipher = None
 
-# Collecte automatique complète de PyOpenGL (datas, binaires, imports cachés)
+# pyopenGL collection
 pyopengl_metadatas = copy_metadata('PyOpenGL')
 
-# Ressources additionnelles à inclure : (chemin_source, dossier_destination)
+# Additionnal ressources)
 added_files = [
     ('sample/data', 'sample/data'),
     ('sample', 'sample'),
 ] +  pyopengl_metadatas
 
-# Liaisons C/C++ et modules dynamiques de plateforme
+# Hidden imports
 hidden_imports = [
     'cv2',
     'imgui.integrations.pygame',
 ]
 
-# Exclusion des bibliothèques lourdes inutilisées
+# Exclude unused libraries
 excluded_modules = [
     'matplotlib',
     'scipy',
