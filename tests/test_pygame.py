@@ -1,26 +1,20 @@
 import sys
 import os
-import traceback
-print("sys.platform =", sys.platform)
-print("PYOPENGL_PLATFORM =", os.environ.get("PYOPENGL_PLATFORM"))
 
-import OpenGL.platform
-
-print("OpenGL.platform =", OpenGL.platform)
-print("PLATFORM =", OpenGL.platform.PLATFORM)
-print("PLATFORM type =", type(OpenGL.platform.PLATFORM))
+print("1 sys.platform =", sys.platform)
 
 if sys.platform == "win32":
     os.environ["PYOPENGL_PLATFORM"] = "win32"
-    try:
-        import OpenGL.platform.win32
-        plat = OpenGL.platform.win32.Win32Platform()
-        print("=== WIN32PLATFORM REUSSI ===", flush=True)
-    except Exception as e:
-        print("=== ERREUR BRUTE WIN32PLATFORM ===", flush=True)
-        traceback.print_exc(file=sys.stdout)
-        sys.exit(1)
 
+print("2 PYOPENGL_PLATFORM =", os.environ.get("PYOPENGL_PLATFORM"))
+
+import OpenGL.platform
+
+print("3 platform module =", OpenGL.platform)
+print("4 PLATFORM =", OpenGL.platform.PLATFORM)
+print("5 PLATFORM type =", type(OpenGL.platform.PLATFORM))
+
+input("ENTER...")
 if sys.platform == "win32":
     os.environ["PYOPENGL_PLATFORM"] = "win32"
 
