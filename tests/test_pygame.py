@@ -1,6 +1,14 @@
 import sys
 import os
 import traceback
+print("sys.platform =", sys.platform)
+print("PYOPENGL_PLATFORM =", os.environ.get("PYOPENGL_PLATFORM"))
+
+import OpenGL.platform
+
+print("OpenGL.platform =", OpenGL.platform)
+print("PLATFORM =", OpenGL.platform.PLATFORM)
+print("PLATFORM type =", type(OpenGL.platform.PLATFORM)
 
 if sys.platform == "win32":
     os.environ["PYOPENGL_PLATFORM"] = "win32"
