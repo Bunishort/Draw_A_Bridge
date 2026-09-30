@@ -3,7 +3,7 @@ name: Build and Release Executables
 on:
   push:
     branches:
-      - game_only
+      - master
     tags:
       - 'v*'
 
