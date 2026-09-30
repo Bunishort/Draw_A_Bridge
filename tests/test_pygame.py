@@ -3,7 +3,6 @@ import os
 
 if sys.platform == "win32":
     os.environ["PYOPENGL_PLATFORM"] = "nt"
-
 import pygame
 import numpy as np
 from context import sample
