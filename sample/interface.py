@@ -179,7 +179,7 @@ void main() {
         v_stress = 1.0; 
     } else {
         vec4 stress = texture(u_tex_stress_old, uv);
-        v_stress = stress.g / u_max_stress;
+        v_stress = stress.r / u_max_stress;
     }
 
     vec2 final_pos = in_pos;
@@ -380,8 +380,8 @@ class SimulationApp:
         self.update_damage_gpu['width'] = self.solver.solid.shape[1]
         self.update_damage_gpu['height'] = self.solver.solid.shape[0]
         self.update_damage_gpu['dt_by_tau_filter'] = (
-                np.min([1.0,self.nbstep * self.solver.dt / self.tau_damage_filter]))
-        self.update_damage_gpu['dt_by_tau_damage'] = self.nbstep * self.solver.dt / self.tau_damage
+                np.min([1.0,1/60 / self.tau_damage_filter])) # Assuming 60fps
+        self.update_damage_gpu['dt_by_tau_damage'] = 1/60 / self.tau_damage
         self.update_damage_gpu['damage_stress'] = self.damage_stress
         self.update_damage_gpu['nu'] = self.solver.elas_lambda / 2 / (self.solver.elas_lambda + self.solver.elas_mu)
 
@@ -499,6 +499,7 @@ class SimulationApp:
             if self.mode_simu:
                 for _ in range(self.nbstep):
                     self.solver.explicit_step()
+                self.update_damage()
 
             # --- IMGUI toolbar drawing---
             imgui.new_frame()
@@ -567,8 +568,9 @@ class SimulationApp:
 
             self.solver.tex_pos_vel.use(location=0)
             self.prog['u_tex_pos_vel'].value = 0
-
-            self.solver.tex_stress_old.use(location=1)
+            #
+            # self.solver.tex_stress_old.use(location=1)
+            self.tex_damage.use(location=1)
             self.prog['u_tex_stress_old'].value = 1
 
             self.solver.tex_masks.use(location=2)
@@ -613,3 +615,10 @@ class SimulationApp:
         group_y = int(np.ceil(self.H / 16.0))
 
         self.update_f_imp.run(group_x, group_y)
+
+    def update_damage(self):
+
+        group_x = int(np.ceil(self.W / 16.0))
+        group_y = int(np.ceil(self.H / 16.0))
+
+        self.update_damage_gpu.run(group_x, group_y)

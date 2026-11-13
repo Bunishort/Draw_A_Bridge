@@ -26,7 +26,7 @@ max_stress_plot = 0.002 # Color scale normalization factor. Higher value for mor
 
 ###### Damage model parameters ####
 tau_damage = 1.0  # characteristic time for damage build up
-tau_damage_filter = 1.0  # characteristic time of low pass filter for damage
+tau_damage_filter = 10.0  # characteristic time of low pass filter for damage
 damage_stress = 0.002  # stress max value for damage
 
 
