@@ -22,7 +22,13 @@ damping = 6e-4 # Viscous damping. Lower the value for more bouncy simulation
 fx = 3.5e-5 #Gravity force amplitude.
 fy = 0.0 # If you want gravity in the lateral direction for some reason
 f_attract_const = 1e-2 # Attraction force magnitude when clicking during simulation
-max_stress = 0.002 # Color scale normalization factor. Higher value for more uniform blue
+max_stress_plot = 0.002 # Color scale normalization factor. Higher value for more uniform blue
+
+###### Damage model parameters ####
+tau_damage = 1.0  # characteristic time for damage build up
+tau_damage_filter = 1.0  # characteristic time of low pass filter for damage
+damage_stress = 0.002  # stress max value for damage
+
 
 # -----------  vvvvvv   DO NOT CHANGE  vvvvvvv  ---------------
 # the following parameters. Unless you know what you are doing.
@@ -101,8 +107,10 @@ def main():
                                       is_explicit=True, vol_mass=vol_mass, dt = dt, ratio=ratio, tau=tau,
                                         damping = damping, gl_context=ctx)
 
-    game = sample.interface.SimulationApp(solver, ctx, screen_size=screen_size, nbstep=nbstep, max_stress=max_stress,
-                                          fx_grav=fx, fy_grav=fy, f_attract_const = f_attract_const)
+    game = sample.interface.SimulationApp(solver, ctx, screen_size=screen_size, nbstep=nbstep, max_stress_plot=max_stress_plot,
+                                          fx_grav=fx, fy_grav=fy, f_attract_const = f_attract_const,
+                                          tau_damage=tau_damage, tau_damage_filter=tau_damage_filter,
+                                          damage_stress=damage_stress)
     game.run()
 
     pygame.quit()

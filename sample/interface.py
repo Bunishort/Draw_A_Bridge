@@ -227,7 +227,8 @@ class SimulationApp:
         self.f_attract_const = kwargs.get('f_attract_const', 1e-2) # magnitude of the attraction force when clicking during simulation
         self.fx_grav = kwargs.get('fx_grav', 0.0) # volumic force in the x direction
         self.fy_grav = kwargs.get('fy_grav', 0.0) # volumic force in the y direction
-        self.tau_damage = kwargs.get('tau_damage', 1.0) #characteristic time of low pass filter for damage
+        self.tau_damage = kwargs.get('tau_damage', 1.0) #characteristic time for damage build up
+        self.tau_damage_filter = kwargs.get('tau_damage_filter', 1.0) #characteristic time of low pass filter for damage
         self.damage_stress = kwargs.get('damage_stress', 1.0) #stress max value for damage
         self.max_stress_plot = kwargs.get('max_stress_plot', 1.0) # stress normalization factor
 
@@ -376,10 +377,11 @@ class SimulationApp:
 
         self.update_damage_gpu = self.ctx.compute_shader(source_code_damage)
 
-        self.update_damage_gpu['lm'].value = self.solver.lm
         self.update_damage_gpu['width'] = self.solver.solid.shape[1]
         self.update_damage_gpu['height'] = self.solver.solid.shape[0]
-        self.update_damage_gpu['dt_by_tau'] = self.nbstep * self.solver.dt / self.tau_damage
+        self.update_damage_gpu['dt_by_tau_filter'] = (
+                np.min([1.0,self.nbstep * self.solver.dt / self.tau_damage_filter]))
+        self.update_damage_gpu['dt_by_tau_damage'] = self.nbstep * self.solver.dt / self.tau_damage
         self.update_damage_gpu['damage_stress'] = self.damage_stress
         self.update_damage_gpu['nu'] = self.solver.elas_lambda / 2 / (self.solver.elas_lambda + self.solver.elas_mu)
 

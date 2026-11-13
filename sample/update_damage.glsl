@@ -5,8 +5,8 @@ layout(rg32f, binding = 7) uniform image2D img_damage;
 layout(rgba32f, binding = 2) uniform image2D img_stress_curr;
 
 uniform int width; uniform int height;
-uniform float lm; uniform float damage_stress; uniform float dt_by_tau;
-uniform float nu;
+uniform float damage_stress; uniform float dt_by_tau_filter;
+uniform float nu; uniform float dt_by_tau_damage;
 
 void main() {
     ivec2 p = ivec2(gl_GlobalInvocationID.xy);
@@ -29,12 +29,12 @@ void main() {
         float szz = nu * (sxx + syy);
 
         // Mean stress (hydrostatic component)
-        float p = (sxx + syy + szz) / 3.0;
+        float pp = (sxx + syy + szz) / 3.0;
 
         // Deviatoric stress tensor
-        sxx = sxx - p;
-        syy = syy - p;
-        szz = szz - p;
+        sxx = sxx - pp;
+        syy = syy - pp;
+        szz = szz - pp;
 
         // Second invariant of the deviatoric stress tensor
         float J2 = 0.5 * (sxx * sxx + syy * syy + szz * szz)
@@ -45,17 +45,12 @@ void main() {
 
         vec2 damage = imageLoad(img_damage, p).xy; // damage map
 
-        float dvx = (c_sxx_dx + c_sxy_dy) * m - f_ext.x - damping_eff * pv.z; // velocity variation
-        float dvy = (c_syy_dy + c_sxy_dx) * m - f_ext.y - damping_eff * pv.w;
+        VMstress *= dt_by_tau_filter;
+        damage.x *= (1 - dt_by_tau_filter);
+        damage.x += VMstress;
 
-        dvx *= dt_by_vol_mass; dvy *= dt_by_vol_mass;
+        damage.y += dt_by_tau_damage * damage.x / damage_stress;
 
-        // Updating speed and position (euler integration)
-        pv.z += dvx;      // vx
-        pv.w += dvy;      // vy
-        pv.x += pv.z * dt; // ux
-        pv.y += pv.w * dt; // uy
-
-        imageStore(img_pos_vel, p, pv);
+        imageStore(img_damage, p, vec4(damage, 0.0, 0.0));
     }
 }
