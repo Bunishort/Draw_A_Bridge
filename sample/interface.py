@@ -227,8 +227,9 @@ class SimulationApp:
         self.f_attract_const = kwargs.get('f_attract_const', 1e-2) # magnitude of the attraction force when clicking during simulation
         self.fx_grav = kwargs.get('fx_grav', 0.0) # volumic force in the x direction
         self.fy_grav = kwargs.get('fy_grav', 0.0) # volumic force in the y direction
-
-        self.max_stress = kwargs.get('max_stress', 1.0) # stress normalization factor
+        self.tau_damage = kwargs.get('tau_damage', 1.0) #characteristic time of low pass filter for damage
+        self.damage_stress = kwargs.get('damage_stress', 1.0) #stress max value for damage
+        self.max_stress_plot = kwargs.get('max_stress_plot', 1.0) # stress normalization factor
 
         #Defining constants and grid for openGL display
         self.point_size = self.screen_size[0] / self.W + 0.5
@@ -364,6 +365,26 @@ class SimulationApp:
         self.toggle_gravity['width'].value = self.solver.solid.shape[1]
         self.toggle_gravity['height'].value = self.solver.solid.shape[0]
         self.toggle_gravity['activate'].value = self.state_gravity
+
+        # Damage compute init
+        file_path = get_resource_path(join('sample', 'update_damage.glsl'))
+        with open(file_path, 'r') as file:
+            source_code_damage = file.read()
+        # Damage texture
+        data_damage = np.stack([np.zeros(self.solver.solid.shape), np.zeros(self.solver.solid.shape)], axis=-1).astype('f4')
+        self.tex_damage = self.ctx.texture(self.solver.solid.shape[::-1], 2, data=data_damage.tobytes(), dtype='f4')
+
+        self.update_damage_gpu = self.ctx.compute_shader(source_code_damage)
+
+        self.update_damage_gpu['lm'].value = self.solver.lm
+        self.update_damage_gpu['width'] = self.solver.solid.shape[1]
+        self.update_damage_gpu['height'] = self.solver.solid.shape[0]
+        self.update_damage_gpu['dt_by_tau'] = self.nbstep * self.solver.dt / self.tau_damage
+        self.update_damage_gpu['damage_stress'] = self.damage_stress
+        self.update_damage_gpu['nu'] = self.solver.elas_lambda / 2 / (self.solver.elas_lambda + self.solver.elas_mu)
+
+
+        self.tex_damage.bind_to_image(7, read=True, write=False)
 
     # Boiler plate button drawing function for IMGUI
     def draw_image_button(self, button_id, state):
@@ -555,7 +576,7 @@ class SimulationApp:
             self.prog['u_amp'].value = 1.0
             self.prog['point_size'].value = self.point_size
             self.prog['u_disp_scale'].value = (self.scale_x, self.scale_y)
-            self.prog['u_max_stress'].value = self.max_stress
+            self.prog['u_max_stress'].value = self.max_stress_plot
 
             #viewport modifications to plot simulation above the toolbar only
             self.ctx.viewport = (0, self.toolbar_height, self.screen_size[0], self.screen_size[1] - self.toolbar_height)

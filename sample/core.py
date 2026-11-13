@@ -1164,7 +1164,7 @@ class ElasticProblem:
         # Calculate szz (plane def) and pressure
         nu = self.elas_lambda / 2 / (self.elas_lambda + self.elas_mu)
         szz = nu * (sxx + syy)
-        p = 1/3 * (sxx + syy + sxy)
+        p = 1/3 * (sxx + syy + szz)
         #
         # Deviatoric stress tensor
         sxx -= p
