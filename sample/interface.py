@@ -179,7 +179,7 @@ void main() {
         v_stress = 1.0; 
     } else {
         vec4 stress = texture(u_tex_stress_old, uv);
-        v_stress = stress.r / u_max_stress;
+        v_stress = stress.g / u_max_stress;
     }
 
     vec2 final_pos = in_pos;
@@ -381,6 +381,7 @@ class SimulationApp:
         self.update_damage_gpu['height'] = self.solver.solid.shape[0]
         self.update_damage_gpu['dt_by_tau_filter'] = (
                 np.min([1.0,1/60 / self.tau_damage_filter])) # Assuming 60fps
+        self.update_damage_gpu['dt_by_tau_damage'] = 1/60 / self.tau_damage
         self.update_damage_gpu['dt_by_tau_damage'] = 1/60 / self.tau_damage
         self.update_damage_gpu['damage_stress'] = self.damage_stress
         self.update_damage_gpu['nu'] = self.solver.elas_lambda / 2 / (self.solver.elas_lambda + self.solver.elas_mu)

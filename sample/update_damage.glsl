@@ -49,7 +49,9 @@ void main() {
         damage.x *= (1 - dt_by_tau_filter);
         damage.x += VMstress;
 
-        damage.y += dt_by_tau_damage * damage.x / damage_stress;
+        if (damage.x > damage_stress) {
+            damage.y += dt_by_tau_damage * (damage.x - damage_stress) / damage_stress;
+        }
 
         imageStore(img_damage, p, vec4(damage, 0.0, 0.0));
     }
