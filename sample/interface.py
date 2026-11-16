@@ -389,6 +389,19 @@ class SimulationApp:
 
         self.tex_damage.bind_to_image(7, read=True, write=False)
 
+        # Remove solid init
+        file_path = get_resource_path(join('sample', 'remove_damaged.glsl'))
+        with open(file_path, 'r') as file:
+            source_code_remove = file.read()
+
+        self.remove_damaged_gpu = self.ctx.compute_shader(source_code_remove)
+
+        self.remove_damaged_gpu['width'] = self.solver.solid.shape[1]
+        self.remove_damaged_gpu['height'] = self.solver.solid.shape[0]
+        self.remove_damaged_gpu['scalex'] = 1 / self.solver.lm
+        self.remove_damaged_gpu['scaley'] = 1 / self.solver.lm
+
+
     # Boiler plate button drawing function for IMGUI
     def draw_image_button(self, button_id, state):
         imgui.push_id(str(button_id)) # remove if different texture for each button
@@ -501,6 +514,7 @@ class SimulationApp:
                 for _ in range(self.nbstep):
                     self.solver.explicit_step()
                 self.update_damage()
+                self.remove_damaged()
 
             # --- IMGUI toolbar drawing---
             imgui.new_frame()
@@ -555,6 +569,7 @@ class SimulationApp:
             #  Reset button
             if self.draw_image_button("reset", False):
                 self.solver.reset()
+                # TODO reset damage
 
             # #  Parameter button TODO
             # if self.draw_image_button("state_setting", self.state_settings):
@@ -578,7 +593,7 @@ class SimulationApp:
             self.prog['u_tex_solid'].value = 2
 
             self.prog['u_mode'].value = 1 if self.mode_simu else 0
-            self.prog['u_amp'].value = 1.0
+            self.prog['u_amp'].value = 1.0 # SHOULD BE =1 for destruction when out of screen
             self.prog['point_size'].value = self.point_size
             self.prog['u_disp_scale'].value = (self.scale_x, self.scale_y)
             self.prog['u_max_stress'].value = self.max_stress_plot
@@ -623,3 +638,10 @@ class SimulationApp:
         group_y = int(np.ceil(self.H / 16.0))
 
         self.update_damage_gpu.run(group_x, group_y)
+
+    def remove_damaged(self):
+
+        group_x = int(np.ceil(self.W / 16.0))
+        group_y = int(np.ceil(self.H / 16.0))
+
+        self.remove_damaged_gpu.run(group_x, group_y)

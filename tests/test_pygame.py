@@ -22,7 +22,7 @@ damping = 6e-4 # Viscous damping. Lower the value for more bouncy simulation
 fx = 3.5e-5 #Gravity force amplitude.
 fy = 0.0 # If you want gravity in the lateral direction for some reason
 f_attract_const = 1e-2 # Attraction force magnitude when clicking during simulation
-max_stress_plot = 0.002 # Color scale normalization factor. Higher value for more uniform blue
+max_stress_plot = 1 # Color scale normalization factor. Higher value for more uniform blue
 
 ###### Damage model parameters ####
 tau_damage = 3.0  # characteristic time for damage build up - in game time

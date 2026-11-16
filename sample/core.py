@@ -1128,8 +1128,7 @@ class ElasticProblem:
     def get_results(self):
         self.ctx.finish()
 
-        # 1. Lecture de la texture Pos_Vel (Contient ux, uy, vx, vy)
-        # On récupère (H, W, 4) car c'est du RGBA
+        # Pos_Vel ( ux, uy, vx, vy)
         data_pv = self.tex_pos_vel.read()
         res_pv = np.frombuffer(data_pv, dtype='f4').reshape(self.solid.shape[0], self.solid.shape[1], 4)
 
@@ -1138,7 +1137,7 @@ class ElasticProblem:
         self.vx = res_pv[:, :, 2].copy()  # Canal B
         self.vy = res_pv[:, :, 3].copy()  # Canal A
 
-        # 2. Lecture de la texture Stress (Contient sxx, sxy_x, syy, sxy_y)
+        # Stress ( sxx, sxy_x, syy, sxy_y)
         data_s = self.tex_stress_old.read()
         res_s = np.frombuffer(data_s, dtype='f4').reshape(self.solid.shape[0], self.solid.shape[1], 4)
 
@@ -1146,6 +1145,15 @@ class ElasticProblem:
         self.sxy_x_old = res_s[:, :, 1].copy()
         self.syy_y_old = res_s[:, :, 2].copy()
         self.sxy_y_old = res_s[:, :, 3].copy()
+
+        # Solid and solid not uimp
+        data_sol = self.tex_masks.read()
+        res_sol = np.frombuffer(data_sol, dtype='bool').reshape(self.solid.shape[0], self.solid.shape[1], 2)
+
+        self.solid = res_sol[:, :, 0].copy()
+        self.solid_not_uimp = res_sol[:, :, 1].copy()
+
+        return
 
     def calc_VM_stress(self):
         # Calculate the second invariant of the deviatoric stress tensor
