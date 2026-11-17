@@ -3,6 +3,7 @@ layout (local_size_x = 16, local_size_y = 16) in;
 
 layout(rg32f, binding = 7) uniform image2D img_damage;
 layout(rgba32f, binding = 2) uniform image2D img_stress_curr;
+layout(rg8, binding = 5) uniform image2D img_masks;
 
 uniform int width; uniform int height;
 uniform float damage_stress; uniform float dt_by_tau_filter;
@@ -10,8 +11,10 @@ uniform float nu; uniform float dt_by_tau_damage;
 
 void main() {
     ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    vec2 masks = imageLoad(img_masks, p).xy;
 
-    if (p.y >= 1 && p.x >= 1 && p.y < height && p.x < width) {
+    //Calculate only if solid_not_uimp
+    if (p.y >= 1 && p.x >= 1 && p.y < height && p.x < width && masks.y > 0.5) {
         // Loading stress values for divergence computation
 
         vec4 s_prev_prev = imageLoad(img_stress_curr, p + ivec2(-1, -1));
