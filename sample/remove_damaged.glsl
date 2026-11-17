@@ -47,10 +47,15 @@ void main() {
             ext.x = 0.0;
             ext.y = 0.0;
 
+            // Reset damage
+            damage.y = 0.0;
+
         }
         imageStore(img_pos_vel, p, dep);
         imageStore(img_masks, p, vec4(masks, 0, 0));
         imageStore(img_ext, p, vec4(ext, 0.0, 0.0));
+        imageStore(img_damage, p, vec4(damage, 0.0, 0.0));
+
 
     }
 }

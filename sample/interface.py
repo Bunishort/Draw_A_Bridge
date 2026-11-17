@@ -514,7 +514,9 @@ class SimulationApp:
                 for _ in range(self.nbstep):
                     self.solver.explicit_step()
                 self.update_damage()
+                self.ctx.memory_barrier(moderngl.SHADER_IMAGE_ACCESS_BARRIER_BIT)
                 self.remove_damaged()
+                self.ctx.memory_barrier(moderngl.SHADER_IMAGE_ACCESS_BARRIER_BIT)
 
             # --- IMGUI toolbar drawing---
             imgui.new_frame()

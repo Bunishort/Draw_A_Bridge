@@ -56,8 +56,6 @@ void main() {
             damage.y += dt_by_tau_damage * (damage.x - damage_stress) / damage_stress;
         }
 
-        // TODO : remove damage if not solid + damage only if solid not uimp
-
         imageStore(img_damage, p, vec4(damage, 0.0, 0.0));
     }
 }
