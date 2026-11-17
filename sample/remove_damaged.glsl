@@ -18,7 +18,7 @@ void main() {
         vec4 dep = imageLoad(img_pos_vel, p);// ux uy vx vy
 
         vec2 final_pos = dep.xy;
-        final_pos.x *= -scalex;
+        final_pos.x *= scalex;
         final_pos.y *= scaley;
 
         final_pos.x += p.y;//x and y inversion because... idk
