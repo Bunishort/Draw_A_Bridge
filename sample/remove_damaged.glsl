@@ -50,6 +50,7 @@ void main() {
             ext.y = 0.0;
 
             // Reset damage
+            damage.x = 0.0;
             damage.y = 0.0;
 
             // Reset stress
@@ -62,7 +63,7 @@ void main() {
         imageStore(img_masks, p, vec4(masks, 0, 0));
         imageStore(img_ext, p, vec4(ext, 0.0, 0.0));
         imageStore(img_damage, p, vec4(damage, 0.0, 0.0));
-
+        imageStore(img_stress, p, stress);
 
     }
 }
