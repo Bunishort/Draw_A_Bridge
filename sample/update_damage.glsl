@@ -48,12 +48,13 @@ void main() {
 
         vec2 damage = imageLoad(img_damage, p).xy; // damage map
 
+        float damage_old = damage.x * dt_by_tau_damage / dt_by_tau_damage;
         VMstress *= dt_by_tau_filter;
         damage.x *= (1 - dt_by_tau_filter);
         damage.x += VMstress;
 
-        if (damage.x > damage_stress) {
-            damage.y += dt_by_tau_damage * (damage.x - damage_stress) / damage_stress;
+        if (damage.x > damage_stress && damage.x > damage_old) {
+            damage.y += (damage.x - damage_old) * (damage.x - damage_stress) / damage_stress / damage_stress;
         }
 
         imageStore(img_damage, p, vec4(damage, 0.0, 0.0));
