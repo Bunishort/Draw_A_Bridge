@@ -681,6 +681,10 @@ class ElasticProblem:
             self.uy[ix:(ix + size), iy:(iy + size)] = 0
             self.vx[ix:(ix + size), iy:(iy + size)] = 0
             self.vy[ix:(ix + size), iy:(iy + size)] = 0
+            self.sxx_x_old[ix:(ix + size), iy:(iy + size)] = 0
+            self.sxy_x_old[ix:(ix + size), iy:(iy + size)] = 0
+            self.syy_y_old[ix:(ix + size), iy:(iy + size)] = 0
+            self.sxy_y_old[ix:(ix + size), iy:(iy + size)] = 0
 
         self.is_uimp = np.bitwise_and(np.bitwise_not(np.isnan(self.ux_imp)),
                                       np.bitwise_not(np.isnan(self.uy_imp)))
@@ -1148,10 +1152,10 @@ class ElasticProblem:
 
         # Solid and solid not uimp
         data_sol = self.tex_masks.read()
-        res_sol = np.frombuffer(data_sol, dtype='bool').reshape(self.solid.shape[0], self.solid.shape[1], 2)
+        res_sol = np.frombuffer(data_sol, dtype=np.uint8).reshape(self.solid.shape[0], self.solid.shape[1], 2)
 
-        self.solid = res_sol[:, :, 0].copy()
-        self.solid_not_uimp = res_sol[:, :, 1].copy()
+        self.solid = res_sol[:, :, 0] > 0
+        self.solid_not_uimp = res_sol[:, :, 1] > 0
 
         return
 

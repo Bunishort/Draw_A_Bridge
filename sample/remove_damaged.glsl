@@ -3,6 +3,7 @@ layout (local_size_x = 16, local_size_y = 16) in;
 
 layout(rg32f, binding = 7) uniform image2D img_damage;
 layout(rgba32f, binding = 0) uniform image2D img_pos_vel;
+layout(rgba32f, binding = 2) uniform image2D img_stress;
 layout(rg32f, binding = 4) uniform image2D img_ext;
 layout(rg8, binding = 5) uniform image2D img_masks;
 
@@ -16,6 +17,7 @@ void main() {
 
         vec2 damage = imageLoad(img_damage, p).xy; // damage map
         vec4 dep = imageLoad(img_pos_vel, p);// ux uy vx vy
+        vec4 stress = imageLoad(img_stress, p);//sxx ...
 
         vec2 final_pos = dep.xy;
         final_pos.x *= scalex;
@@ -50,6 +52,11 @@ void main() {
             // Reset damage
             damage.y = 0.0;
 
+            // Reset stress
+            stress.x = 0.0;
+            stress.y = 0.0;
+            stress.z = 0.0;
+            stress.w = 0.0;
         }
         imageStore(img_pos_vel, p, dep);
         imageStore(img_masks, p, vec4(masks, 0, 0));
