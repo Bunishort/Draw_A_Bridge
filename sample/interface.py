@@ -376,6 +376,8 @@ class SimulationApp:
         with open(file_path, 'r') as file:
             source_code_damage = file.read()
         # Damage texture
+        self.damage1 = np.zeros(self.solver.solid.shape)
+        self.damage2 = np.zeros(self.solver.solid.shape)
         data_damage = np.stack([np.zeros(self.solver.solid.shape), np.zeros(self.solver.solid.shape)], axis=-1).astype('f4')
         self.tex_damage = self.ctx.texture(self.solver.solid.shape[::-1], 2, data=data_damage.tobytes(), dtype='f4')
 
@@ -423,6 +425,7 @@ class SimulationApp:
         self.mode_simu = not self.mode_simu
         if self.mode_simu:
             self.solver.mod_solid_buffer_update()
+            self.clean_damage_buffer()
             # Reactivating gravity on the updated solid
             if self.state_gravity:  # removing gravity before solid update, reactivating it afterwards
                 group_x = int(np.ceil(self.W / 16.0))
@@ -433,6 +436,7 @@ class SimulationApp:
         else:
             self.set_attractor_state(active=0.0)
             self.solver.get_results()
+            self.get_damage()
 
     def run(self):
         clock = pygame.time.Clock()
@@ -501,6 +505,9 @@ class SimulationApp:
                             self.solver.mod_solid(gyt, gxt, draw,
                                                   self.draw_fixed, self.cursor_size)
                         self.solver.mod_solid_update_solid()
+                        self.damage1[np.bitwise_not(self.solver.solid)] = 0.0
+                        self.damage2[np.bitwise_not(self.solver.solid)] = 0.0
+                        self.clean_damage_buffer()
 
                     self.gx_old = gx
                     self.gy_old = gy
@@ -659,3 +666,13 @@ class SimulationApp:
     def reset_damage(self):
         data_damage = np.stack([np.zeros(self.solver.solid.shape), np.zeros(self.solver.solid.shape)], axis=-1).astype('f4')
         self.tex_damage.write(np.ascontiguousarray(data_damage).tobytes())
+
+    def clean_damage_buffer(self):
+        data_damage = np.stack([self.damage1, self.damage2], axis=-1).astype('f4')
+        self.tex_damage.write(np.ascontiguousarray(data_damage).tobytes())
+
+    def get_damage(self):
+        data = self.tex_damage.read()
+        res = np.frombuffer(data, dtype='f4').reshape(self.solver.solid.shape[0], self.solver.solid.shape[1], 2)
+        self.damage1 = res[:, :, 0].copy()
+        self.damage2 = res[:, :, 1].copy()
