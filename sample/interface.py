@@ -576,6 +576,7 @@ class SimulationApp:
             #  Reset button
             if self.draw_image_button("reset", False):
                 self.solver.reset()
+                self.reset_damage()
                 # TODO reset damage
 
             # #  Parameter button TODO
@@ -652,3 +653,7 @@ class SimulationApp:
         group_y = int(np.ceil(self.H / 16.0))
 
         self.remove_damaged_gpu.run(group_x, group_y)
+
+    def reset_damage(self):
+        data_damage = np.stack([np.zeros(self.solver.solid.shape), np.zeros(self.solver.solid.shape)], axis=-1).astype('f4')
+        self.tex_damage.write(np.ascontiguousarray(data_damage).tobytes())
