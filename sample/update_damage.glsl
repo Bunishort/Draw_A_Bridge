@@ -7,7 +7,7 @@ layout(rg8, binding = 5) uniform image2D img_masks;
 
 uniform int width; uniform int height;
 uniform float damage_stress; uniform float dt_by_tau_filter;
-uniform float nu; uniform float dt_by_tau_damage;
+uniform float nu; uniform float damage_max2;
 
 void main() {
     ivec2 p = ivec2(gl_GlobalInvocationID.xy);
@@ -48,13 +48,13 @@ void main() {
 
         vec2 damage = imageLoad(img_damage, p).xy; // damage map
 
-        float damage_old = damage.x * dt_by_tau_damage / dt_by_tau_damage;
+        float damage_old = damage.x;
         VMstress *= dt_by_tau_filter;
         damage.x *= (1 - dt_by_tau_filter);
         damage.x += VMstress;
 
         if (damage.x > damage_stress && damage.x > damage_old) {
-            damage.y += (damage.x - damage_old) * (damage.x - damage_stress) / damage_stress / damage_stress;
+            damage.y += (damage.x - damage_old) * (damage.x - damage_stress) / damage_max2;
         }
 
         imageStore(img_damage, p, vec4(damage, 0.0, 0.0));

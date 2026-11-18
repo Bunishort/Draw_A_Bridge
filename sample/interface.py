@@ -229,7 +229,11 @@ class SimulationApp:
         self.fy_grav = kwargs.get('fy_grav', 0.0) # volumic force in the y direction
         self.tau_damage = kwargs.get('tau_damage', 1.0) #characteristic time for damage build up
         self.tau_damage_filter = kwargs.get('tau_damage_filter', 1.0) #characteristic time of low pass filter for damage
-        self.damage_stress = kwargs.get('damage_stress', 1.0) #stress max value for damage
+        self.damage_stress = kwargs.get('damage_stress', 1.0) #stress threshold value for damage
+        self.damage_stress_max = kwargs.get('damage_stress_max', 2 * self.damage_stress) #stress max max value before damage=1
+        if self.damage_stress_max <= self.damage_stress:
+            self.damage_stress_max = 2 * self.damage_stress
+
         self.max_stress_plot = kwargs.get('max_stress_plot', 1.0) # stress normalization factor
 
         #Defining constants and grid for openGL display
@@ -381,9 +385,10 @@ class SimulationApp:
         self.update_damage_gpu['height'] = self.solver.solid.shape[0]
         self.update_damage_gpu['dt_by_tau_filter'] = (
                 np.min([1.0,1/60 / self.tau_damage_filter])) # Assuming 60fps
-        self.update_damage_gpu['dt_by_tau_damage'] = 1/60 / self.tau_damage
-        self.update_damage_gpu['dt_by_tau_damage'] = 1/60 / self.tau_damage
         self.update_damage_gpu['damage_stress'] = self.damage_stress
+        #damage max = 1/2 * (damage stress _max - damage_stress)**2
+        self.update_damage_gpu['damage_max2'] = 1/2 * (self.damage_stress_max - self.damage_stress)**2
+
         self.update_damage_gpu['nu'] = self.solver.elas_lambda / 2 / (self.solver.elas_lambda + self.solver.elas_mu)
 
 

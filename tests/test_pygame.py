@@ -28,6 +28,7 @@ max_stress_plot = 1 # Color scale normalization factor. Higher value for more un
 tau_damage = 3.0  # characteristic time for damage build up - in game time
 tau_damage_filter = 0.1  # characteristic time of low pass filter for damage - in game time
 damage_stress = 0.002  # stress max value for damage
+damage_stress_max = 10 * 0.002  # stress max value for damage
 
 
 # -----------  vvvvvv   DO NOT CHANGE  vvvvvvv  ---------------
@@ -110,7 +111,7 @@ def main():
     game = sample.interface.SimulationApp(solver, ctx, screen_size=screen_size, nbstep=nbstep, max_stress_plot=max_stress_plot,
                                           fx_grav=fx, fy_grav=fy, f_attract_const = f_attract_const,
                                           tau_damage=tau_damage, tau_damage_filter=tau_damage_filter,
-                                          damage_stress=damage_stress)
+                                          damage_stress=damage_stress, damage_stress_max = damage_stress_max)
     game.run()
 
     pygame.quit()
