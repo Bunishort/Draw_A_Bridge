@@ -550,19 +550,22 @@ class SimulationApp:
             state = not self.mode_simu and not self.draw_fixed and not self.state_rubber
             if self.draw_image_button("draw", state):
                 self.draw_fixed = False
-                self.mode_simu = False
+                if self.mode_simu:
+                    self.toggle_simu()
                 self.state_rubber = False
 
             # draw fixed mode button
             if self.draw_image_button("draw_fixed", self.draw_fixed):
                 self.draw_fixed = not self.draw_fixed
-                self.mode_simu = False
+                if self.mode_simu:
+                    self.toggle_simu()
                 self.state_rubber = False
 
             #  Rubber button
             if self.draw_image_button("state_rubber", self.state_rubber):
                 self.state_rubber = not self.state_rubber
-                self.mode_simu = False
+                if self.mode_simu:
+                    self.toggle_simu()
                 self.draw_fixed = False
 
             #  Cursor size button
@@ -577,7 +580,6 @@ class SimulationApp:
             if self.draw_image_button("reset", False):
                 self.solver.reset()
                 self.reset_damage()
-                # TODO reset damage
 
             # #  Parameter button TODO
             # if self.draw_image_button("state_setting", self.state_settings):
