@@ -1,0 +1,37 @@
+# Level image file
+image: level1.png
+
+
+# ###### Performance / Speed / Size tuning ######
+screen_size: [1400, 1000]   # Window size in pixels
+# nb of simulation time steps per frame.
+# Higher value = faster response of the solid, but needs more computing power.
+# Lower the value if you have performance issues ( FPS < 60 )
+nbstep: 35
+
+# ###### Simulation physical parameters ######
+# Found by trial and error to make the simulation feel bouncy
+simulation:
+  damping: 6.0e-4           # Viscous damping. Lower the value for more bouncy simulation
+  fx: 3.5e-5                # Gravity force amplitude.
+  fy: 0.0                   # If you want gravity in the lateral direction for some reason
+  f_attract_const: 1.0e-2   # Attraction force magnitude when clicking during simulation
+  max_stress_plot: 1        # Color scale normalization factor. Higher value for more uniform blue
+
+# ###### Damage model parameters ######
+damage:
+  tau_damage: 3.0           # characteristic time for damage build up - in game time
+  tau_damage_filter: 0.1    # characteristic time of low pass filter for damage - in game time
+  damage_stress: 0.002      # stress max value for damage
+  damage_stress_max: 0.02   # stress max value for damage 
+
+# -----------  vvvvvv   DO NOT CHANGE  vvvvvvv  ---------------
+# the following parameters. Unless you know what you are doing.
+material:
+  E: 1                      # Young modulus (higher value means stiffer)
+  nu: 0.4                   # Poisson ratio (must be between 0 and 0.49)
+  vol_mass: 0.5             # Volumic mass of the solid.
+  ratio: 0.9                # Viscoelastic parameter. Must be >0 and <=1. Higher value = less dissipation
+  tau: 20                   # Viscoelastic characteristic time. Around 1sec of real game time is OK.
+  # Delicate simulation parameter: size of each element (= each simulation grid pixel).
+  lm: 0.35

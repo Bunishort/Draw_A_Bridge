@@ -1,6 +1,6 @@
 import sys
 import os
-import json
+import yaml
 import ctypes
 from pathlib import Path
 
@@ -14,7 +14,7 @@ import moderngl
 # Ce script est dans <racine>/tests ; les niveaux sont dans <racine>/levels
 ROOT_DIR = Path(__file__).resolve().parent.parent
 LEVELS_DIR = ROOT_DIR / "levels"
-DEFAULT_LEVEL = "level1.json"
+DEFAULT_LEVEL = "level1.yaml"
 
 #Import libGL
 if sys.platform.startswith('linux'):
@@ -27,18 +27,41 @@ if sys.platform.startswith('linux'):
         except OSError:
             pass
 
+def check_numbers(node, path=""):
+    """check no numerical parameter was read as text.
+    """
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key != "image":
+                check_numbers(value, path + "/" + str(key))
+    elif isinstance(node, list):
+        for i, value in enumerate(node):
+            check_numbers(value, "{}[{}]".format(path, i))
+    elif isinstance(node, str):
+        raise ValueError("Parameter '{}' was read as text {!r} instead of number ".format(path, node))
+
+
+def read_level_file(path):
+    if path.suffix.lower() in (".yaml", ".yml"):
+        with open(path, "r", encoding="utf-8") as f:
+            params = yaml.safe_load(f)
+    else:
+        raise ValueError("Need a yaml file")
+    check_numbers(params)
+    return params
+
 
 def load_level(level_name):
     """Read json file and associated images
     """
     level_path = LEVELS_DIR / level_name
-    with open(level_path, "r", encoding="utf-8") as f:
-        params = json.load(f)
+    params = read_level_file(level_path)
 
+    # Image : chemin relatif au dossier levels/
     image_path = LEVELS_DIR / params["image"]
     surf = pygame.image.load(str(image_path))
     surf = pygame.transform.flip(surf, True, False)
-    surf = pygame.transform.rotate(surf, params.get("rotation", 90))
+    surf = pygame.transform.rotate(surf, 90)
 
     rgb = pygame.surfarray.array3d(surf)
     red = rgb[:, :, 0] >= 200
