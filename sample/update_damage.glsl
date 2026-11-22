@@ -57,6 +57,20 @@ void main() {
             damage.y += (damage.x - damage_old) * (damage.x - damage_stress) / damage_max2;
         }
 
+        // Damage = 1 if only 1 pixel is holding, to avoid bugs on some destructions
+        bool sp0 = imageLoad(img_masks, p + ivec2(1, 0)).r < 0.5;
+        bool sm0 = imageLoad(img_masks, p + ivec2(-1, 0)).r < 0.5;
+        bool s0p = imageLoad(img_masks, p + ivec2(0, 1)).r < 0.5;
+        bool s0m = imageLoad(img_masks, p + ivec2(0, -1)).r < 0.5;
+
+        if (sp0 && sm0) {
+            damage.y=1.1;
+        }
+        if (s0p && s0m) {
+            damage.y=1.1;
+        }
+
+
         imageStore(img_damage, p, vec4(damage, 0.0, 0.0));
     }
 }

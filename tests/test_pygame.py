@@ -9,10 +9,10 @@ from context import sample
 import moderngl
 
 ###### Performance / Speed / Size tuning ######
-screen_size=(800,800) #Window size in pixels
-nx = 180 #Simulation grid size (higher for more grid points, at the cost of some FPS)
-ny = 180
-nbstep = int(45) # nb of simulation time steps per frame.
+screen_size=(1400,1000) #Window size in pixels
+nx = 200 #Simulation grid size (higher for more grid points, at the cost of some FPS)
+ny = 280
+nbstep = int(35) # nb of simulation time steps per frame.
 # Higher value = faster response of the solid, but needs more computing power.
 # Lower the value if you have performance issues ( FPS < 60 )
 
