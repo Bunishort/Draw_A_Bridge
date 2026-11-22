@@ -1,3 +1,4 @@
+import yaml
 from sample.core import conv
 import numpy as np
 # import matplotlib.pyplot as plt
@@ -676,3 +677,45 @@ class SimulationApp:
         res = np.frombuffer(data, dtype='f4').reshape(self.solver.solid.shape[0], self.solver.solid.shape[1], 2)
         self.damage1 = res[:, :, 0].copy()
         self.damage2 = res[:, :, 1].copy()
+
+
+def check_numbers(node, path=""):
+    """check no numerical parameter was read as text.
+    """
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key != "image":
+                check_numbers(value, path + "/" + str(key))
+    elif isinstance(node, list):
+        for i, value in enumerate(node):
+            check_numbers(value, "{}[{}]".format(path, i))
+    elif isinstance(node, str):
+        raise ValueError("Parameter '{}' was read as text {!r} instead of number ".format(path, node))
+
+
+def load_level(level_name):
+    """Read json file and associated images
+    """
+
+    level_path = get_resource_path(join('levels', level_name))
+    with open(level_path, "r", encoding="utf-8") as f:
+        params = yaml.safe_load(f)
+    check_numbers(params)
+
+
+    # Image : chemin relatif au dossier levels/
+    image_path = get_resource_path(join('levels', params['image']))
+    surf = pygame.image.load(str(image_path))
+    surf = pygame.transform.flip(surf, True, False)
+    surf = pygame.transform.rotate(surf, 90)
+
+    rgb = pygame.surfarray.array3d(surf)
+    red = rgb[:, :, 0] >= 200
+    blue = rgb[:, :, 2] >= 200
+
+    solid = red | blue                     #
+    ux_imp = np.full(solid.shape, np.nan)  #
+    ux_imp[red] = 0.0                      #
+    uy_imp = ux_imp.copy()
+
+    return params, solid, ux_imp, uy_imp
