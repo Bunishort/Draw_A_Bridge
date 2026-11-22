@@ -1,5 +1,8 @@
 import sys
 import os
+import json
+import ctypes
+from pathlib import Path
 
 if sys.platform == "win32":
     os.environ["PYOPENGL_PLATFORM"] = "nt"
@@ -8,84 +11,12 @@ import numpy as np
 from context import sample
 import moderngl
 
-###### Performance / Speed / Size tuning ######
-screen_size=(1400,1000) #Window size in pixels
-nx = 200 #Simulation grid size (higher for more grid points, at the cost of some FPS)
-ny = 280
-nbstep = int(35) # nb of simulation time steps per frame.
-# Higher value = faster response of the solid, but needs more computing power.
-# Lower the value if you have performance issues ( FPS < 60 )
-
-###### Simulation physical parameters ######
-# Those were found by trial and error to make the simmulation feel bouncy
-damping = 6e-4 # Viscous damping. Lower the value for more bouncy simulation
-fx = 3.5e-5 #Gravity force amplitude.
-fy = 0.0 # If you want gravity in the lateral direction for some reason
-f_attract_const = 1e-2 # Attraction force magnitude when clicking during simulation
-max_stress_plot = 1 # Color scale normalization factor. Higher value for more uniform blue
-
-###### Damage model parameters ####
-tau_damage = 3.0  # characteristic time for damage build up - in game time
-tau_damage_filter = 0.1  # characteristic time of low pass filter for damage - in game time
-damage_stress = 0.002  # stress max value for damage
-damage_stress_max = 10 * 0.002  # stress max value for damage
-
-
-# -----------  vvvvvv   DO NOT CHANGE  vvvvvvv  ---------------
-# the following parameters. Unless you know what you are doing.
-
-###### Material parameters ######
-E=1 #Young modulus (higher value means stiffer)
-nu = 0.4 #Poisson ratio (must be between 0 and 0.49, check Wikipedia for definition)
-vol_mass = 0.5 #Volumic mass of the solid.
-ratio = 0.9  # Viscoelastic parameter. Must be >0 and <=1. Higher value = less dissipation
-tau = 20 # Viscoelastic characteristic time. Something around 1sec of real game time (=dt*nbstep*FPS) is OK.
-
-### Delicate simulation parameters
-lm = 0.35 # Size of each element (= each simulation grid pixel)
-# The defautl 0.35 value does not have any specific sense, but changing it changes the whole solid behaviour.
-
-c_p = np.sqrt(E / ratio * (1 - nu) / (vol_mass * (1 + nu) * (1 - 2 * nu))) #Formula for compression sound wave speed
-c_s = np.sqrt(E / ratio /  (2 * (1 + nu)) / vol_mass) #Formula for shear sound wave speed
-
-dt = 0.9 * lm / c_p # Size of a simulation time step. cp*dt/lm must be <1 to ensure simulation stability.
-# This formula ensures stable simulation with close to the largest time step possible, to have the simulation feel as fast as possible
-
-print( 'Sound speed * dt / lm ')
-print( "Compression : {:.2f}".format(c_p * dt / lm))
-print( "Shear : {:.2f}".format(c_s * dt / lm))
-
-
-####################################################
-#SOlid initialization
-solid = np.zeros([nx,ny],dtype = bool)
-ix = int(nx*7/10)
-iy = int(ny*1/10)
-solid[ix:(ix+2),iy:(iy+2)] = True
-ux_imp=np.zeros(solid.shape)
-ux_imp[:,:] = np.nan
-ux_imp[ix:(ix+2),iy:(iy+2)] = 0
-ix = int(nx*7/10)
-iy = int(ny*9/10)
-solid[ix:(ix+2),iy:(iy+2)] = True
-ux_imp[ix:(ix+2),iy:(iy+2)] = 0
-# ix = int(nx*7/10)
-# iy = int(ny*5/10)
-# solid[ix:(ix+2),iy:(iy+2)] = True
-# ux_imp[ix:(ix+2),iy:(iy+2)] = 0
-
-uy_imp = ux_imp.copy()
-fx_imp = np.ones(solid.shape) * fx
-fy_imp = np.ones(solid.shape) * fy
-
-
-elas_lambda = E*nu /(1+nu)/(1-2*nu) # Elastic parameter. Do not touch
-elas_mu = E/2/(1+nu)
+# Ce script est dans <racine>/tests ; les niveaux sont dans <racine>/levels
+ROOT_DIR = Path(__file__).resolve().parent.parent
+LEVELS_DIR = ROOT_DIR / "levels"
+DEFAULT_LEVEL = "level1.json"
 
 #Import libGL
-import sys
-import ctypes
-
 if sys.platform.startswith('linux'):
     try:
         ctypes.CDLL('libGL.so')
@@ -96,22 +27,97 @@ if sys.platform.startswith('linux'):
         except OSError:
             pass
 
+
+def load_level(level_name):
+    """Read json file and associated images
+    """
+    level_path = LEVELS_DIR / level_name
+    with open(level_path, "r", encoding="utf-8") as f:
+        params = json.load(f)
+
+    image_path = LEVELS_DIR / params["image"]
+    surf = pygame.image.load(str(image_path))
+    surf = pygame.transform.flip(surf, True, False)
+    surf = pygame.transform.rotate(surf, params.get("rotation", 90))
+
+    rgb = pygame.surfarray.array3d(surf)
+    red = rgb[:, :, 0] >= 200
+    blue = rgb[:, :, 2] >= 200
+
+    solid = red | blue                     #
+    ux_imp = np.full(solid.shape, np.nan)  #
+    ux_imp[red] = 0.0                      #
+    uy_imp = ux_imp.copy()
+
+    return params, solid, ux_imp, uy_imp
+
+
 # ---PYGAME interface---
 def main():
+    level_name = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_LEVEL
 
     pygame.init()
+
+    params, solid, ux_imp, uy_imp = load_level(level_name)
+
+    ###### Taille de la grille : déduite de l'image ######
+    nx, ny = solid.shape
+
+    ###### Performance / Speed / Size tuning ######
+    screen_size = tuple(params["screen_size"])
+    nbstep = int(params["nbstep"])
+
+    ###### Simulation physical parameters ######
+    sim = params["simulation"]
+    damping = sim["damping"]
+    fx = sim["fx"]
+    fy = sim["fy"]
+    f_attract_const = sim["f_attract_const"]
+    max_stress_plot = sim["max_stress_plot"]
+
+    ###### Damage model parameters ####
+    dmg = params["damage"]
+    tau_damage = dmg["tau_damage"]
+    tau_damage_filter = dmg["tau_damage_filter"]
+    damage_stress = dmg["damage_stress"]
+    damage_stress_max = dmg["damage_stress_max"]
+
+    # -----------  vvvvvv   DO NOT CHANGE  vvvvvvv  ---------------
+    ###### Material parameters ######
+    mat = params["material"]
+    E = mat["E"]
+    nu = mat["nu"]
+    vol_mass = mat["vol_mass"]
+    ratio = mat["ratio"]
+    tau = mat["tau"]
+    lm = mat["lm"]
+
+    c_p = np.sqrt(E / ratio * (1 - nu) / (vol_mass * (1 + nu) * (1 - 2 * nu)))  # onde de compression
+    c_s = np.sqrt(E / ratio / (2 * (1 + nu)) / vol_mass)                        # onde de cisaillement
+
+    dt = 0.9 * lm / c_p  # cp*dt/lm doit rester < 1 pour la stabilité
+
+    print('Sound speed * dt / lm ')
+    print("Compression : {:.2f}".format(c_p * dt / lm))
+    print("Shear : {:.2f}".format(c_s * dt / lm))
+
+    elas_lambda = E * nu / (1 + nu) / (1 - 2 * nu)  # Elastic parameter. Do not touch
+    elas_mu = E / 2 / (1 + nu)
+
+    print("Niveau : {} ({} x {} éléments)".format(level_name, nx, ny))
 
     pygame.display.set_mode(screen_size, pygame.OPENGL | pygame.DOUBLEBUF)
     ctx = moderngl.create_context()
     # Solver init
     solver = sample.core.ElasticProblem(solid, elas_lambda, elas_mu, lm, ux_imp, uy_imp,
-                                      is_explicit=True, vol_mass=vol_mass, dt = dt, ratio=ratio, tau=tau,
-                                        damping = damping, gl_context=ctx)
+                                        is_explicit=True, vol_mass=vol_mass, dt=dt, ratio=ratio, tau=tau,
+                                        damping=damping, gl_context=ctx)
 
-    game = sample.interface.SimulationApp(solver, ctx, screen_size=screen_size, nbstep=nbstep, max_stress_plot=max_stress_plot,
-                                          fx_grav=fx, fy_grav=fy, f_attract_const = f_attract_const,
+    game = sample.interface.SimulationApp(solver, ctx, screen_size=screen_size, nbstep=nbstep,
+                                          max_stress_plot=max_stress_plot,
+                                          fx_grav=fx, fy_grav=fy, f_attract_const=f_attract_const,
                                           tau_damage=tau_damage, tau_damage_filter=tau_damage_filter,
-                                          damage_stress=damage_stress, damage_stress_max = damage_stress_max)
+                                          damage_stress=damage_stress, damage_stress_max=damage_stress_max)
     game.run()
 
     pygame.quit()
