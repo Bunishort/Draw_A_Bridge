@@ -33,7 +33,7 @@ def main():
 
     params, solid, ux_imp, uy_imp = sample.interface.load_level(level_name)
 
-    ###### Taille de la grille : déduite de l'image ######
+    ###### Grid size: deduced from the level image ######
     nx, ny = solid.shape
 
     ###### Performance / Speed / Size tuning ######
@@ -65,10 +65,10 @@ def main():
     tau = mat["tau"]
     lm = mat["lm"]
 
-    c_p = np.sqrt(E / ratio * (1 - nu) / (vol_mass * (1 + nu) * (1 - 2 * nu)))  # onde de compression
-    c_s = np.sqrt(E / ratio / (2 * (1 + nu)) / vol_mass)                        # onde de cisaillement
+    c_p = np.sqrt(E / ratio * (1 - nu) / (vol_mass * (1 + nu) * (1 - 2 * nu)))  # compression wave speed
+    c_s = np.sqrt(E / ratio / (2 * (1 + nu)) / vol_mass)                        # shear wave speed
 
-    dt = 0.9 * lm / c_p  # cp*dt/lm doit rester < 1 pour la stabilité
+    dt = 0.9 * lm / c_p  # cp*dt/lm must stay < 1 for stability
 
     print('Sound speed * dt / lm ')
     print("Compression : {:.2f}".format(c_p * dt / lm))
@@ -90,7 +90,8 @@ def main():
                                           max_stress_plot=max_stress_plot,
                                           fx_grav=fx, fy_grav=fy, f_attract_const=f_attract_const,
                                           tau_damage=tau_damage, tau_damage_filter=tau_damage_filter,
-                                          damage_stress=damage_stress, damage_stress_max=damage_stress_max)
+                                          damage_stress=damage_stress, damage_stress_max=damage_stress_max,
+                                          background_image=params.get("background_path"))
     game.run()
 
     pygame.quit()

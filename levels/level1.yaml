@@ -1,10 +1,15 @@
-# Level image file
+# Level image (path relative to the levels/ folder).
+# Saturated red pixel (255) = fixed solid, saturated blue pixel (255) = free solid
 image: level1.png
 
+# Optional background image (path relative to the levels/ folder).
+# It is displayed behind the simulation, stretched over the whole window.
+# Leave this line commented out (or empty) to keep the plain background.
+background: level1_back.png
 
 # ###### Performance / Speed / Size tuning ######
 screen_size: [1400, 1000]   # Window size in pixels
-# nb of simulation time steps per frame.
+# Number of simulation time steps per frame.
 # Higher value = faster response of the solid, but needs more computing power.
 # Lower the value if you have performance issues ( FPS < 60 )
 nbstep: 35
@@ -20,13 +25,13 @@ simulation:
 
 # ###### Damage model parameters ######
 damage:
-  tau_damage: 3.0           # characteristic time for damage build up - in game time
-  tau_damage_filter: 0.1    # characteristic time of low pass filter for damage - in game time
-  damage_stress: 0.002      # stress max value for damage
-  damage_stress_max: 0.02   # stress max value for damage 
+  tau_damage: 3.0           # Characteristic time for damage build up - in game time
+  tau_damage_filter: 0.1    # Characteristic time of low pass filter for damage - in game time
+  damage_stress: 0.002      # Stress threshold value for damage
+  damage_stress_max: 0.02   # Stress max value for damage (10 * 0.002)
 
 # -----------  vvvvvv   DO NOT CHANGE  vvvvvvv  ---------------
-# the following parameters. Unless you know what you are doing.
+# The following parameters. Unless you know what you are doing.
 material:
   E: 1                      # Young modulus (higher value means stiffer)
   nu: 0.4                   # Poisson ratio (must be between 0 and 0.49)
@@ -34,4 +39,5 @@ material:
   ratio: 0.9                # Viscoelastic parameter. Must be >0 and <=1. Higher value = less dissipation
   tau: 20                   # Viscoelastic characteristic time. Around 1sec of real game time is OK.
   # Delicate simulation parameter: size of each element (= each simulation grid pixel).
+  # The default 0.35 has no specific sense, but changing it changes the whole solid behaviour.
   lm: 0.35

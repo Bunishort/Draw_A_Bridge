@@ -9,7 +9,7 @@ import moderngl
 from os.path import join
 from .core import get_resource_path
 
-# --- Import de l'interface ImGui ---
+# --- ImGui interface import ---
 import imgui
 from imgui.integrations.pygame import PygameRenderer
 import pygame
@@ -206,6 +206,30 @@ void main() {
 }
 """
 
+# --- Background image shaders: full-screen quad, no vertex buffer needed ---
+BG_VTX_SHADER = """
+#version 330
+out vec2 v_uv;
+
+void main() {
+    // Triangle strip of 4 vertices generated from gl_VertexID: (0,0) (1,0) (0,1) (1,1)
+    vec2 p = vec2(float(gl_VertexID & 1), float((gl_VertexID >> 1) & 1));
+    v_uv = p;
+    gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}
+"""
+
+BG_FRAG_SHADER = """
+#version 330
+uniform sampler2D u_tex_bg;
+in vec2 v_uv;
+out vec4 f_color;
+
+void main() {
+    f_color = vec4(texture(u_tex_bg, v_uv).rgb, 1.0);
+}
+"""
+
 
 class SimulationApp:
     """
@@ -251,6 +275,27 @@ class SimulationApp:
 
         self.vbo_pos = self.ctx.buffer(self.pos_init.tobytes())
         self.vao = self.ctx.vertex_array(self.prog, [(self.vbo_pos, '2f', 'in_pos')])
+
+        # Optional background image, displayed behind the simulation.
+        # If no path is given (or loading fails), the plain clear color is kept.
+        self.tex_bg = None
+        bg_path = kwargs.get('background_image', None)
+        if bg_path:
+            try:
+                surf_bg = pygame.image.load(str(bg_path))
+                # flipped=True : OpenGL texture origin is the bottom-left corner
+                data_bg = pygame.image.tostring(surf_bg, "RGB", True)
+                self.tex_bg = self.ctx.texture(surf_bg.get_size(), 3, data_bg)
+                self.tex_bg.repeat_x = False
+                self.tex_bg.repeat_y = False
+                self.tex_bg.build_mipmaps()
+                self.tex_bg.filter = (moderngl.LINEAR_MIPMAP_LINEAR, moderngl.LINEAR)
+                self.prog_bg = self.ctx.program(vertex_shader=BG_VTX_SHADER, fragment_shader=BG_FRAG_SHADER)
+                self.prog_bg['u_tex_bg'].value = 3  # texture unit 3 (0 to 2 are used by the simulation)
+                self.vao_bg = self.ctx.vertex_array(self.prog_bg, [])
+            except Exception as e:
+                print(f"Background image could not be loaded, using plain background. ({e})")
+                self.tex_bg = None
 
         # Pre computing displacement scale
         self.scale_x = 2.0 / (self.W * self.solver.lm)
@@ -599,6 +644,12 @@ class SimulationApp:
             # --- Texture rendering ---
             self.ctx.clear(0.1, 0.1, 0.1)
 
+            # Optional background image: drawn first, stretched over the whole window
+            if self.tex_bg is not None:
+                self.ctx.viewport = (0, 0, self.screen_size[0], self.screen_size[1])
+                self.tex_bg.use(location=3)
+                self.vao_bg.render(moderngl.TRIANGLE_STRIP, vertices=4)
+
 
             self.solver.tex_pos_vel.use(location=0)
             self.prog['u_tex_pos_vel'].value = 0
@@ -684,7 +735,7 @@ def check_numbers(node, path=""):
     """
     if isinstance(node, dict):
         for key, value in node.items():
-            if key != "image":
+            if key not in ("image", "background"):  # these two are file paths
                 check_numbers(value, path + "/" + str(key))
     elif isinstance(node, list):
         for i, value in enumerate(node):
@@ -694,7 +745,7 @@ def check_numbers(node, path=""):
 
 
 def load_level(level_name):
-    """Read json file and associated images
+    """Read the yaml level file and the associated images
     """
 
     level_path = get_resource_path(join('levels', level_name))
@@ -703,7 +754,7 @@ def load_level(level_name):
     check_numbers(params)
 
 
-    # Image : chemin relatif au dossier levels/
+    # Level image: path relative to the levels/ folder
     image_path = get_resource_path(join('levels', params['image']))
     surf = pygame.image.load(str(image_path))
     surf = pygame.transform.flip(surf, True, False)
@@ -717,5 +768,10 @@ def load_level(level_name):
     ux_imp = np.full(solid.shape, np.nan)  #
     ux_imp[red] = 0.0                      #
     uy_imp = ux_imp.copy()
+
+    # Optional background image (path relative to the levels/ folder).
+    # params["background_path"] is None when no background is given.
+    bg_name = params.get('background')
+    params['background_path'] = get_resource_path(join('levels', bg_name)) if bg_name else None
 
     return params, solid, ux_imp, uy_imp
