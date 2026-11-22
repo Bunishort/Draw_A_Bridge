@@ -11,7 +11,6 @@ import numpy as np
 from context import sample
 import moderngl
 
-# Ce script est dans <racine>/tests ; les niveaux sont dans <racine>/levels
 ROOT_DIR = Path(__file__).resolve().parent.parent
 LEVELS_DIR = ROOT_DIR / "levels"
 DEFAULT_LEVEL = "level1.yaml"
@@ -22,7 +21,7 @@ if sys.platform.startswith('linux'):
         ctypes.CDLL('libGL.so')
     except OSError:
         try:
-            # Forcer le chargement de la version runtime présente sur le système
+            # force change runtime
             ctypes.CDLL('libGL.so.1', mode=ctypes.RTLD_GLOBAL)
         except OSError:
             pass
