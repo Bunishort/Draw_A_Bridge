@@ -233,7 +233,7 @@ void main() {
 
 class SimulationApp:
     """
-    TODO now need to add cursor size button, param menu and restart.
+    TODO now need to add cursor size button, param menu.
     This class is the actual game interface
     solver = instance of the core/ElasticProblem class
     ctx = modernGL context (which would have been created for the creation of "solver")

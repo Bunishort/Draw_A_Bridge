@@ -5,7 +5,7 @@ image: level1.png
 # Optional background image (path relative to the levels/ folder).
 # It is displayed behind the simulation, stretched over the whole window.
 # Leave this line commented out (or empty) to keep the plain background.
-background: level1_back.png
+background: Siduhe_Bridge-4.png
 
 # ###### Performance / Speed / Size tuning ######
 screen_size: [1400, 1000]   # Window size in pixels
