@@ -399,6 +399,10 @@ class ElasticProblem:
         self.lm = np.float32(lm)
         self.ux_imp = np.float32(ux_imp)
         self.uy_imp = np.float32(uy_imp)
+        # Copies of the initial level, used by reset(to_initial=True)
+        self.solid_init = np.array(solid, dtype=bool)
+        self.ux_imp_init = self.ux_imp.copy()
+        self.uy_imp_init = self.uy_imp.copy()
         for var in ['px_bound','py_bound','fx_imp','fy_imp']:
             setattr(self,var,kwargs.get(var,np.zeros(solid.shape, dtype=np.float32)))
 
@@ -717,10 +721,20 @@ class ElasticProblem:
 
         return
 
-    def reset(self):
-        self.solid[:] = False
-        self.ux_imp[:] = np.nan
-        self.uy_imp[:] = np.nan
+    def reset(self, to_initial=False):
+        """Reset the simulation state (displacements, speeds, stresses).
+        to_initial=False : the solid and the imposed displacements are erased.
+        to_initial=True  : the solid and the imposed displacements are restored to the level
+                           given when the solver was created.
+        """
+        if to_initial:
+            self.solid[:] = self.solid_init
+            self.ux_imp[:] = self.ux_imp_init
+            self.uy_imp[:] = self.uy_imp_init
+        else:
+            self.solid[:] = False
+            self.ux_imp[:] = np.nan
+            self.uy_imp[:] = np.nan
         self.ux[:] = 0
         self.uy[:] = 0
         self.vx[:] = 0

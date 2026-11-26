@@ -632,8 +632,7 @@ class SimulationApp:
 
             #  Reset button
             if self.draw_image_button("reset", False):
-                self.solver.reset()
-                self.reset_damage()
+                self.reset_level()
 
             # #  Parameter button TODO
             # if self.draw_image_button("state_setting", self.state_settings):
@@ -717,7 +716,25 @@ class SimulationApp:
 
         self.remove_damaged_gpu.run(group_x, group_y)
 
+    def reset_level(self):
+        """Reload the level as it was loaded from the level file:
+        solid, fixed points, displacements, speeds, stresses and damage are all restored."""
+        if self.mode_simu:
+            # Cancel the attractor force (and clear its buffer) before the buffers are rewritten
+            self.set_attractor_state(active=0.0)
+        self.solver.ctx.finish()
+        self.solver.reset(to_initial=True)
+        self.reset_damage()
+        if self.mode_simu and self.state_gravity:
+            # reset() rewrote the external forces without gravity: apply it again
+            group_x = int(np.ceil(self.W / 16.0))
+            group_y = int(np.ceil(self.H / 16.0))
+            self.toggle_gravity.run(group_x, group_y)
+
     def reset_damage(self):
+        # Also clear the CPU copies, otherwise toggle_simu() -> clean_damage_buffer() would write the old damage back
+        self.damage1[:] = 0.0
+        self.damage2[:] = 0.0
         data_damage = np.stack([np.zeros(self.solver.solid.shape), np.zeros(self.solver.solid.shape)], axis=-1).astype('f4')
         self.tex_damage.write(np.ascontiguousarray(data_damage).tobytes())
 
