@@ -644,9 +644,10 @@ class SimulationApp:
             # --- Texture rendering ---
             self.ctx.clear(0.1, 0.1, 0.1)
 
-            # Optional background image: drawn first, stretched over the whole window
+            # Optional background image: drawn first, stretched over the area above the toolbar only
+            # (same viewport as the simulation, so the toolbar keeps its plain background)
             if self.tex_bg is not None:
-                self.ctx.viewport = (0, 0, self.screen_size[0], self.screen_size[1])
+                self.ctx.viewport = (0, self.toolbar_height, self.screen_size[0], self.screen_size[1] - self.toolbar_height)
                 self.tex_bg.use(location=3)
                 self.vao_bg.render(moderngl.TRIANGLE_STRIP, vertices=4)
 
