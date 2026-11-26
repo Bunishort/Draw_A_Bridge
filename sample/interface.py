@@ -745,6 +745,39 @@ def check_numbers(node, path=""):
         raise ValueError("Parameter '{}' was read as text {!r} instead of number ".format(path, node))
 
 
+def resample_mask(mask, new_shape):
+    """Resample a boolean matrix to new_shape without interpolation (values stay True/False).
+    Upscaling: each new cell takes the value of the source cell under its center (nearest).
+    Downscaling: a new cell is True if ANY source cell it covers is True, so thin features
+    (e.g. a 2x2 pixel fixed point) are never lost.
+    """
+    nx, ny = mask.shape
+    new_nx, new_ny = new_shape
+    if (nx, ny) == (new_nx, new_ny):
+        return mask.copy()
+
+
+    def ranges(n_old, n_new):
+        i = np.arange(n_new)
+        if n_new >= n_old:  # upscaling : nearest source cell
+            start = np.minimum(((i + 0.5) * n_old / n_new).astype(int), n_old - 1)
+            end = start + 1
+        else:  # downscaling : all the source cells covered by the new cell
+            start = (i * n_old) // n_new
+            end = -((-(i + 1) * n_old) // n_new)  # ceil
+            end = np.minimum(np.maximum(end, start + 1), n_old)
+        return start, end
+
+
+    x0, x1 = ranges(nx, new_nx)
+    y0, y1 = ranges(ny, new_ny)
+    # 2D prefix sum : number of True cells in every rectangle, computed in one go
+    S = np.zeros((nx + 1, ny + 1), dtype=np.int64)
+    S[1:, 1:] = mask.astype(np.int64).cumsum(axis=0).cumsum(axis=1)
+    counts = S[np.ix_(x1, y1)] - S[np.ix_(x0, y1)] - S[np.ix_(x1, y0)] + S[np.ix_(x0, y0)]
+    return counts > 0
+
+
 def load_level(level_name):
     """Read the yaml level file and the associated images
     """
@@ -764,6 +797,17 @@ def load_level(level_name):
     rgb = pygame.surfarray.array3d(surf)
     red = rgb[:, :, 0] >= 200
     blue = rgb[:, :, 2] >= 200
+
+    # Optional uniform rescaling: the largest dimension of the grid becomes params["sim_size"]
+    sim_size = params.get('sim_size')
+    if sim_size is not None:
+        sim_size = int(sim_size)
+        if sim_size < 1:
+            raise ValueError("sim_size must be a positive integer, got {}".format(sim_size))
+        scale = sim_size / max(red.shape)
+        new_shape = tuple(max(1, int(round(n * scale))) for n in red.shape)
+        red = resample_mask(red, new_shape)
+        blue = resample_mask(blue, new_shape)
 
     solid = red | blue                     #
     ux_imp = np.full(solid.shape, np.nan)  #

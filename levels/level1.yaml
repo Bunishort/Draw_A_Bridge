@@ -8,6 +8,7 @@ image: level1.png
 background: Siduhe_Bridge-4.png
 
 # ###### Performance / Speed / Size tuning ######
+sim_size: 280 #number of simulation cells in the largest dimension x or y (OPTIONAL)
 screen_size: [1400, 1000]   # Window size in pixels
 # Number of simulation time steps per frame.
 # Higher value = faster response of the solid, but needs more computing power.
