@@ -30,8 +30,8 @@ void main() {
         vec2 ext = imageLoad(img_ext, p).xy;
 
         // Remove solid if damaged or out of screen
-        if (damage.y > 1 || final_pos.x < 1 || final_pos.y <1
-            || final_pos.x > height || final_pos.y > width) {
+        if ((damage.y > 1 || final_pos.x < 1 || final_pos.y <1
+            || final_pos.x > height || final_pos.y > width) && masks.y > 0.5) {
 
 
 

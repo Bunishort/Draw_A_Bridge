@@ -585,8 +585,8 @@ class ElasticProblem:
             # --- Binding to buffers ---
             self.tex_pos_vel.bind_to_image(0, read=True, write=True)
             self.tex_stress_old.bind_to_image(2, read=True, write=True)
-            self.tex_ext.bind_to_image(4, read=True, write=False)
-            self.tex_masks.bind_to_image(5, read=True, write=False)
+            self.tex_ext.bind_to_image(4, read=True, write=True)
+            self.tex_masks.bind_to_image(5, read=True, write=True)
 
             #gpu thread group sizes
             self.gx = int(np.ceil(self.solid.shape[1] / 16))

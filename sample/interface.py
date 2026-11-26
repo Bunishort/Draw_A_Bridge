@@ -440,7 +440,7 @@ class SimulationApp:
         self.update_damage_gpu['nu'] = self.solver.elas_lambda / 2 / (self.solver.elas_lambda + self.solver.elas_mu)
 
 
-        self.tex_damage.bind_to_image(7, read=True, write=False)
+        self.tex_damage.bind_to_image(7, read=True, write=True)
 
         # Remove solid init
         file_path = get_resource_path(join('sample', 'remove_damaged.glsl'))
@@ -470,6 +470,7 @@ class SimulationApp:
     def toggle_simu(self):
         self.mode_simu = not self.mode_simu
         if self.mode_simu:
+            self.solver.ctx.finish()
             self.solver.mod_solid_buffer_update()
             self.clean_damage_buffer()
             # Reactivating gravity on the updated solid

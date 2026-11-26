@@ -13,7 +13,7 @@ screen_size: [1400, 1000]   # Window size in pixels
 # Number of simulation time steps per frame.
 # Higher value = faster response of the solid, but needs more computing power.
 # Lower the value if you have performance issues ( FPS < 60 )
-nbstep: 35
+nbstep: 1
 
 # ###### Simulation physical parameters ######
 # Found by trial and error to make the simulation feel bouncy
